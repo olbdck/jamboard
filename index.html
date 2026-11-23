@@ -1,0 +1,2849 @@
+<!doctype html>
+<html lang="uk">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>JamBoard</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: full-screen shared canvas; frosted tool dock bottom-centre, board pill top-left, people + zoom pills top-right, context bar over the selection.
+   Tokens follow Orbit Pro (Apple-style DESIGN.md v1): system SF type, pill controls, frosted bars, 160/320/500 ms motion. Accent is JamBoard raspberry instead of Orbit blue. */
+:root {
+  --bg: #f5f5f7;            /* color-bg-alt: the board */
+  --surface: #ffffff;       /* color-surface */
+  --glass: rgba(250, 250, 252, 0.8); /* color-nav-bg */
+  --text: #1d1d1f;          /* color-fg */
+  --muted: #6e6e73;         /* color-fg-muted */
+  --subtle: #6e6e73;        /* color-fg-muted: fg-subtle fails 4.5:1 on the board */
+  --line: #d2d2d7;          /* color-border */
+  --chip: rgba(0, 0, 0, 0.05);
+  --accent: #c2185b;        /* JamBoard raspberry, replaces Orbit blue: 5.9:1 with white, 5.4:1 on the board */
+  --accent-hover: #a8124d;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(194, 24, 91, 0.10);
+  --danger-bg: #d70015;
+  --ok: #008009; --warn: #b64400; --bad: #e30000;
+  --focus: 0 0 0 4px rgba(194, 24, 91, 0.45);
+  --dot: #d2d2d7;
+  --ink: #1d1d1f;           /* text on notes, both themes */
+  --shadow: 2px 4px 12px rgba(0, 0, 0, 0.08);   /* shadow-md */
+  --shadow-lg: 2px 4px 16px rgba(0, 0, 0, 0.16); /* shadow-lg */
+  --note-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 2px 4px 12px rgba(0, 0, 0, 0.08);
+  --lift-shadow: 0 2px 4px rgba(0, 0, 0, 0.08), 8px 22px 34px rgba(0, 0, 0, 0.22);
+  --t-caution: #ffe17a; --t-warn: #ffc39e; --t-pink: #ffb8d1; --t-purple: #d8c6ff;
+  --rope: #7c7c82;
+  --t-info: #b5d6ff; --t-ok: #bde8c4; --t-teal: #a6e9e1; --t-gray: #e3e3e8;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 18px; --r-xl: 28px; --r-pill: 980px;
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 20px; --s6: 24px;
+  --fast: 160ms; --base: 320ms; --slow: 500ms;
+  --ease: cubic-bezier(0.4, 0, 0.6, 1); --ease-em: cubic-bezier(0.28, 0.11, 0.32, 1); --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --blur: saturate(180%) blur(20px);
+  --f-display: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --f-note: "Onest", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; /* sticky text: regular weight, Cyrillic-friendly */
+  --f-text: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000; --surface: #1d1d1f; --glass: rgba(22, 22, 23, 0.8); --text: #f5f5f7; --muted: #98989d; --subtle: #98989d;
+    --accent: #ff6b9d; --accent-hover: #ff85ad; --accent-fg: #1d1d1f; --accent-soft: rgba(255, 107, 157, 0.14); --focus: 0 0 0 4px rgba(255, 107, 157, 0.45);
+    --line: #424245; --chip: rgba(255, 255, 255, 0.08); --ok: #30d158; --warn: #ff9f0a; --bad: #ff453a; --dot: #2c2c2e; --rope: #a1a1a6;
+    --shadow: 2px 4px 12px rgba(0, 0, 0, 0.5); --shadow-lg: 2px 4px 16px rgba(0, 0, 0, 0.6);
+    --note-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 2px 4px 12px rgba(0, 0, 0, 0.45);
+    --lift-shadow: 0 2px 4px rgba(0, 0, 0, 0.5), 8px 22px 34px rgba(0, 0, 0, 0.7);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #000000; --surface: #1d1d1f; --glass: rgba(22, 22, 23, 0.8); --text: #f5f5f7; --muted: #98989d; --subtle: #98989d;
+    --accent: #ff6b9d; --accent-hover: #ff85ad; --accent-fg: #1d1d1f; --accent-soft: rgba(255, 107, 157, 0.14); --focus: 0 0 0 4px rgba(255, 107, 157, 0.45);
+  --line: #424245; --chip: rgba(255, 255, 255, 0.08); --ok: #30d158; --warn: #ff9f0a; --bad: #ff453a; --dot: #2c2c2e; --rope: #a1a1a6;
+  --shadow: 2px 4px 12px rgba(0, 0, 0, 0.5); --shadow-lg: 2px 4px 16px rgba(0, 0, 0, 0.6);
+  --note-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 2px 4px 12px rgba(0, 0, 0, 0.45);
+  --lift-shadow: 0 2px 4px rgba(0, 0, 0, 0.5), 8px 22px 34px rgba(0, 0, 0, 0.7);
+  color-scheme: dark;
+}
+html, body { height: 100%; overflow: hidden; }
+body { background: var(--bg); color: var(--text); font: 400 14px/1.42859 var(--f-text); letter-spacing: -0.016em; -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; letter-spacing: inherit; }
+[hidden] { display: none !important; }
+
+#viewport {
+  position: fixed; inset: 0; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none;
+  background-color: var(--bg);
+}
+/* dot grid on its own layer: panning only moves it (no repaint); 100px overhang covers the largest cell (96px) */
+#grid { position: absolute; inset: -100px; pointer-events: none; background-image: radial-gradient(circle, var(--dot) 1.2px, transparent 1.4px); will-change: transform; }
+#viewport.grab, #viewport.tool-hand { cursor: grab; }
+#viewport.grabbing { cursor: grabbing; }
+#viewport.tool-sticky, #viewport.tool-section, #viewport.tool-comment { cursor: crosshair; }
+#viewport.tool-stamp { cursor: none; }
+#viewport.tool-text { cursor: text; }
+#viewport.tool-link { cursor: crosshair; }
+#world { transition: opacity 220ms var(--ease-em); }
+#world.switching { opacity: 0; transition: opacity 120ms var(--ease); }
+#world { position: absolute; left: 0; top: 0; transform-origin: 0 0; --z: 1; }
+
+/* items: position via the `translate` property (composited, no layout); `rotate`/`scale` carry lift and tilt; `transform` is left to the pop-in */
+.item { position: absolute; left: 0; top: 0; box-sizing: border-box; contain: layout style; transition: translate 120ms var(--ease), width 120ms var(--ease), height 120ms var(--ease), box-shadow var(--base) var(--ease-em); }
+.item.dragging { will-change: translate, rotate; }
+.item.dragging, .item.resizing, .item.editing { transition: box-shadow var(--fast) var(--ease); }
+.item.sel { outline: calc(2px / var(--z)) solid var(--accent); outline-offset: calc(3px / var(--z)); }
+.item.pop { animation: pop var(--slow) var(--ease-spring) both; }
+.item.gone { animation: gone var(--fast) var(--ease) both; pointer-events: none; }
+@keyframes pop { from { opacity: 0; transform: scale(0.6) translateY(12px); } 60% { opacity: 1; } to { opacity: 1; transform: none; } }
+@keyframes gone { to { opacity: 0; transform: scale(0.85); } }
+.item.lifted { box-shadow: var(--lift-shadow); }
+.item.settle { transition: translate 120ms var(--ease), rotate var(--slow) var(--ease-spring), scale var(--slow) var(--ease-spring), box-shadow var(--slow) var(--ease-em); }
+
+.sticky { background: var(--c, var(--t-caution)); color: var(--ink); border-radius: var(--r-md); box-shadow: var(--note-shadow); }
+.sticky:hover:not(.dragging) { box-shadow: var(--shadow-lg); }
+.sticky .txt {
+  position: absolute; inset: 0 0 22px 0; padding: 16px 18px 0; box-sizing: border-box; overflow: hidden;
+  font-family: var(--f-note); font-weight: 400; line-height: 1.3; letter-spacing: -0.005em; overflow-wrap: normal; white-space: pre-wrap; outline: none;
+}
+.sticky .txt:empty::before { content: "Напишіть щось…"; opacity: .7; font-weight: 400; }
+.sticky .by { position: absolute; left: 18px; right: 18px; bottom: 8px; font-size: 11px; font-weight: 500; opacity: .72; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+.sticky.editing .txt { cursor: text; user-select: text; -webkit-user-select: text; }
+.item.editing { outline: calc(2px / var(--z)) solid var(--accent); outline-offset: calc(3px / var(--z)); box-shadow: 0 0 0 calc(6px / var(--z)) var(--accent-soft), var(--note-shadow); }
+.image { border-radius: var(--r-md); box-shadow: var(--note-shadow); background: var(--surface); }
+.image img { width: 100%; height: 100%; display: block; border-radius: var(--r-md); pointer-events: none; -webkit-user-drag: none; object-fit: cover; }
+
+.section {
+  border-radius: var(--r-lg); background: color-mix(in srgb, var(--c, var(--t-gray)) 22%, var(--surface));
+  border: calc(1px / var(--z)) solid color-mix(in srgb, var(--c, var(--t-gray)) 70%, var(--line));
+}
+.section .stitle {
+  position: absolute; left: 0; bottom: 100%; margin-bottom: 8px; max-width: 100%; box-sizing: border-box;
+  font: 600 20px/1.2 var(--f-display); letter-spacing: -0.01em; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  padding: 2px 4px; border-radius: 6px; outline: none; cursor: default;
+}
+.section .stitle:empty::before { content: "Секція"; color: var(--muted); }
+.section.editing .stitle { cursor: text; user-select: text; -webkit-user-select: text; background: var(--surface); overflow: visible; text-overflow: clip; }
+.section.editing { box-shadow: none; }
+.section.drop-target { border-color: var(--accent); box-shadow: 0 0 0 calc(3px / var(--z)) var(--accent-soft); }
+
+.handle {
+  position: absolute; right: calc(-7px / var(--z)); bottom: calc(-7px / var(--z));
+  width: calc(14px / var(--z)); height: calc(14px / var(--z)); box-sizing: border-box;
+  border: calc(2px / var(--z)) solid var(--accent); background: var(--surface); border-radius: 50%; cursor: nwse-resize; display: none;
+}
+.item.sel.solo .handle { display: block; }
+.peer-box { position: absolute; left: 0; top: 0; pointer-events: none; border: calc(2px / var(--z)) solid var(--pc); border-radius: calc(14px / var(--z)); margin: calc(-4px / var(--z)); transition: translate 120ms var(--ease), width 120ms var(--ease), height 120ms var(--ease); }
+.peer-box span {
+  position: absolute; left: calc(-2px / var(--z)); bottom: 100%; margin-bottom: calc(3px / var(--z)); transform-origin: 0 100%; transform: scale(calc(1 / var(--z)));
+  background: var(--pc); color: #fff; font: 600 11px/1 var(--f-text); padding: 4px 8px; border-radius: var(--r-pill); white-space: nowrap;
+}
+
+#cursors { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.cursor { position: absolute; left: 0; top: 0; will-change: transform; }
+.cursor svg { width: 18px; height: 18px; display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.3)); }
+.cursor span { position: absolute; left: 14px; top: 16px; background: var(--pc); color: #fff; font: 600 12px/1 var(--f-text); padding: 5px 9px; border-radius: var(--r-pill); white-space: nowrap; }
+
+#marquee { position: fixed; border: 1px solid var(--accent); background: var(--accent-soft); pointer-events: none; border-radius: 4px; }
+#pasteCatcher { position: fixed; width: 48px; height: 48px; opacity: 0; z-index: 4; outline: none; caret-color: transparent; overflow: hidden; color: transparent; }
+.item.section:not(.dragging):not(.resizing):not(.settle) { transition: translate var(--base) var(--ease-em), width var(--base) var(--ease-em), height var(--base) var(--ease-em), box-shadow var(--base) var(--ease-em); }
+/* free text on the board: headings and body copy, no card behind it */
+.text { color: var(--text); }
+.text .txt { white-space: pre-wrap; overflow-wrap: anywhere; outline: none; font-family: var(--f-note); padding: 2px 4px; min-height: 1.2em; }
+.text .txt:empty::before { content: "Текст"; color: var(--muted); }
+.text[data-ts="h1"] .txt { font-size: 44px; line-height: 1.12; font-weight: 700; letter-spacing: -0.02em; }
+.text[data-ts="h2"] .txt { font-size: 30px; line-height: 1.2; font-weight: 600; letter-spacing: -0.015em; }
+.text[data-ts="p"] .txt { font-size: 20px; line-height: 1.45; font-weight: 400; }
+.text[data-ts="s"] .txt { font-size: 15px; line-height: 1.45; font-weight: 400; color: var(--muted); }
+.text.editing .txt { cursor: text; user-select: text; -webkit-user-select: text; }
+.item.text.editing { box-shadow: none; }
+/* link ports: four dots on a card's edges; drag one to tie a rope to another card */
+.port {
+  position: absolute; width: calc(14px / var(--z)); height: calc(14px / var(--z)); margin: calc(-7px / var(--z)) 0 0 calc(-7px / var(--z)); box-sizing: border-box; z-index: 3;
+  border-radius: 50%; background: var(--surface); border: calc(2px / var(--z)) solid var(--accent); cursor: crosshair;
+  opacity: 0; scale: .5; transition: opacity var(--fast) var(--ease), scale var(--fast) var(--ease-spring); pointer-events: none;
+}
+.port.t { left: 50%; top: 0; } .port.r { left: 100%; top: 50%; } .port.b { left: 50%; top: 100%; } .port.l { left: 0; top: 50%; }
+#viewport.tool-select .item:hover:not(.dragging):not(.editing):not(.resizing) > .port, #viewport.tool-link .item:hover > .port { opacity: 1; scale: 1; pointer-events: auto; }
+.port:hover { scale: 1.3 !important; background: var(--accent); }
+.item.link-target { box-shadow: 0 0 0 calc(2px / var(--z)) var(--accent), 0 0 0 calc(8px / var(--z)) var(--accent-soft) !important; }
+#links { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
+#links g { transition: opacity 200ms var(--ease); }
+#links g.gone { opacity: 0; }
+#links g { --rc: var(--rope); }
+#links .halo { fill: none; stroke: var(--rc); stroke-width: 14px; vector-effect: non-scaling-stroke; stroke-linecap: round; opacity: 0; transition: opacity var(--fast) var(--ease); }
+#links g:hover .halo { opacity: .14; } #links g.sel .halo { opacity: .26; }
+#links .rope { fill: none; stroke: var(--rc); stroke-width: 3.5px; vector-effect: non-scaling-stroke; stroke-linecap: round; transition: stroke var(--fast) var(--ease); }
+#links g.temp .rope { stroke: var(--accent); }
+#links .rope-hit { fill: none; stroke: transparent; stroke-width: 18px; vector-effect: non-scaling-stroke; pointer-events: stroke; cursor: pointer; }
+#links g.temp .rope-hit { pointer-events: none; }
+/* direction: one soft glowing dot travels from the rope's start to its end */
+#links .pulse { pointer-events: none; opacity: 0; }
+#links .pulse .glow { fill: var(--rc); opacity: .32; }
+#links .pulse .core { fill: color-mix(in srgb, var(--rc) 30%, #fff); stroke: var(--rc); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+/* rope names: a pill in the middle of the rope, in the rope's colour */
+#ropeLabels { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
+.rope-label {
+  --rc: var(--rope); position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); box-sizing: border-box;
+  max-width: 280px; padding: 5px 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font: 600 14px/1.3 var(--f-text); color: var(--text); letter-spacing: -0.005em;
+  background: color-mix(in srgb, var(--rc) 20%, var(--surface)); border: 2px solid var(--rc); border-radius: var(--r-pill);
+  box-shadow: var(--shadow); pointer-events: auto; cursor: pointer; user-select: none; -webkit-user-select: none; outline: none;
+  transition: box-shadow var(--fast) var(--ease), opacity 200ms var(--ease);
+}
+.rope-label.sel { box-shadow: 0 0 0 4px color-mix(in srgb, var(--rc) 30%, transparent), var(--shadow); }
+.rope-label.editing { cursor: text; user-select: text; -webkit-user-select: text; text-overflow: clip; min-width: 64px; box-shadow: 0 0 0 4px var(--accent-soft), var(--shadow); border-color: var(--accent); }
+.rope-label:empty::before { content: "Назва зв’язку"; color: var(--muted); font-weight: 500; }
+.rope-label.gone { opacity: 0; }
+/* link cards: a pasted URL becomes a preview card; YouTube gets its thumbnail and a play button */
+.web { color: var(--text); }
+.web .web-in { border-radius: var(--r-md); overflow: hidden; background: var(--surface); box-shadow: var(--note-shadow); border: calc(1px / var(--z)) solid var(--line); }
+.web:hover:not(.dragging) .web-in { box-shadow: var(--shadow-lg); }
+.web .web-media { position: relative; aspect-ratio: 1.91 / 1; background: color-mix(in srgb, var(--muted) 14%, var(--surface)); overflow: hidden; }
+.web.yt .web-media { aspect-ratio: 16 / 9; background: linear-gradient(135deg, #2a2a2e, #111113); }
+.web.noimg:not(.yt) .web-media { display: none; }
+.web .web-img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; -webkit-user-drag: none; opacity: 0; transition: opacity var(--base) var(--ease); }
+.web .web-img.on { opacity: 1; }
+.web .web-play { position: absolute; left: 50%; top: 50%; width: 64px; height: 44px; margin: -22px 0 0 -32px; border-radius: 13px; background: rgba(18, 18, 20, .72); display: none; place-items: center; transition: background var(--fast) var(--ease), scale var(--fast) var(--ease-spring); }
+.web.yt .web-play { display: grid; }
+.web .web-play:hover { background: #e62117; scale: 1.06; }
+.web .web-play svg { width: 22px; height: 22px; fill: #fff; margin-left: 3px; }
+.web .web-body { padding: 12px 14px 12px; display: grid; gap: 4px; }
+.web .web-title { font: 600 15px/1.3 var(--f-text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.web .web-desc { font: 400 13px/1.4 var(--f-text); color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.web .web-desc:empty { display: none; }
+.web .web-go.site { display: flex; align-items: center; gap: 6px; margin-top: 2px; font: 500 12px/1.3 var(--f-text); color: var(--muted); text-decoration: none; width: max-content; max-width: 100%; border-radius: 6px; }
+.web .web-go.site span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.web .web-go.site:hover { color: var(--accent); }
+.web .web-go.site svg { width: 12px; height: 12px; flex: none; }
+.web .web-ico { width: 14px; height: 14px; border-radius: 3px; flex: none; }
+.web .web-ico.off { display: none; }
+.web.loading .web-title { color: var(--muted); }
+.web.loading .web-title::after { content: " · завантажуємо превʼю…"; font-weight: 400; }
+.web .web-go:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* text style controls in the context bar */
+#ctx .txt-tools { gap: 2px; padding: 0 4px; align-items: center; }
+/* rich text inside stickies and text boxes: block styles per line, bold per selection */
+.sticky .txt h1, .sticky .txt h2, .sticky .txt h6, .text .txt h1, .text .txt h2, .text .txt h6, .txt > div { margin: 0; font-family: inherit; }
+.sticky .txt h1 { font-size: 1.35em; line-height: 1.15; font-weight: 700; letter-spacing: -0.015em; }
+.sticky .txt h2 { font-size: 1.2em; line-height: 1.2; font-weight: 600; }
+.sticky .txt h6 { font-size: 0.78em; line-height: 1.4; font-weight: 400; opacity: .8; }
+.text .txt h1 { font-size: 44px; line-height: 1.12; font-weight: 700; letter-spacing: -0.02em; }
+.text .txt h2 { font-size: 30px; line-height: 1.2; font-weight: 600; letter-spacing: -0.015em; }
+.text .txt h6 { font-size: 15px; line-height: 1.45; font-weight: 400; color: var(--muted); }
+.txt b, .txt strong { font-weight: 700; }
+.style-pick { position: relative; margin-right: 4px; }
+.style-btn { display: flex; align-items: center; gap: 6px; border: 0; background: var(--chip); color: var(--text); font: 500 13px var(--f-text); height: 32px; padding: 0 10px 0 12px; border-radius: var(--r-pill); cursor: pointer; white-space: nowrap; min-width: 116px; justify-content: space-between; }
+.style-btn:hover { background: color-mix(in srgb, var(--chip) 100%, var(--text) 6%); }
+.style-btn svg { width: 12px; height: 12px; color: var(--muted); }
+.panel.style-menu { position: absolute; top: calc(100% + 10px); left: 0; min-width: 200px; padding: 6px; display: grid; gap: 2px; background: var(--surface); border-radius: 14px; z-index: 2; transform-origin: 20% 0; animation: popIn var(--fast) var(--ease-em) both; }
+.sm-item { display: flex; align-items: center; gap: 10px; border: 0; background: transparent; color: var(--text); text-align: left; padding: 7px 10px; border-radius: 9px; cursor: pointer; font-family: var(--f-note); }
+.sm-item:hover { background: var(--chip); }
+.sm-item::before { content: ""; width: 14px; flex: none; color: var(--accent); font: 600 13px var(--f-text); }
+.sm-item[aria-checked="true"]::before { content: "✓"; }
+.sm-item.h1 { font-size: 20px; font-weight: 700; } .sm-item.h2 { font-size: 16px; font-weight: 600; } .sm-item.p { font-size: 14px; } .sm-item.s { font-size: 12px; color: var(--muted); } .sm-item.auto { font-size: 14px; }
+#ctxStyle {
+  appearance: none; -webkit-appearance: none; border: 0; background-color: var(--chip); color: var(--text); font: 500 13px var(--f-text); height: 32px; padding: 0 30px 0 12px; border-radius: var(--r-pill); cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5l3 3 3-3' fill='none' stroke='%238e8e93' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; background-size: 12px; margin-right: 4px;
+}
+#ctxStyle:focus-visible { box-shadow: var(--focus); outline: none; }
+#boldBtn b { font: 700 17px var(--f-text); }
+/* board switcher and share */
+.board-pill .icon-btn { width: 32px; height: 32px; }
+.board-pill .icon-btn svg { width: 18px; height: 18px; }
+.panel.menu { position: fixed; top: calc(64px + env(safe-area-inset-top, 0px)); left: calc(12px + env(safe-area-inset-left, 0px)); width: 300px; max-width: calc(100vw - 24px); box-sizing: border-box; padding: 8px; z-index: 6; background: var(--surface); display: grid; gap: 2px; transform-origin: 10% 0; animation: popIn var(--base) var(--ease-em) both; }
+.menu .label { padding: 6px 10px 4px; }
+.board-list { display: grid; gap: 2px; max-height: 50vh; overflow: auto; overscroll-behavior: contain; }
+.menu-item { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: transparent; padding: 9px 10px; border-radius: 10px; text-align: left; cursor: pointer; font-size: 14px; color: var(--text); transition: background-color var(--fast) var(--ease); }
+.menu-item:hover { background: var(--chip); }
+.menu-item .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.menu-item .who { font-size: 13px; letter-spacing: -2px; white-space: nowrap; }
+.menu-item .tick { width: 16px; color: var(--accent); flex: none; }
+.menu-item[aria-current="true"] { font-weight: 600; }
+.menu-item.add { color: var(--accent); border-top: 1px solid var(--line); border-radius: 0 0 10px 10px; margin-top: 4px; padding-top: 11px; }
+.panel.popover.share { left: calc(12px + env(safe-area-inset-left, 0px)); right: auto; width: 360px; max-width: calc(100vw - 24px); box-sizing: border-box; transform-origin: 10% 0; }
+.share .row { flex-wrap: nowrap; }
+.share .field { font-size: 14px; height: 40px; min-width: 0; flex: 1; color: var(--muted); }
+.primary.sm { font-size: 14px; padding: 10px 16px; white-space: nowrap; }
+/* stamps: an emoji pressed onto the board, always above cards */
+.stamp { display: grid; place-items: center; line-height: 1; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .22)); border-radius: 50%; }
+.stamp .emo { pointer-events: none; }
+.item.stamp.sel { outline-offset: calc(1px / var(--z)); }
+.item.thump { animation: thump 420ms var(--ease-spring) both; }
+@keyframes thump { from { opacity: 0; transform: scale(1.5); } 45% { opacity: 1; transform: scale(0.9); } to { opacity: 1; transform: none; } }
+#stampGhost { position: absolute; left: 0; top: 0; display: grid; place-items: center; line-height: 1; pointer-events: none; opacity: .55; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; will-change: translate, width, height; z-index: 200000; }
+#stampGhost.press { opacity: 1; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .25)); }
+/* comment pins keep one screen size at any zoom; the tip (bottom-left) marks the spot */
+.item.comment { pointer-events: none; }
+.item.comment.sel { outline: none; }
+.pin {
+  pointer-events: auto; position: absolute; left: 0; bottom: 0; width: 36px; height: 36px; box-sizing: border-box; transform-origin: 0 100%; scale: calc(1 / var(--z));
+  display: grid; place-items: center; font-size: 18px; line-height: 1; cursor: pointer;
+  background: var(--surface); border: 2px solid var(--pc, var(--accent)); border-radius: 18px 18px 18px 4px; box-shadow: var(--shadow);
+  transition: box-shadow var(--fast) var(--ease), translate var(--fast) var(--ease);
+}
+.pin:hover { box-shadow: var(--shadow-lg); translate: 0 -2px; }
+.item.comment.sel .pin, .item.comment.open .pin { box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow-lg); border-color: var(--accent); }
+.pin b { position: absolute; right: -7px; top: -7px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; background: var(--accent); color: var(--accent-fg); font: 600 11px/18px var(--f-text); text-align: center; }
+.pin b:empty { display: none; }
+.panel.thread { position: fixed; width: 320px; max-width: calc(100vw - 24px); box-sizing: border-box; padding: var(--s4); display: grid; gap: var(--s3); z-index: 7; background: var(--surface); transform-origin: 0 0; animation: popIn var(--base) var(--ease-em) both; }
+.th-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.th-head .close { border: 0; background: var(--chip); color: var(--muted); cursor: pointer; font-size: 15px; line-height: 1; width: 26px; height: 26px; border-radius: 50%; }
+.th-msgs { display: grid; gap: 12px; max-height: 260px; overflow: auto; overscroll-behavior: contain; }
+.th-msgs:empty { display: none; }
+.msg { display: grid; grid-template-columns: 28px 1fr; gap: 10px; animation: msgIn var(--base) var(--ease-em) both; }
+@keyframes msgIn { from { opacity: 0; transform: translateY(4px); } }
+.msg .av { width: 28px; height: 28px; margin: 0; border: 0; font-size: 15px; }
+.msg b { font-weight: 600; font-size: 13px; }
+.msg time { color: var(--muted); font-size: 12px; margin-left: 6px; }
+.msg p { margin: 2px 0 0; font-size: 14px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
+.th-form { display: flex; gap: 8px; align-items: flex-end; }
+.th-form textarea { height: auto; min-height: 44px; max-height: 140px; padding: 10px 14px; font-size: 15px; line-height: 1.4; resize: none; }
+.send-btn { flex: none; width: 40px; height: 40px; border: 0; border-radius: 50%; background: var(--accent); color: var(--accent-fg); display: grid; place-items: center; cursor: pointer; transition: background-color var(--fast) var(--ease), transform var(--fast) var(--ease), opacity var(--fast) var(--ease); }
+.send-btn:hover { background: var(--accent-hover); }
+.send-btn:active { transform: scale(.92); }
+.send-btn:disabled { opacity: .4; cursor: default; }
+.send-btn svg { width: 18px; height: 18px; }
+#ghostSection { position: absolute; border: calc(1.5px / var(--z)) dashed var(--accent); background: var(--accent-soft); border-radius: var(--r-lg); pointer-events: none; }
+
+/* frosted chrome */
+.panel { background: var(--glass); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); border: 1px solid color-mix(in srgb, var(--line) 60%, transparent); box-shadow: var(--shadow); border-radius: var(--r-lg); }
+.pill { border-radius: var(--r-pill); }
+.board-pill {
+  position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); left: calc(12px + env(safe-area-inset-left, 0px));
+  display: flex; align-items: center; gap: var(--s2); padding: 5px 5px 5px 16px; max-width: calc(100vw - 380px); min-width: 0; height: 44px; box-sizing: border-box;
+}
+.logo { font: 600 17px var(--f-display); letter-spacing: -0.022em; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.logo i { font-style: normal; color: var(--accent); }
+.sep { width: 1px; align-self: stretch; background: var(--line); margin: 6px 2px; flex: none; }
+#title { border: 0; background: transparent; color: var(--text); font: 400 14px var(--f-text); letter-spacing: -0.016em; min-width: 0; width: 14em; max-width: 100%; padding: 6px 10px; border-radius: var(--r-pill); text-overflow: ellipsis; }
+#title:hover { background: var(--chip); }
+#title:focus { outline: none; box-shadow: var(--focus); background: var(--surface); }
+.txt-btn { border: 0; background: transparent; padding: 7px 13px; border-radius: var(--r-pill); font-size: 14px; color: var(--accent); cursor: pointer; white-space: nowrap; transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease); }
+.txt-btn:hover { background: var(--chip); }
+.txt-btn.danger { color: #fff; background: var(--danger-bg); }
+.primary { border: 0; background: var(--accent); color: var(--accent-fg); padding: 11px 21px; font-size: 17px; border-radius: var(--r-pill); cursor: pointer; transition: background-color var(--fast) var(--ease); }
+.primary:hover { background: var(--accent-hover); }
+
+.top-right { position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); right: calc(12px + env(safe-area-inset-right, 0px)); display: flex; gap: var(--s2); align-items: flex-start; }
+.zoom-pill, .people { display: flex; align-items: center; gap: 2px; padding: 4px; height: 44px; box-sizing: border-box; border-radius: var(--r-pill); }
+.people { padding: 4px 6px 4px 14px; gap: var(--s2); }
+.status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.status i { width: 7px; height: 7px; border-radius: 50%; background: var(--subtle); }
+.status[data-s="ok"] i { background: var(--ok); }
+.status[data-s="warn"] i { background: var(--warn); }
+.status[data-s="bad"] i { background: var(--bad); }
+.avatars { display: flex; align-items: center; }
+.av {
+  width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 16px; line-height: 1;
+  background: color-mix(in srgb, var(--pc) 28%, var(--surface)); border: 2px solid var(--surface); margin-left: -8px; position: relative; padding: 0;
+}
+.av:first-child { margin-left: 0; }
+.av.me { cursor: pointer; box-shadow: 0 0 0 2px var(--pc); }
+.av.more { background: var(--chip); color: var(--muted); font-size: 11px; font-weight: 600; }
+.me-name { border: 0; background: transparent; padding: 6px 10px; border-radius: var(--r-pill); cursor: pointer; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.me-name:hover { background: var(--chip); }
+
+.icon-btn { width: 36px; height: 36px; border: 0; background: transparent; border-radius: var(--r-pill); display: grid; place-items: center; cursor: pointer; color: var(--text); position: relative; transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease), transform var(--fast) var(--ease); }
+.icon-btn:hover { background: var(--chip); }
+.icon-btn:active { transform: scale(0.92); }
+.icon-btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+.icon-btn:disabled { opacity: .35; cursor: default; background: transparent; transform: none; }
+.icon-btn svg { width: 20px; height: 20px; }
+#zoomLabel { min-width: 52px; height: 32px; border: 0; background: transparent; border-radius: var(--r-pill); cursor: pointer; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--text); }
+#zoomLabel:hover { background: var(--chip); }
+
+.rail { position: fixed; left: 50%; translate: -50% 0; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: row; align-items: center; gap: 4px; padding: 6px; border-radius: var(--r-pill); z-index: 5; }
+.rail .rule { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
+.rail .icon-btn { width: 40px; height: 40px; }
+.rail .emo-ico { font-size: 20px; line-height: 1; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+.rail .dot { position: absolute; right: 4px; bottom: 4px; width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 0 1.5px var(--surface); }
+.tip {
+  position: absolute; left: 50%; bottom: calc(100% + 12px); transform: translate(-50%, 4px); white-space: nowrap; z-index: 3;
+  background: var(--text); color: var(--bg); font-size: 12px; padding: 5px 10px; border-radius: var(--r-pill); opacity: 0; pointer-events: none;
+  transition: opacity var(--fast) var(--ease), transform var(--fast) var(--ease);
+}
+.tip kbd { font: inherit; opacity: .6; margin-left: 6px; }
+#ctx .tip { bottom: calc(100% + 10px); }
+.icon-btn:hover .tip, .icon-btn:focus-visible .tip { opacity: 1; transform: translate(-50%, 0); }
+.palette { position: fixed; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); translate: -50% 0; display: flex; flex-direction: row; align-items: center; gap: 8px; padding: 10px; border-radius: var(--r-pill); z-index: 5; transform-origin: 50% 100%; animation: palIn var(--base) var(--ease-spring) both; }
+@keyframes palIn { from { opacity: 0; transform: translateY(8px) scale(0.9); } }
+.palette.emojis { gap: 2px; padding: 6px; }
+.emo-btn { width: 36px; height: 36px; border: 0; padding: 0; background: transparent; border-radius: 50%; cursor: pointer; font-size: 22px; line-height: 1; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; transition: transform var(--fast) var(--ease-spring), background-color var(--fast) var(--ease); }
+.emo-btn:hover { transform: scale(1.18); background: var(--chip); }
+.emo-btn[aria-pressed="true"] { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent); }
+.swatch { width: 24px; height: 24px; border-radius: 50%; border: 0; cursor: pointer; padding: 0; position: relative; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12); transition: transform var(--fast) var(--ease); }
+.swatch:hover { transform: scale(1.12); }
+.swatch::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid transparent; transition: border-color var(--fast) var(--ease); }
+.swatch[aria-pressed="true"]::after { border-color: var(--accent); }
+
+#ctx { position: fixed; display: flex; align-items: center; gap: 2px; padding: 5px; z-index: 5; border-radius: var(--r-pill); transform-origin: 50% 100%; animation: ctxIn var(--fast) var(--ease-em) both; }
+@keyframes ctxIn { from { opacity: 0; transform: translateY(6px) scale(0.96); } }
+#ctx .swatch { width: 22px; height: 22px; }
+#ctx:not(.link-mode) #ctxLink { display: none; }
+#ctx.link-mode > :not(#ctxLink):not(#delBtn) { display: none !important; }
+#ctx .group { display: flex; gap: 8px; padding: 0 8px; }
+
+.popover { position: fixed; top: calc(64px + env(safe-area-inset-top, 0px)); right: calc(12px + env(safe-area-inset-right, 0px)); width: 300px; padding: var(--s5); display: grid; gap: var(--s4); z-index: 6; background: var(--surface); transform-origin: 90% 0; animation: popIn var(--base) var(--ease-em) both; }
+@keyframes popIn { from { opacity: 0; transform: translateY(-6px) scale(0.97); } }
+.label { font: 600 12px var(--f-text); color: var(--muted); letter-spacing: -0.01em; }
+.field { width: 100%; box-sizing: border-box; background: var(--surface); border: 1px solid var(--line); color: var(--text); border-radius: var(--r-md); height: 44px; padding: 0 14px; font: 400 17px var(--f-text); letter-spacing: -0.022em; outline: none; transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease); }
+.field:focus { border-color: var(--accent); box-shadow: var(--focus); }
+.hint { font-size: 12px; color: var(--subtle); margin: 6px 0 0; }
+.row { display: flex; gap: var(--s3); align-items: center; flex-wrap: wrap; }
+.animal-btn { border: 1px solid var(--accent); color: var(--accent); background: transparent; border-radius: var(--r-pill); padding: 8px 15px; cursor: pointer; transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease); }
+.animal-btn:hover { background: var(--accent); color: var(--accent-fg); }
+.people-list { display: grid; gap: 8px; max-height: 180px; overflow: auto; }
+.people-list div { display: flex; align-items: center; gap: 10px; }
+.people-list .av { width: 26px; height: 26px; font-size: 14px; margin: 0; border: 0; animation: none; }
+.people-list em { font-style: normal; color: var(--subtle); }
+
+.hints { position: fixed; right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); width: 290px; padding: var(--s4) var(--s5); font-size: 12px; color: var(--muted); }
+.hints h2 { margin: 0 0 10px; display: flex; justify-content: space-between; align-items: center; }
+.hints ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 7px; }
+.hints li { display: flex; justify-content: space-between; gap: 12px; }
+.hints li b { color: var(--text); font-weight: 500; white-space: nowrap; }
+.hints .close { border: 0; background: var(--chip); color: var(--muted); cursor: pointer; font-size: 15px; line-height: 1; width: 22px; height: 22px; border-radius: 50%; }
+#hintsOpen { position: fixed; right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); font-weight: 600; width: 40px; height: 40px; }
+
+#empty { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; padding: var(--s6); max-width: min(380px, calc(100vw - 48px)); pointer-events: none; }
+#empty b { display: block; font: 600 28px/1.14 var(--f-display); color: var(--text); margin-bottom: 8px; letter-spacing: 0.007em; }
+#empty p { margin: 0; color: var(--muted); font-size: 17px; line-height: 1.47; letter-spacing: -0.022em; }
+
+#toast {
+  position: fixed; left: 50%; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 16px) scale(0.96);
+  background: var(--glass); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); color: var(--text); box-shadow: var(--shadow-lg);
+  padding: 10px 18px; border-radius: var(--r-pill); font-size: 14px; opacity: 0; transition: opacity var(--base) var(--ease-em), transform var(--base) var(--ease-em);
+  pointer-events: none; max-width: calc(100vw - 32px); text-align: center; z-index: 9; border: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+#dropzone { position: fixed; inset: 10px; border: 2px dashed var(--accent); border-radius: var(--r-xl); background: var(--accent-soft); pointer-events: none; display: grid; place-items: center; font: 600 21px var(--f-display); color: var(--accent); }
+:focus-visible { outline: none; box-shadow: var(--focus); }
+@media (max-width: 1180px) {
+  .hints { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (max-width: 520px) {
+  .rail .icon-btn { width: 34px; height: 34px; }
+  .rail [data-tool="hand"], .rail [data-tool="link"], .rail .rule { display: none; }
+  .rail { gap: 2px; padding: 5px; }
+}
+@media (max-width: 760px) {
+  .hints, #hintsOpen, #fitBtn, .logo span, .status span, .me-name, #clearBtn { display: none !important; }
+  .board-pill { max-width: calc(100vw - 250px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+
+<div id="viewport" aria-label="Дошка"><div id="grid"></div><div id="world"></div></div>
+<div id="cursors"></div>
+<div id="marquee" hidden></div>
+<div id="dropzone" hidden>Відпустіть, щоб додати зображення на дошку</div>
+<div id="empty" hidden><b>Дошка порожня</b><p>Подвійний клік створює стікер, а Ctrl+V (⌘V) вставляє зображення з буфера.</p></div>
+
+<div class="panel pill board-pill">
+  <div class="logo"><i>◐</i><span>JamBoard</span></div>
+  <div class="sep"></div>
+  <input id="title" aria-label="Назва дошки" value="Спринт 48 · планінг">
+  <button class="icon-btn" id="boardsBtn" aria-label="Усі дошки" aria-expanded="false" title="Усі дошки"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10l5 5 5-5"/></svg></button>
+  <button class="icon-btn" id="shareBtn" aria-label="Посилання на цю дошку" title="Посилання на цю дошку"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg></button>
+  <button class="txt-btn" id="clearBtn">Очистити</button>
+</div>
+<div class="panel menu" id="boardMenu" role="menu" hidden>
+  <div class="label">Дошки</div>
+  <div class="board-list" id="boardList"></div>
+  <button class="menu-item add" id="newBoardBtn"><span class="tick">＋</span><span class="nm">Нова дошка</span></button>
+</div>
+<div class="panel popover share" id="sharePop" hidden>
+  <div class="label" id="shareLabel">Посилання на цю дошку</div>
+  <div class="row"><input class="field" id="shareUrl" readonly aria-label="Посилання"><button class="primary sm" id="copyBtn">Скопіювати</button></div>
+  <p class="hint">Хто відкриє посилання, потрапить одразу на цю дошку. Доступ до самої сторінки задає меню Share.</p>
+</div>
+
+<div class="top-right">
+  <div class="panel people">
+    <div class="status" id="status" data-s="warn"><i></i><span>Підключення…</span></div>
+    <div class="avatars" id="avatars"></div>
+    <button class="me-name" id="meName" title="Змінити ім’я"></button>
+  </div>
+  <div class="panel zoom-pill">
+    <button class="icon-btn" id="zoomOut" aria-label="Зменшити"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 12h12"/></svg></button>
+    <button id="zoomLabel" title="Масштаб 100%">100%</button>
+    <button class="icon-btn" id="zoomIn" aria-label="Збільшити"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 12h12M12 6v12"/></svg></button>
+    <button class="txt-btn" id="fitBtn" title="Shift+1">Показати все</button>
+    <button class="icon-btn" id="themeBtn" aria-label="Тема: як у системі" title="Тема: як у системі"></button>
+  </div>
+</div>
+
+<div class="panel popover" id="mePop" hidden>
+  <div>
+    <label class="label" for="nameInput">Як вас звати на дошці</label>
+    <input class="field" id="nameInput" maxlength="32" autocomplete="off" style="margin-top:6px">
+    <p class="hint">Ім’я бачать усі, хто зараз на дошці. Входити не потрібно.</p>
+  </div>
+  <div class="row"><button class="animal-btn" id="rerollBtn">Інша тваринка</button></div>
+  <div>
+    <div class="label">Колір курсора</div>
+    <div class="row" id="meColors" style="margin-top:6px"></div>
+  </div>
+  <div>
+    <div class="label" id="peopleLabel">Зараз на дошці</div>
+    <div class="people-list" id="peopleList" style="margin-top:6px"></div>
+  </div>
+  <button class="primary" id="mePopDone">Готово</button>
+</div>
+
+<div class="panel rail" role="toolbar" aria-label="Інструменти">
+  <button class="icon-btn" data-tool="select" aria-label="Виділення"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 3.5l13 7.2-5.6 1.6-2.4 5.4z"/></svg><span class="tip">Виділення<kbd>V</kbd></span></button>
+  <button class="icon-btn" data-tool="hand" aria-label="Рука"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12V5.5a1.5 1.5 0 013 0V11M11 10.5V4a1.5 1.5 0 013 0v7M14 10.5V5.5a1.5 1.5 0 013 0V14c0 4-2.5 6.5-6 6.5-2.6 0-4-1.3-5.4-3.3L4 14.4a1.5 1.5 0 012.4-1.8L8 14"/></svg><span class="tip">Рука<kbd>H · Пробіл</kbd></span></button>
+  <div class="rule"></div>
+  <button class="icon-btn" data-tool="sticky" aria-label="Стікер"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4.5 4.5h15v9l-6 6h-9z"/><path d="M19.5 13.5h-6v6"/></svg><span class="dot" id="stickyDot"></span><span class="tip">Стікер<kbd>S</kbd></span></button>
+  <button class="icon-btn" data-tool="text" aria-label="Текст"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 7V5h13v2M12 5v14M9.5 19h5"/></svg><span class="tip">Текст<kbd>T</kbd></span></button>
+  <button class="icon-btn" data-tool="stamp" aria-label="Штамп"><span class="emo-ico" id="stampIco">👍</span><span class="tip">Штамп · утримуйте, щоб більший<kbd>E</kbd></span></button>
+  <button class="icon-btn" data-tool="comment" aria-label="Коментар"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 4.5h14A1.5 1.5 0 0120.5 6v9a1.5 1.5 0 01-1.5 1.5h-7.5L7 20v-3.5H5A1.5 1.5 0 013.5 15V6A1.5 1.5 0 015 4.5z"/></svg><span class="tip">Коментар<kbd>C</kbd></span></button>
+  <button class="icon-btn" data-tool="link" aria-label="З’єднати картки"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="17" r="2.5"/><path d="M8.3 8.2c3.5 1.6 1.8 7.4 7.4 8.2"/></svg><span class="tip">З’єднати картки<kbd>L</kbd></span></button>
+  <button class="icon-btn" data-tool="section" aria-label="Секція"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M4 7.5h4"/><rect x="3.5" y="10" width="17" height="10" rx="2.5"/><path d="M3.5 4.5h7"/></svg><span class="tip">Секція<kbd>F</kbd></span></button>
+  <button class="icon-btn" id="imageBtn" aria-label="Зображення"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M20.5 16l-5-5-9 8.5"/></svg><span class="tip">Зображення<kbd>Ctrl+V</kbd></span></button>
+  <div class="rule"></div>
+  <button class="icon-btn" id="undoBtn" aria-label="Скасувати"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L4.5 11.5 9 16"/><path d="M5 11.5h9a5 5 0 010 10h-2"/></svg><span class="tip">Скасувати<kbd>Ctrl+Z</kbd></span></button>
+  <button class="icon-btn" id="redoBtn" aria-label="Повторити"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7l4.5 4.5L15 16"/><path d="M19 11.5h-9a5 5 0 000 10h2"/></svg><span class="tip">Повторити<kbd>Ctrl+Shift+Z</kbd></span></button>
+</div>
+<div class="panel palette" id="palette" hidden></div>
+
+<div class="panel" id="ctx" hidden>
+  <div class="row" id="ctxLink" style="gap:2px">
+    <div class="group" id="linkColors"></div>
+    <div class="sep"></div>
+    <button class="icon-btn" id="linkNameBtn" aria-label="Назвати зв’язок"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="7.5" width="17" height="9" rx="4.5"/><path d="M8 12h8"/></svg><span class="tip">Назвати<kbd>Enter</kbd></span></button>
+    <button class="icon-btn" id="linkFlipBtn" aria-label="Змінити напрямок"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5h14M14.5 5l3.5 3.5-3.5 3.5M20 15.5H6M9.5 12L6 15.5 9.5 19"/></svg><span class="tip">Змінити напрямок</span></button>
+    <button class="icon-btn" id="linkFlowBtn" aria-label="Рух по мотузці" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3.5 15c4-6 13-6 17 0" opacity=".55"/><circle cx="14.5" cy="10.6" r="2.6" fill="currentColor"/></svg><span class="tip">Рух по мотузці</span></button>
+    <div class="sep"></div>
+  </div>
+  <div class="group" id="ctxColors"></div>
+  <div class="sep" id="ctxSep"></div>
+  <div class="group txt-tools" id="ctxText">
+    <div class="style-pick">
+      <button class="style-btn" id="styleBtn" aria-haspopup="menu" aria-expanded="false" title="Стиль тексту: під час редагування діє на рядки з курсором або виділенням"><span id="styleLabel">Авто</span><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"/></svg></button>
+      <div class="panel style-menu" id="styleMenu" role="menu" hidden>
+        <button class="sm-item auto" data-style="auto" role="menuitemradio">Авто</button>
+        <button class="sm-item h1" data-style="h1" role="menuitemradio">Заголовок</button>
+        <button class="sm-item h2" data-style="h2" role="menuitemradio">Підзаголовок</button>
+        <button class="sm-item p" data-style="p" role="menuitemradio">Текст</button>
+        <button class="sm-item s" data-style="s" role="menuitemradio">Дрібний</button>
+      </div>
+    </div>
+    <button class="icon-btn" id="boldBtn" aria-label="Жирний" aria-pressed="false"><b>B</b><span class="tip">Жирний<kbd>Ctrl+B</kbd></span></button>
+    <button class="icon-btn" id="alignBtn" aria-label="Вирівнювання"><span id="alignIco"></span><span class="tip" id="alignTip">Вирівнювання</span></button>
+  </div>
+  <div class="sep" id="ctxTextSep"></div>
+  <button class="icon-btn" id="fitSecBtn" aria-label="Підганяти розмір під картки" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V5.5A1.5 1.5 0 015.5 4H9M15 4h3.5A1.5 1.5 0 0120 5.5V9M20 15v3.5a1.5 1.5 0 01-1.5 1.5H15M9 20H5.5A1.5 1.5 0 014 18.5V15"/><rect x="8.5" y="8.5" width="7" height="7" rx="1.2"/></svg><span class="tip">Підганяти розмір під картки</span></button>
+  <button class="icon-btn" id="wrapBtn" aria-label="Обгорнути в секцію"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><rect x="3.5" y="6" width="17" height="14" rx="2.5" stroke-dasharray="3 2.5"/><rect x="8" y="10" width="8" height="6" rx="1.2"/><path d="M3.5 3h6"/></svg><span class="tip">Обгорнути в секцію<kbd>Ctrl+G</kbd></span></button>
+  <button class="icon-btn" id="frontBtn" aria-label="На передній план"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="1.5" fill="currentColor" fill-opacity=".18"/><path d="M15 6V5.5A1.5 1.5 0 0013.5 4h-8A1.5 1.5 0 004 5.5v8A1.5 1.5 0 005.5 15H6"/></svg><span class="tip">На передній план</span></button>
+  <button class="icon-btn" id="dupBtn" aria-label="Дублювати"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 5.5A1.5 1.5 0 0014.5 4h-9A1.5 1.5 0 004 5.5v9A1.5 1.5 0 005.5 16M14 11v6M11 14h6"/></svg><span class="tip">Дублювати<kbd>Ctrl+D</kbd></span></button>
+  <button class="icon-btn" id="delBtn" aria-label="Видалити"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13"/></svg><span class="tip">Видалити<kbd>Del</kbd></span></button>
+</div>
+
+<div class="panel thread" id="thread" role="dialog" aria-label="Коментар" hidden>
+  <div class="th-head"><span class="label" id="thTitle">Новий коментар</span><span class="row" style="gap:4px"><button class="txt-btn" id="thResolve">Вирішено</button><button class="close" id="thClose" aria-label="Закрити">×</button></span></div>
+  <div class="th-msgs" id="thMsgs"></div>
+  <form class="th-form" id="thForm"><textarea class="field" id="thInput" rows="1" maxlength="1000" placeholder="Напишіть коментар…" aria-label="Текст коментаря"></textarea><button class="send-btn" id="thSend" aria-label="Надіслати" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button></form>
+</div>
+
+<div class="panel hints" id="hints">
+  <h2><span class="label">Як працювати з дошкою</span><button class="close" id="hintsClose" aria-label="Сховати підказки">×</button></h2>
+  <ul>
+    <li>Картинка чи картки FigJam <b>Ctrl/⌘ + V · правий клік</b></li>
+    <li>Новий стікер <b>Подвійний клік</b></li>
+    <li>Редагувати стікер <b>Подвійний клік · Enter</b></li>
+    <li>Рухати дошку <b>Пробіл + тягнути</b></li>
+    <li>Масштаб <b>Ctrl/⌘ + коліщатко</b></li>
+    <li>Секція <b>F і протягнути</b></li>
+    <li>Текст і заголовки <b>T і клік</b></li>
+    <li>З’єднати картки <b>Тягніть за точку на краю · L</b></li>
+    <li>Назвати зв’язок <b>Подвійний клік на мотузці</b></li>
+    <li>Посилання чи YouTube <b>Вставте URL · Ctrl/⌘ + V</b></li>
+    <li>Штамп <b>E · утримуйте, щоб більший</b></li>
+    <li>Коментар <b>C і клік</b></li>
+    <li>Змінити своє ім’я <b>Клік на аватарці</b></li>
+  </ul>
+</div>
+<button class="panel icon-btn" id="hintsOpen" aria-label="Показати підказки" hidden>?</button>
+<div id="toast" role="status"></div>
+<div id="pasteCatcher" contenteditable="true" aria-hidden="true" hidden></div>
+<input type="file" id="fileInput" accept="image/*" multiple hidden>
+
+<script src="https://cdn.jsdelivr.net/npm/fzstd@0.1.1/umd/index.js"></script>
+<script src="config.js"></script>
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const vp = $('#viewport'), world = $('#world'), marquee = $('#marquee'), ctx = $('#ctx'), cursorsEl = $('#cursors');
+  const COLORS = ['caution', 'warn', 'pink', 'purple', 'info', 'ok', 'teal', 'gray'];
+  const COLOR_NAMES = { caution: 'Жовтий', warn: 'Помаранчевий', pink: 'Рожевий', purple: 'Бузковий', info: 'Синій', ok: 'Зелений', teal: 'Бірюзовий', gray: 'Сірий' };
+  const OLD_COLORS = { yellow: 'caution', orange: 'warn', pink: 'pink', lilac: 'purple', blue: 'info', green: 'ok', white: 'gray' };
+  const PEOPLE_COLORS = ['#c2185b', '#0062c4', '#1d7a34', '#b25000', '#9b44d0', '#5e5ce6', '#007d8a', '#8a6a46'];
+  const ANIMALS = [['🦊', 'Лисиця'], ['🦉', 'Сова'], ['🐻', 'Ведмідь'], ['🦔', 'Їжак'], ['🐼', 'Панда'], ['🦦', 'Видра'], ['🐨', 'Коала'], ['🐙', 'Восьминіг'], ['🦩', 'Фламінго'], ['🐧', 'Пінгвін'], ['🦝', 'Єнот'], ['🐢', 'Черепаха'], ['🐳', 'Кит'], ['🦒', 'Жирафа'], ['🐸', 'Жабка'], ['🦥', 'Лінивець'], ['🐝', 'Бджілка'], ['🦘', 'Кенгуру'], ['🐌', 'Равлик'], ['🦭', 'Тюлень'], ['🐿️', 'Білка'], ['🦫', 'Бобер']];
+  const LOCAL_KEY = 'jamboard:v2', ME_KEY = 'jamboard:me', VIEW_KEY = 'jamboard:view', BOARD_KEY = 'jamboard:board';
+  const ARTIFACT_URL = window.JAMBOARD_CONFIG && /^https?:$/.test(location.protocol) ? location.origin + location.pathname : 'https://claude.ai/artifact/Eyk2ELfFNGzQwb54tnPot4';
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },
+  };
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  const uid = () => 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+  // ---------- identity (no sign-in: a name and an animal per browser) ----------
+  let me = null;
+  try { me = JSON.parse(store.get(ME_KEY) || 'null'); } catch (e) {}
+  if (!me || !me.name) { const [emoji, name] = pick(ANIMALS); me = { name, emoji, color: pick(PEOPLE_COLORS) }; store.set(ME_KEY, JSON.stringify(me)); }
+  if (!PEOPLE_COLORS.includes(me.color)) { me.color = pick(PEOPLE_COLORS); store.set(ME_KEY, JSON.stringify(me)); }
+
+  // ---------- state ----------
+  const items = new Map();
+  let view = { x: 0, y: 0, z: 1 };
+  let selected = new Set();
+  let tool = 'select';
+  let stickyColor = 'caution';
+  let editingId = null, editBefore = null;
+  const els = new Map();
+  const undoStack = [], redoStack = [];
+  const active = new Set(); // ids this tab is dragging/resizing/editing: remote echoes don't overwrite them
+  let mode = 'connecting'; // connecting | shared | local
+  let db = null, room = null, assetsCap = null;
+  let peers = [];
+  const remotePos = new Map(); // id -> {x, y}: where a peer is dragging it right now
+  let dragBase = new Map();    // peer|id -> {x, y}: where it stood when that peer's drag began
+  const ghost = new Map();     // id -> {x, y, until}: a peer's drop, held until their db write lands
+  const remoteSize = new Map();
+
+  const isSec = (i) => i.type === 'section';
+  const isCard = (i) => i.type === 'sticky' || i.type === 'image' || i.type === 'text' || i.type === 'web';
+  const isLink = (i) => i.type === 'link';
+  const LINKABLE = (i) => !!i && isCard(i);
+  const TEXT_TS = ['h1', 'h2', 'p', 's'];
+  const isMark = (i) => i.type === 'stamp' || i.type === 'comment';
+  // paint order: sections under everything, stamps over cards, comment pins on top
+  const RANK = { section: 0, stamp: 2, comment: 3 };
+  const rank = (i) => (i.type in RANK ? RANK[i.type] : 1);
+  const sorted = () => [...items.values()].filter((i) => !isLink(i)).sort((a, b) => rank(a) - rank(b) || (a.z || 0) - (b.z || 0) || (a.id < b.id ? -1 : 1));
+  const TYPES_OK = ['sticky', 'image', 'section', 'stamp', 'comment', 'text', 'link', 'web'];
+  const STAMPS = ['👍', '❤️', '🔥', '⭐', '✅', '❌', '❓', '💡', '🎉', '😂', '👀', '🚀'];
+  let stampEmoji = STAMPS.includes(store.get('jamboard:stamp')) ? store.get('jamboard:stamp') : STAMPS[0];
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const metaPending = new Set(); // link cards still fetching their preview
+  const ROPE_COLORS = ['gray', 'pink', 'green', 'blue', 'orange', 'purple'];
+  const ROPE_VAR = { gray: 'var(--rope)', pink: 'var(--accent)', green: '#2e9d5b', blue: '#2f7de1', orange: '#e07a2f', purple: '#8b5cf6' };
+  const ROPE_NAMES = { gray: 'Сірий', pink: 'Малиновий', green: 'Зелений', blue: 'Синій', orange: 'Помаранчевий', purple: 'Фіолетовий' };
+  const ropeColor = (l) => ROPE_VAR[l && l.color] || ROPE_VAR.gray;
+  function safeHttps(u) {
+    if (typeof u !== 'string' || u.length > 2048) return null;
+    try { const x = new URL(u); return x.protocol === 'https:' ? x.href : null; } catch (e) { return null; }
+  }
+  const quiet = new Set(); // ids whose element should appear without the pop-in
+  let booted = false;
+  const topZ = () => { let m = 0; items.forEach((i) => { m = Math.max(m, i.z || 0); }); return m + 1; };
+  const clean = (it) => { const o = {}; for (const k in it) if (k[0] !== '_' && k !== 'id') o[k] = it[k]; return o; };
+  const full = (id, data) => {
+    const o = { ...data, id, color: data.type !== 'link' && data.color && OLD_COLORS[data.color] ? OLD_COLORS[data.color] : data.color };
+    if (o.type === 'comment') { o.msgs = Array.isArray(o.msgs) ? o.msgs.filter((m) => m && typeof m.t === 'string').slice(-200) : []; o.w = 36; o.h = 36; }
+    if (o.type === 'stamp' && (typeof o.emoji !== 'string' || o.emoji.length > 16)) o.emoji = '👍';
+    if (o.type === 'link') {
+      o.a = String(o.a || ''); o.b = String(o.b || '');
+      if (typeof o.label !== 'string' || !o.label.trim()) delete o.label; else o.label = o.label.slice(0, 60);
+      if (!ROPE_COLORS.includes(o.color)) delete o.color;
+    }
+    if (o.type === 'web') {
+      o.url = safeHttps(o.url) || '';
+      if (typeof o.yt !== 'string' || !/^[\w-]{11}$/.test(o.yt)) delete o.yt;
+      ['img', 'icon'].forEach((k) => { if (!safeHttps(o[k])) delete o[k]; });
+      ['title', 'desc', 'site'].forEach((k) => { if (typeof o[k] !== 'string') delete o[k]; else o[k] = o[k].slice(0, k === 'desc' ? 300 : 160); });
+    }
+    if (o.ts != null && !TEXT_TS.includes(o.ts)) delete o.ts;
+    return o;
+  };
+
+  // ---------- persistence ----------
+  // Every write carries a revision that only grows (wall clock, but always above the highest one seen),
+  // so a late or out-of-order copy of an older state is ignored instead of pulling the item back.
+  const revs = new Map();
+  function write(it) {
+    if (mode === 'shared') {
+      const r = Math.max(Date.now(), (revs.get(it.id) || 0) + 1);
+      it.rev = r; revs.set(it.id, r);
+      db.doc(itemsPath() + '/' + it.id).set(clean(it)).catch(dbError);
+    }
+    else if (mode === 'local') saveLocal();
+  }
+  function remove(id) {
+    if (mode === 'shared') db.doc(itemsPath() + '/' + id).delete().catch(dbError);
+    else if (mode === 'local') saveLocal();
+  }
+  let localTimer = null;
+  function saveLocal(now) {
+    clearTimeout(localTimer); localTimer = null;
+    const save = () => {
+      localTimer = null;
+      const data = JSON.stringify({ items: [...items.values()].map((i) => ({ ...clean(i), id: i.id })), title: $('#title').value });
+      if (!store.set(localKey(), data)) toast('Браузеру забракло місця, щоб зберегти дошку');
+    };
+    if (now === true) save(); else localTimer = setTimeout(save, 300);
+  }
+  let lastDbToast = 0;
+  function dbError(e) {
+    if (Date.now() - lastDbToast < 4000) return; lastDbToast = Date.now();
+    const code = e && e.code;
+    if (code === 'quota_exceeded') toast('На дошці закінчилось місце. Видаліть кілька елементів');
+    else if (code === 'resource_exhausted') toast('Забагато змін за раз. Зачекайте секунду');
+    else if (code === 'revoked' || code === 'not_granted') { toast('Доступ до спільної дошки закрито'); setStatus('bad', 'Без доступу'); }
+    else toast('Не вдалося зберегти зміну. Спробуйте ще раз');
+  }
+
+  // ---------- boards: several boards in one place; "main" keeps the original paths ----------
+  let boardId = 'main', mainTitle = 'Спринт 48 · планінг', loadingBoard = true;
+  const boards = new Map(); // id -> {title, at, by}; "main" is implicit
+  const itemsPath = () => (boardId === 'main' ? 'items' : `boards/${boardId}/items`);
+  const localKey = () => (boardId === 'main' ? LOCAL_KEY : LOCAL_KEY + ':' + boardId);
+  const viewKey = () => (boardId === 'main' ? VIEW_KEY : VIEW_KEY + ':' + boardId);
+  const validBoard = (id) => typeof id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(id);
+  function boardFromUrl() {
+    const m = /[#?&]b=([A-Za-z0-9_-]{1,64})/.exec((location.hash || '') + '&' + (location.search || ''));
+    return m ? m[1] : null;
+  }
+  const titleOf = (id) => (id === 'main' ? mainTitle : (boards.get(id) && boards.get(id).title) || 'Нова дошка');
+  function showTitle() { if (document.activeElement !== $('#title')) $('#title').value = titleOf(boardId); }
+
+  // ---------- history (per action, only the items it touched, so undo never clobbers others' work) ----------
+  function snapIds(ids) { const m = {}; ids.forEach((id) => { const it = items.get(id); m[id] = it ? { ...clean(it), id } : null; }); return m; }
+  function commit(before, newIds = []) {
+    newIds.forEach((id) => { if (!(id in before)) before[id] = null; });
+    for (const [id, prev] of autofitSections()) if (!(id in before)) before[id] = prev;
+    const after = snapIds(Object.keys(before));
+    undoStack.push({ before, after }); if (undoStack.length > 120) undoStack.shift();
+    redoStack.length = 0; updateHistoryButtons();
+    persist(after);
+  }
+  function persist(map) { for (const id in map) map[id] ? write(items.get(id)) : remove(id); }
+  function putItem(id, next) {
+    const cur = items.get(id);
+    if (!cur) { items.set(id, next); return; }
+    for (const k of Object.keys(cur)) if (!(k in next)) delete cur[k];
+    Object.assign(cur, next);
+  }
+  function applyMap(map) {
+    for (const id in map) map[id] ? putItem(id, { ...map[id] }) : items.delete(id);
+    selected = new Set([...selected].filter((id) => items.has(id)));
+    persist(map); renderAll();
+  }
+  function undo() { finishEdit(); const op = undoStack.pop(); if (!op) return; applyMap(op.before); redoStack.push(op); updateHistoryButtons(); }
+  function redo() { finishEdit(); const op = redoStack.pop(); if (!op) return; applyMap(op.after); undoStack.push(op); updateHistoryButtons(); }
+  function updateHistoryButtons() { $('#undoBtn').disabled = !undoStack.length; $('#redoBtn').disabled = !redoStack.length; }
+
+  // ---------- frame scheduler: visual work that can wait is drawn once per animation frame ----------
+  const need = new Set(); let frameQueued = false;
+  function schedule(k) { need.add(k); if (!frameQueued) { frameQueued = true; requestAnimationFrame(flushFrame); } }
+  function flushFrame() {
+    frameQueued = false;
+    if (need.delete('view')) { paintView(); need.add('ctx'); need.add('cursors'); need.add('thread'); }
+    if (need.delete('boxes')) renderPeerBoxes();
+    if (need.delete('ctx')) updateCtxNow();
+    if (need.delete('cursors')) renderCursors();
+    if (need.delete('thread')) placeThread();
+    if (need.delete('links')) renderLinks();
+  }
+
+  // ---------- view ----------
+  const gridEl = $('#grid');
+  let paintedZ = 0, gridCell = 24;
+  function paintView() {
+    world.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.z})`;
+    if (view.z !== paintedZ) { // zoom-dependent work only when the zoom changed, not on every pan frame
+      paintedZ = view.z; world.style.setProperty('--z', view.z);
+      let step = 24; while (step * view.z < 12) step *= 4;
+      const g = step * view.z;
+      if (g !== gridCell || !gridEl.style.backgroundSize) { gridCell = g; gridEl.style.backgroundSize = `${g}px ${g}px`; }
+      $('#zoomLabel').textContent = Math.round(view.z * 100) + '%';
+    }
+    const g = gridCell, mx = (((view.x + 100) % g) + g) % g, my = (((view.y + 100) % g) + g) % g;
+    gridEl.style.transform = `translate3d(${mx}px, ${my}px, 0)`;
+    clearTimeout(paintView.t); const vk = viewKey(); paintView.t = setTimeout(() => store.set(vk, JSON.stringify(view)), 400);
+  }
+  function applyView() { schedule('view'); }
+  function zoomAt(sx, sy, factor) {
+    const nz = clamp(view.z * factor, 0.1, 4);
+    const wx = (sx - view.x) / view.z, wy = (sy - view.y) / view.z;
+    view.x = sx - wx * nz; view.y = sy - wy * nz; view.z = nz;
+    applyView();
+  }
+  // Smooth zoom: wheel notches and buttons glide to their target instead of jumping.
+  let zTarget = null, zAnchor = null, zRaf = 0, zLast = 0;
+  function smoothZoom(sx, sy, factor) { smoothZoomTo(sx, sy, (zTarget || view.z) * factor); }
+  function smoothZoomTo(sx, sy, z) {
+    stopGlide(); cancelFly();
+    zTarget = clamp(z, 0.1, 4); zAnchor = { sx, sy };
+    if (reduceMotion) { zoomAt(sx, sy, zTarget / view.z); zTarget = null; return; }
+    if (!zRaf) { zLast = performance.now(); zRaf = requestAnimationFrame(zoomStep); }
+  }
+  function zoomStep(t) {
+    const dt = Math.min(50, Math.max(1, t - zLast)); zLast = t;
+    if (zTarget == null) { zRaf = 0; return; }
+    const done = Math.abs(zTarget - view.z) / zTarget < 0.003;
+    const nz = done ? zTarget : view.z + (zTarget - view.z) * (1 - Math.exp(-dt / 65));
+    zoomAt(zAnchor.sx, zAnchor.sy, nz / view.z);
+    if (done) { zTarget = null; zRaf = 0; } else zRaf = requestAnimationFrame(zoomStep);
+  }
+  function stopZoom() { if (zRaf) cancelAnimationFrame(zRaf); zRaf = 0; zTarget = null; }
+  // Fly: animate the camera to another view; zoom eases in log space so it feels even.
+  let flyRaf = 0;
+  function cancelFly() { if (flyRaf) cancelAnimationFrame(flyRaf); flyRaf = 0; }
+  function flyTo(t, dur = 420) {
+    stopZoom(); stopGlide(); cancelFly();
+    if (reduceMotion) { Object.assign(view, t); applyView(); return; }
+    const W = innerWidth / 2, H = innerHeight / 2;
+    const c0 = toWorld(W, H), z0 = view.z, c1 = { x: (W - t.x) / t.z, y: (H - t.y) / t.z }, t0 = performance.now();
+    const step = (now) => {
+      const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      const z = z0 * Math.pow(t.z / z0, e);
+      view.z = z; view.x = W - (c0.x + (c1.x - c0.x) * e) * z; view.y = H - (c0.y + (c1.y - c0.y) * e) * z; applyView();
+      flyRaf = k < 1 ? requestAnimationFrame(step) : 0;
+    };
+    flyRaf = requestAnimationFrame(step);
+  }
+  // Glide: a flung pan keeps drifting and slows down.
+  let glideRaf = 0;
+  function stopGlide() { if (glideRaf) cancelAnimationFrame(glideRaf); glideRaf = 0; }
+  function glide(vx, vy) {
+    stopGlide(); if (reduceMotion || Math.hypot(vx, vy) < 0.3) return;
+    let last = performance.now();
+    const step = (now) => {
+      const dt = Math.min(40, Math.max(1, now - last)); last = now;
+      view.x += vx * dt; view.y += vy * dt; applyView();
+      const f = Math.exp(-dt / 260); vx *= f; vy *= f;
+      glideRaf = Math.hypot(vx, vy) > 0.02 ? requestAnimationFrame(step) : 0;
+    };
+    glideRaf = requestAnimationFrame(step);
+  }
+  const toWorld = (sx, sy) => ({ x: (sx - view.x) / view.z, y: (sy - view.y) / view.z });
+  const center = () => toWorld(innerWidth / 2, innerHeight / 2);
+  function bbox(list) {
+    if (!list.length) return null;
+    let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+    list.forEach((i) => { x1 = Math.min(x1, i.x); y1 = Math.min(y1, i.y); x2 = Math.max(x2, i.x + i.w); y2 = Math.max(y2, i.y + i.h); });
+    return { x1, y1, x2, y2 };
+  }
+  function fitAll(instant) {
+    const b = bbox([...items.values()].filter((i) => !isLink(i)));
+    let t = { x: innerWidth / 2, y: innerHeight / 2, z: 1 };
+    if (b) {
+      const pad = Math.min(120, innerWidth * 0.06 + 20), w = b.x2 - b.x1, h = b.y2 - b.y1;
+      const z = clamp(Math.min((innerWidth - pad * 2) / w, (innerHeight - pad * 2 - 120) / h), 0.1, 1.25);
+      t = { z, x: innerWidth / 2 - (b.x1 + w / 2) * z, y: innerHeight / 2 - 4 - (b.y1 + h / 2) * z };
+    }
+    if (instant === true) { stopZoom(); cancelFly(); Object.assign(view, t); applyView(); } else flyTo(t);
+  }
+
+  // ---------- rendering ----------
+  function elFor(it) {
+    let d = els.get(it.id);
+    if (d && d._type === it.type) return d;
+    if (d) { d.remove(); els.delete(it.id); }
+    d = document.createElement('div');
+    d.className = 'item ' + it.type; d.dataset.id = it.id; d._type = it.type;
+    const id = it.id;
+    const PORTS = '<i class="port t"></i><i class="port r"></i><i class="port b"></i><i class="port l"></i>';
+    if (it.type === 'text') {
+      d.innerHTML = '<div class="txt"></div><div class="handle" title="Змінити ширину"></div>' + PORTS;
+      const t = d.firstChild;
+      t.addEventListener('input', () => { liveText(id); const cur = items.get(id); if (cur) { cur.h = d.offsetHeight; schedule('links'); updateCtx(); } });
+      t.addEventListener('blur', () => { if (editingId === id) finishEdit(); });
+    } else if (it.type === 'sticky') {
+      d.innerHTML = '<div class="txt"></div><div class="by"></div><div class="handle" title="Змінити розмір"></div>' + PORTS;
+      const t = d.firstChild;
+      t.addEventListener('input', () => { fit(d, id); liveText(id); });
+      t.addEventListener('blur', () => { if (editingId === id) finishEdit(); });
+    } else if (it.type === 'section') {
+      d.innerHTML = '<div class="stitle"></div><div class="handle" title="Змінити розмір"></div>';
+      const t = d.firstChild;
+      t.addEventListener('blur', () => { if (editingId === id) finishEdit(); });
+      t.addEventListener('input', () => liveText(id));
+    } else if (it.type === 'web') {
+      const ARR = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2.5h5.5V8M9.5 2.5L3 9"/></svg>';
+      d.innerHTML = '<div class="web-in"><div class="web-media"><img class="web-img" alt="" draggable="false" referrerpolicy="no-referrer">'
+        + '<a class="web-go web-play" target="_blank" rel="noopener noreferrer" aria-label="Дивитися на YouTube"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z"/></svg></a></div>'
+        + '<div class="web-body"><div class="web-title"></div><div class="web-desc"></div>'
+        + '<a class="web-go site" target="_blank" rel="noopener noreferrer"><img class="web-ico" alt="" draggable="false" referrerpolicy="no-referrer"><span></span>' + ARR + '</a></div></div>'
+        + '<div class="handle" title="Змінити ширину"></div>' + PORTS;
+      const img = d.querySelector('.web-img'), ico = d.querySelector('.web-ico');
+      const again = () => { const cur = items.get(id); if (cur) { render(cur); updateCtx(); } };
+      img.addEventListener('load', () => { img.classList.add('on'); d.classList.remove('noimg'); again(); });
+      img.addEventListener('error', () => { img.classList.remove('on'); d.classList.add('noimg'); again(); });
+      ico.addEventListener('error', () => ico.classList.add('off'));
+      ico.addEventListener('load', () => ico.classList.remove('off'));
+    } else if (it.type === 'stamp') {
+      d.innerHTML = '<span class="emo"></span>';
+    } else if (it.type === 'comment') {
+      d.innerHTML = '<div class="pin"><span class="pe"></span><b></b></div>';
+    } else {
+      d.innerHTML = '<img alt="Зображення на дошці" draggable="false"><div class="handle" title="Змінити розмір"></div>' + PORTS;
+    }
+    if (booted && !quiet.delete(id)) {
+      const cls = it.type === 'stamp' ? 'thump' : 'pop';
+      d.classList.add(cls); d.addEventListener('animationend', (e) => { if (e.target === d) d.classList.remove(cls); });
+    }
+    world.appendChild(d); els.set(id, d);
+    return d;
+  }
+  function geom(it) {
+    let { x, y, w, h } = it;
+    if (!active.has(it.id)) {
+      const pos = remotePos.get(it.id) || liveGhost(it.id);
+      if (pos) { x = pos.x; y = pos.y; }
+      const rs = remoteSize.get(it.id);
+      if (rs) { w = rs.w; h = rs.h; }
+    }
+    return { x, y, w, h };
+  }
+  function liveGhost(id) { const g = ghost.get(id); if (!g) return null; if (g.until < Date.now()) { ghost.delete(id); return null; } return g; }
+  function fit(d, id) {
+    const it = items.get(id); if (!it) return;
+    const t = d.firstChild, { w, h } = geom(it);
+    const text = editingId === id ? t.innerHTML : (it.html || it.text);
+    const key = w + 'x' + h + ':' + (it.ts || '') + (it.b ? 'b' : '') + ':' + text;
+    if (d._fit === key) return; d._fit = key;
+    // Largest size (binary search, ~4 layouts instead of up to 20) where the text fits and no word breaks mid-word.
+    const STICKY_MAX = { h1: 40, h2: 30, p: 20, s: 15 };
+    const max = it.ts && STICKY_MAX[it.ts] ? Math.min(STICKY_MAX[it.ts], Math.round(w / 6)) : Math.min(28, Math.round(w / 8.5));
+    t.style.overflowWrap = '';
+    const fits = (sz) => { t.style.fontSize = sz + 'px'; return t.scrollHeight <= t.clientHeight + 1 && t.scrollWidth <= t.clientWidth + 1; };
+    if (!fits(max)) {
+      let lo = 9, hi = max - 1, best = 9;
+      while (lo <= hi) { const mid = (lo + hi) >> 1; if (fits(mid)) { best = mid; lo = mid + 1; } else hi = mid - 1; }
+      t.style.fontSize = best + 'px';
+    }
+    if (t.scrollWidth > t.clientWidth + 1) t.style.overflowWrap = 'anywhere';
+  }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { els.forEach((d) => { d._fit = null; }); renderAll(); });
+  function render(it, index) {
+    const d = elFor(it), g = geom(it);
+    schedule('links');
+    d.style.translate = `${g.x}px ${g.y}px`; d.style.width = g.w + 'px'; d.style.height = g.h + 'px';
+    if (index != null) d.style.zIndex = index + 1;
+    if (it.type === 'section') {
+      d.style.setProperty('--c', `var(--t-${COLORS.includes(it.color) ? it.color : 'gray'})`);
+      const t = d.firstChild;
+      if (editingId !== it.id && t.textContent !== (it.title || '')) t.textContent = it.title || '';
+      d.title = '';
+    } else if (it.type === 'sticky') {
+      d.style.setProperty('--c', `var(--t-${COLORS.includes(it.color) ? it.color : 'caution'})`);
+      const t = d.firstChild;
+      if (editingId !== it.id) setRich(t, it);
+      d.children[1].textContent = it.by || '';
+      t.style.fontWeight = it.b || it.ts === 'h1' ? '700' : it.ts === 'h2' ? '600' : '';
+      t.style.textAlign = it.al || '';
+      t.style.lineHeight = it.ts === 'p' || it.ts === 's' ? '1.4' : '';
+      fit(d, it.id);
+    } else if (it.type === 'text') {
+      const t = d.firstChild;
+      if (editingId !== it.id) setRich(t, it);
+      d.dataset.ts = TEXT_TS.includes(it.ts) ? it.ts : 'p';
+      t.style.fontWeight = it.b ? '700' : ''; t.style.textAlign = it.al || '';
+      d.style.height = 'auto';
+      const hh = d.offsetHeight; if (hh && Math.abs(hh - (it.h || 0)) > 0.5) it.h = hh;
+    } else if (it.type === 'web') {
+      renderWeb(d, it);
+      d.style.height = 'auto';
+      const hh = d.offsetHeight; if (hh && Math.abs(hh - (it.h || 0)) > 0.5) it.h = hh;
+    } else if (it.type === 'stamp') {
+      const e = d.firstChild; if (e.textContent !== it.emoji) e.textContent = it.emoji;
+      d.style.fontSize = Math.round(g.h * 0.8) + 'px';
+      d.title = it.by ? 'Штамп · ' + it.by : 'Штамп';
+    } else if (it.type === 'comment') {
+      const pin = d.firstChild, msgs = it.msgs || [], m0 = msgs[0] || {};
+      pin.style.setProperty('--pc', safeColor(m0.c));
+      pin.firstChild.textContent = m0.e || '💬';
+      pin.lastChild.textContent = msgs.length > 1 ? msgs.length : '';
+      pin.title = (m0.n ? m0.n + ': ' : '') + (m0.t || '').slice(0, 90);
+      d.classList.toggle('open', threadId === it.id);
+    } else {
+      const img = d.firstChild, src = it.src || it.url || '';
+      if (img.getAttribute('src') !== src) img.src = src;
+    }
+    d.classList.toggle('sel', selected.has(it.id));
+    d.classList.toggle('solo', selected.size === 1);
+    if (!d.classList.contains('dragging')) d.classList.toggle('lifted', !active.has(it.id) && remotePos.has(it.id) && !isSec(it));
+  }
+  const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } };
+  function renderWeb(d, it) {
+    const url = safeHttps(it.url), host = hostOf(url || '');
+    d.classList.toggle('yt', !!it.yt);
+    d.classList.toggle('loading', metaPending.has(it.id) && !it.title);
+    const imgSrc = it.yt ? `https://i.ytimg.com/vi/${it.yt}/hqdefault.jpg` : it.img || '';
+    const img = d.querySelector('.web-img');
+    if (!imgSrc) d.classList.add('noimg');
+    if ((img.getAttribute('src') || '') !== imgSrc) {
+      img.classList.remove('on');
+      if (imgSrc) { img.src = imgSrc; if (!it.yt) d.classList.remove('noimg'); } else { img.removeAttribute('src'); d.classList.add('noimg'); }
+    }
+    const t = d.querySelector('.web-title'), ds = d.querySelector('.web-desc'), site = d.querySelector('.web-go.site');
+    const title = it.title || (it.yt ? 'Відео на YouTube' : host || 'Посилання');
+    if (t.textContent !== title) t.textContent = title;
+    const desc = it.yt ? '' : it.desc || '';
+    if (ds.textContent !== desc) ds.textContent = desc;
+    const siteName = it.yt ? 'YouTube' + (it.site ? ' · ' + it.site : '') : it.site || host;
+    const sn = site.querySelector('span'); if (sn.textContent !== siteName) sn.textContent = siteName;
+    d.querySelectorAll('.web-go').forEach((a) => { if (url) { if (a.getAttribute('href') !== url) a.href = url; } else a.removeAttribute('href'); });
+    site.title = url || '';
+    const ico = site.querySelector('.web-ico');
+    const icoSrc = it.yt ? 'https://www.youtube.com/favicon.ico' : it.icon || (host ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64` : '');
+    if ((ico.getAttribute('src') || '') !== icoSrc) { if (icoSrc) ico.src = icoSrc; else { ico.removeAttribute('src'); ico.classList.add('off'); } }
+    d.title = '';
+  }
+  function renderAll() {
+    for (const [id, d] of els) if (!items.has(id)) {
+      els.delete(id);
+      if (booted) { d.classList.add('gone'); setTimeout(() => d.remove(), 200); } else d.remove();
+    }
+    // sections paint first, the rope layer sits just above them, then cards, stamps and pins
+    const list = sorted(); let secs = 0;
+    list.forEach((it, i) => { if (isSec(it)) secs++; render(it, isSec(it) ? i : i + 1); });
+    linksSvg.style.zIndex = secs + 1; ropeLabels.style.zIndex = secs + 1;
+    $('#empty').hidden = mode === 'connecting' || loadingBoard || items.size > 0;
+    updateCtx(); schedule('boxes'); refreshThread();
+  }
+  function setSel(ids) {
+    selected = new Set(ids);
+    for (const [id, d] of els) { d.classList.toggle('sel', selected.has(id)); d.classList.toggle('solo', selected.size === 1); }
+    schedule('links');
+    updateCtx(); sendPresence({ sel: [...selected].slice(0, 40) });
+  }
+
+  // ---------- context bar ----------
+  let ctxHidden = false;
+  function buildSwatches(container, onPick, isActive, list = COLORS, varFn = (c) => `var(--t-${c})`, names = COLOR_NAMES) {
+    container.innerHTML = '';
+    list.forEach((c) => {
+      const b = document.createElement('button');
+      b.className = 'swatch'; b.style.background = varFn(c); b.title = names[c] || ''; b.setAttribute('aria-label', names[c] || c);
+      b.setAttribute('aria-pressed', isActive(c) ? 'true' : 'false');
+      b.addEventListener('click', () => onPick(c));
+      container.appendChild(b);
+    });
+  }
+  function updateCtx() { schedule('ctx'); }
+  const ALIGN_ICONS = {
+    left: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4.5 6.5h15M4.5 12h9M4.5 17.5h12"/></svg>',
+    center: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4.5 6.5h15M7.5 12h9M6 17.5h12"/></svg>',
+    right: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4.5 6.5h15M10.5 12h9M7.5 17.5h12"/></svg>' };
+  const ALIGN_NAMES = { left: 'Ліворуч', center: 'По центру', right: 'Праворуч' };
+  // Rich text: a small safe subset (line blocks h1/h2/h6/div, inline b/i/u/s, br) — anything else is unwrapped to text.
+  const RICH = { B: 'b', STRONG: 'b', I: 'i', EM: 'i', U: 'u', S: 's', STRIKE: 's', DEL: 's', H1: 'h1', H2: 'h2', H3: 'h2', H4: 'h2', H5: 'h6', H6: 'h6', P: 'div', DIV: 'div', LI: 'div', BR: 'br' };
+  function cleanRich(html) {
+    const src = new DOMParser().parseFromString('<body>' + String(html || '') + '</body>', 'text/html').body;
+    const out = document.createElement('div');
+    const walk = (from, to) => {
+      for (const n of from.childNodes) {
+        if (n.nodeType === 3) { to.appendChild(document.createTextNode(n.nodeValue)); continue; }
+        if (n.nodeType !== 1 || /^(SCRIPT|STYLE|TEMPLATE|IFRAME|OBJECT|SVG|MATH)$/i.test(n.tagName)) continue;
+        const tag = RICH[n.tagName];
+        if (tag === 'br') { to.appendChild(document.createElement('br')); continue; }
+        let target = to;
+        if (tag) { target = document.createElement(tag); to.appendChild(target); }
+        else if (n.style && /bold|[6-9]00/.test(n.style.fontWeight || '')) { target = document.createElement('b'); to.appendChild(target); }
+        walk(n, target);
+      }
+    };
+    walk(src, out);
+    return out.innerHTML.slice(0, 20000);
+  }
+  const hasFormatting = (html) => /<(b|i|u|s|h1|h2|h6)\b/i.test(html || '');
+  function setRich(t, it) {
+    const key = it.html != null ? 'H' + it.html : 'T' + (it.text || '');
+    if (t._k === key) return; t._k = key;
+    if (it.html != null) t.innerHTML = cleanRich(it.html); else t.textContent = it.text || '';
+  }
+  const isRich = (it) => !!it && (it.type === 'sticky' || it.type === 'text');
+  const richEditing = () => !!editingId && isRich(items.get(editingId));
+  const STYLE_NAMES = { auto: 'Авто', h1: 'Заголовок', h2: 'Підзаголовок', p: 'Текст', s: 'Дрібний', mixed: 'Різні' };
+  const BLOCK_OF = { h1: 'h1', h2: 'h2', p: 'div', s: 'h6' };
+  function caretStyle() { // the style of the line the caret is on
+    const sel = getSelection(), d = els.get(editingId); if (!sel.rangeCount || !d) return 'p';
+    let n = sel.anchorNode; const root = d.firstChild;
+    while (n && n !== root) { if (n.nodeType === 1) { const t = n.tagName; if (t === 'H1') return 'h1'; if (t === 'H2') return 'h2'; if (t === 'H6') return 's'; } n = n.parentNode; }
+    return 'p';
+  }
+  function afterRich() {
+    const d = els.get(editingId); if (d) { d._fit = null; fit(d, editingId); liveText(editingId); }
+    updateCtx();
+  }
+  document.addEventListener('selectionchange', () => { if (richEditing()) updateCtx(); });
+  // keep the caret and selection in the card while you press buttons in the bar
+  ctx.addEventListener('mousedown', (e) => { if (editingId && !e.target.closest('input, textarea')) e.preventDefault(); });
+  function textTargets() { return selItems().filter((i) => i.type === 'sticky' || i.type === 'text'); }
+  function applyText(fn) {
+    const list = editingId ? [items.get(editingId)].filter((i) => i && i.type !== 'section') : textTargets();
+    if (!list.length) return;
+    const before = snapIds(list.map((i) => i.id));
+    list.forEach(fn); commit(before); renderAll();
+  }
+  function setStyle(v) {
+    if (v === 'mixed') return;
+    if (richEditing()) { // while typing: style only the lines under the caret or selection
+      try { document.execCommand('formatBlock', false, '<' + BLOCK_OF[v === 'auto' ? 'p' : v] + '>'); } catch (e) {}
+      afterRich(); return;
+    }
+    applyText((i) => { if (v === 'auto') { if (i.type === 'text') i.ts = 'p'; else delete i.ts; } else i.ts = v; });
+  }
+  const styleMenu = $('#styleMenu');
+  function closeStyleMenu() { styleMenu.hidden = true; $('#styleBtn').setAttribute('aria-expanded', 'false'); }
+  $('#styleBtn').addEventListener('click', () => {
+    const open = styleMenu.hidden;
+    if (!open) { closeStyleMenu(); return; }
+    const cur = $('#styleBtn').dataset.v || 'auto';
+    styleMenu.querySelector('[data-style="auto"]').hidden = richEditing();
+    styleMenu.querySelectorAll('.sm-item').forEach((b) => b.setAttribute('aria-checked', b.dataset.style === cur ? 'true' : 'false'));
+    styleMenu.hidden = false; $('#styleBtn').setAttribute('aria-expanded', 'true');
+  });
+  styleMenu.addEventListener('click', (e) => { const b = e.target.closest('[data-style]'); if (!b) return; closeStyleMenu(); setStyle(b.dataset.style); });
+  addEventListener('pointerdown', (e) => { if (!styleMenu.hidden && !e.target.closest('.style-pick')) closeStyleMenu(); }, true);
+  function toggleBold() {
+    if (richEditing()) { try { document.execCommand('bold'); } catch (e) {} afterRich(); return; }
+    const list = textTargets(); if (!list.length) return;
+    const on = !list.every((i) => i.b);
+    applyText((i) => { if (on) i.b = true; else delete i.b; });
+  }
+  $('#boldBtn').addEventListener('click', toggleBold);
+  $('#alignBtn').addEventListener('click', () => {
+    const list = textTargets(); if (!list.length) return;
+    const order = ['left', 'center', 'right'], next = order[(order.indexOf(list[0].al || 'left') + 1) % 3];
+    applyText((i) => { if (next === 'left') delete i.al; else i.al = next; });
+  });
+  let ctxSig = '';
+  function updateCtxNow() {
+    if (ctxHidden || !selected.size) { ctx.hidden = true; closeStyleMenu(); return; }
+    const sel = [...selected].map((id) => items.get(id)).filter((i) => i && !isLink(i));
+    if (!sel.length) { updateLinkCtx(); return; }
+    ctx.classList.remove('link-mode');
+    const texty = sel.filter((i) => i.type === 'sticky' || i.type === 'text');
+    $('#ctxText').hidden = $('#ctxTextSep').hidden = !texty.length;
+    if (texty.length) {
+      const tsOf = (i) => i.ts || (i.type === 'text' ? 'p' : 'auto');
+      const ts0 = tsOf(texty[0]);
+      let v = texty.every((i) => tsOf(i) === ts0) ? ts0 : 'mixed', bold = texty.every((i) => i.b);
+      if (richEditing()) { v = caretStyle(); try { bold = document.queryCommandState('bold'); } catch (e) {} }
+      $('#styleBtn').dataset.v = v; $('#styleLabel').textContent = STYLE_NAMES[v];
+      $('#boldBtn').setAttribute('aria-pressed', bold ? 'true' : 'false');
+      const al = texty[0].al || 'left';
+      $('#alignIco').innerHTML = ALIGN_ICONS[al]; $('#alignTip').textContent = ALIGN_NAMES[al];
+      $('#alignBtn').setAttribute('aria-label', ALIGN_NAMES[al] + '. Натисніть, щоб змінити');
+    }
+    const tinted = sel.filter((i) => i.type === 'sticky' || isSec(i));
+    $('#wrapBtn').hidden = !sel.some(isCard);
+    const secs = sel.filter(isSec);
+    $('#fitSecBtn').hidden = !secs.length;
+    $('#fitSecBtn').setAttribute('aria-pressed', secs.length && secs.every((x) => x.autofit !== false) ? 'true' : 'false');
+    const colors = $('#ctxColors');
+    colors.hidden = $('#ctxSep').hidden = !tinted.length;
+    if (tinted.length) {
+      const same = tinted.every((s) => s.color === tinted[0].color) ? tinted[0].color : null;
+      const ids = tinted.map((s) => s.id), sig = ids.join() + '|' + same;
+      if (sig !== ctxSig) { // rebuild the swatches only when the selection or its colour changed
+        ctxSig = sig;
+        buildSwatches(colors, (c) => {
+          const list = ids.map((k) => items.get(k)).filter(Boolean);
+          const before = snapIds(list.map((s) => s.id));
+          list.forEach((s) => (s.color = c)); stickyColor = c; updateStickyDot();
+          commit(before); renderAll();
+        }, (c) => c === same);
+      }
+    } else ctxSig = '';
+    ctx.hidden = false;
+    const b = bbox(sel.map(geom));
+    const sx1 = b.x1 * view.z + view.x, sx2 = b.x2 * view.z + view.x, sy1 = b.y1 * view.z + view.y, sy2 = b.y2 * view.z + view.y;
+    const w = ctx.offsetWidth, h = ctx.offsetHeight;
+    const left = clamp((sx1 + sx2) / 2 - w / 2, 12, innerWidth - w - 12);
+    let top = sy1 - h - 14;
+    if (top < 64) top = Math.min(sy2 + 14, innerHeight - h - 84);
+    if (sel.length === 1 && sel[0].type === 'text' && top < sy1 && top + h > sy1) top = Math.max(64, sy1 - h - 14);
+    ctx.style.left = left + 'px'; ctx.style.top = Math.max(64, top) + 'px';
+  }
+
+  // rope controls: colour, name, direction and the travelling dot
+  let linkSig = '';
+  const selLinks = () => [...selected].map((id) => items.get(id)).filter((i) => i && isLink(i));
+  function editLinks(fn) {
+    const list = selLinks(); if (!list.length) return;
+    const before = snapIds(list.map((l) => l.id)); list.forEach(fn); commit(before); renderAll();
+  }
+  function updateLinkCtx() {
+    const links = selLinks();
+    if (!links.length || ropeEditId) { ctx.hidden = true; return; }
+    ctx.classList.add('link-mode');
+    const c0 = links[0].color || 'gray', same = links.every((l) => (l.color || 'gray') === c0) ? c0 : null;
+    const sig = links.map((l) => l.id).join() + '|' + same;
+    if (sig !== linkSig) {
+      linkSig = sig;
+      buildSwatches($('#linkColors'), (c) => editLinks((l) => { if (c === 'gray') delete l.color; else l.color = c; }), (c) => c === same, ROPE_COLORS, (c) => ROPE_VAR[c], ROPE_NAMES);
+    }
+    $('#linkNameBtn').hidden = links.length !== 1;
+    $('#linkFlowBtn').setAttribute('aria-pressed', links.every((l) => l.flow !== false) ? 'true' : 'false');
+    ctx.hidden = false;
+    const pts = links.map((l) => ropes.get(l.id)).filter((r) => r && r.p0).map(ropeMid);
+    if (!pts.length) { ctx.hidden = true; return; }
+    const b = bbox(pts.map((p) => ({ x: p.x, y: p.y, w: 0, h: 0 })));
+    const sx = ((b.x1 + b.x2) / 2) * view.z + view.x, sy1 = b.y1 * view.z + view.y, sy2 = b.y2 * view.z + view.y;
+    const w = ctx.offsetWidth, h = ctx.offsetHeight;
+    let top = sy2 + 22; if (top + h > innerHeight - 84) top = sy1 - h - 22; // under the rope's belly, clear of the cards
+    ctx.style.left = clamp(sx - w / 2, 12, innerWidth - w - 12) + 'px'; ctx.style.top = Math.max(64, top) + 'px';
+  }
+  $('#linkNameBtn').addEventListener('click', () => { const l = selLinks()[0]; if (l) editRopeLabel(l.id); });
+  $('#linkFlipBtn').addEventListener('click', () => {
+    editLinks((l) => { const a = l.a; l.a = l.b; l.b = a; const r = ropes.get(l.id); if (r) r.ph = Math.max(0, 1 - (r.ph || 0)); });
+    toast('Напрямок змінено');
+  });
+  $('#linkFlowBtn').addEventListener('click', () => {
+    const on = selLinks().every((l) => l.flow !== false);
+    editLinks((l) => { if (on) l.flow = false; else delete l.flow; });
+  });
+
+  // ---------- tools ----------
+  function setTool(t) {
+    tool = t;
+    document.querySelectorAll('[data-tool]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.tool === t ? 'true' : 'false'));
+    ['select', 'hand', 'sticky', 'section', 'stamp', 'comment', 'text', 'link'].forEach((n) => vp.classList.toggle('tool-' + n, t === n));
+    const pal = $('#palette');
+    pal.hidden = t !== 'sticky' && t !== 'stamp';
+    pal.classList.toggle('emojis', t === 'stamp');
+    if (t === 'sticky') buildSwatches(pal, (c) => { stickyColor = c; updateStickyDot(); setTool('sticky'); }, (c) => c === stickyColor);
+    if (t === 'stamp') buildEmojis(pal);
+    if (!pal.hidden) {
+      const btn = document.querySelector(`[data-tool="${t}"]`).getBoundingClientRect(), half = pal.offsetWidth / 2;
+      pal.style.left = clamp(btn.left + btn.width / 2, half + 12, innerWidth - half - 12) + 'px';
+    }
+    if (t !== 'stamp') hideStampGhost();
+  }
+  function buildEmojis(pal) {
+    pal.innerHTML = '';
+    STAMPS.forEach((e) => {
+      const b = document.createElement('button');
+      b.className = 'emo-btn'; b.textContent = e; b.setAttribute('aria-label', 'Штамп ' + e);
+      b.setAttribute('aria-pressed', e === stampEmoji ? 'true' : 'false');
+      b.addEventListener('click', () => { stampEmoji = e; $('#stampIco').textContent = e; store.set('jamboard:stamp', e); setTool('stamp'); });
+      pal.appendChild(b);
+    });
+  }
+  function updateStickyDot() { $('#stickyDot').style.background = `var(--t-${stickyColor})`; }
+
+  // ---------- creating & editing ----------
+  function addSticky(cx, cy, text = '', color = stickyColor, size = 200) {
+    const it = { id: uid(), type: 'sticky', x: Math.round(cx - size / 2), y: Math.round(cy - size / 2), w: size, h: size, z: topZ(), color, text, by: me.name };
+    items.set(it.id, it); return it;
+  }
+  const freshText = new Set();
+  function createTextAt(p) {
+    const it = { id: uid(), type: 'text', x: Math.round(p.x - 6), y: Math.round(p.y - 16), w: 360, h: 36, ts: 'p', text: '', z: topZ(), by: me.name };
+    items.set(it.id, it); freshText.add(it.id); write(it); renderAll(); return it;
+  }
+  function createStickyAt(p) { const it = addSticky(p.x, p.y); commit({}, [it.id]); renderAll(); return it; }
+  function startEdit(id) {
+    finishEdit();
+    const it = items.get(id); if (!it || (it.type !== 'sticky' && it.type !== 'text' && !isSec(it))) return;
+    editingId = id; editBefore = freshText.delete(id) ? { [id]: null } : snapIds([id]); active.add(id);
+    const d = els.get(id); d.classList.add('editing');
+    const t = d.firstChild;
+    if (isRich(it)) {
+      t.contentEditable = 'true';
+      try { document.execCommand('defaultParagraphSeparator', false, 'div'); document.execCommand('styleWithCSS', false, false); } catch (e) {}
+    } else {
+      t.contentEditable = 'plaintext-only';
+      if (t.contentEditable !== 'plaintext-only') t.contentEditable = 'true';
+    }
+    t.focus();
+    const r = document.createRange(); r.selectNodeContents(t); r.collapse(isSec(it) && it.title === 'Нова секція' ? true : false);
+    if (isSec(it)) r.selectNodeContents(t);
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    setSel([id]); sendPresence({ editing: id });
+  }
+  let textTimer = null;
+  function liveText(id) {
+    clearTimeout(textTimer);
+    textTimer = setTimeout(() => {
+      const it = items.get(id), d = els.get(id);
+      if (!it || editingId !== id || !d) return;
+      it[isSec(it) ? 'title' : 'text'] = d.firstChild.innerText.replace(/\n+$/, '');
+      if (isRich(it)) { const h = cleanRich(d.firstChild.innerHTML); if (hasFormatting(h)) it.html = h; else delete it.html; d.firstChild._k = null; }
+      write(it);
+    }, 350);
+  }
+  function finishEdit() {
+    if (!editingId) return;
+    const id = editingId; editingId = null; clearTimeout(textTimer); active.delete(id);
+    const d = els.get(id), it = items.get(id);
+    sendPresence({ editing: null });
+    if (!d) return;
+    const t = d.firstChild;
+    const text = t.innerText.replace(/\n+$/, '');
+    t.contentEditable = 'false'; d.classList.remove('editing');
+    if (it && it.type === 'text' && !text.trim()) { // an empty text box disappears, as if it was never there
+      items.delete(id); selected.delete(id);
+      if (editBefore[id]) commit(editBefore); else remove(id);
+      renderAll(); return;
+    }
+    if (it) {
+      const f = isSec(it) ? 'title' : 'text';
+      const prev = editBefore[id] ? editBefore[id][f] : null, prevHtml = editBefore[id] ? editBefore[id].html : undefined;
+      it[f] = isSec(it) ? text.replace(/\s+/g, ' ').trim().slice(0, 80) : text;
+      if (isRich(it)) { const h = cleanRich(t.innerHTML); if (hasFormatting(h)) it.html = h; else delete it.html; t._k = null; }
+      if (text !== prev || it.html !== prevHtml) commit(editBefore); else write(it);
+      render(it); updateCtx();
+    }
+  }
+
+  // ---------- pointer ----------
+  const pointers = new Map();
+  let action = null, spaceDown = false, pendingEdit = null;
+  let lastTap = { t: 0, x: 0, y: 0, id: null };
+  let lastPointer = null;
+
+  const centerIn = (i, s) => { const cx = i.x + i.w / 2, cy = i.y + i.h / 2; return cx >= s.x && cx <= s.x + s.w && cy >= s.y && cy <= s.y + s.h; };
+  const contained = (sec) => [...items.values()].filter((i) => !isSec(i) && !isLink(i) && centerIn(i, sec));
+  function sectionAt(p, exclude) {
+    const secs = sorted().filter((i) => isSec(i) && !exclude.has(i.id) && p.x >= i.x && p.x <= i.x + i.w && p.y >= i.y && p.y <= i.y + i.h);
+    return secs[secs.length - 1] || null;
+  }
+  let dropEl = null;
+  function setDropTarget(sec) {
+    const el = sec ? els.get(sec.id) : null;
+    if (el === dropEl) return;
+    if (dropEl) dropEl.classList.remove('drop-target');
+    dropEl = el; if (el) el.classList.add('drop-target');
+  }
+  function tiltLoop(a) {
+    if (action !== a || !a.moved) return;
+    a.vx *= 0.82;
+    const target = clamp(a.vx * 0.9, -12, 12);
+    a.r += (target - a.r) * 0.22;
+    a.starts.forEach((s) => { const d = els.get(s.it.id); if (d) { d.style.rotate = a.r.toFixed(2) + 'deg'; d.style.scale = '1.04'; } });
+    requestAnimationFrame(() => tiltLoop(a));
+  }
+  let ghostEl = null;
+
+  vp.addEventListener('pointerdown', (e) => {
+    stopGlide(); cancelFly();
+    const itemEl = e.target.closest('.item');
+    if (editingId && itemEl && itemEl.dataset.id === editingId && e.target.closest('.txt, .stitle')) return;
+    if (e.button === 0 && e.target.closest('.web-go[href]')) return; // let the browser open the link
+    if (e.target.closest('.rope-label.editing')) return;
+    if (e.button === 2) { if (!editingId) showCatcher(e); return; }
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    try { vp.setPointerCapture(e.pointerId); } catch (_) {}
+    if (pointers.size === 2) {
+      const [a, b] = [...pointers.values()];
+      stopZoom(); action = { type: 'pinch', d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+      return;
+    }
+    if (pointers.size > 2) return;
+    const now = performance.now();
+    const id = itemEl ? itemEl.dataset.id : null;
+    const hit = id ? items.get(id) : null;
+    const dbl = e.button === 0 && now - lastTap.t < 380 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 10 && id === lastTap.id;
+    lastTap = dbl ? { t: 0 } : { t: now, x: e.clientX, y: e.clientY, id };
+    if (e.button === 1 || spaceDown || tool === 'hand') { action = { type: 'pan', sx: e.clientX, sy: e.clientY, vx: 0, vy: 0, t: performance.now() }; vp.classList.add('grabbing'); return; }
+    if (e.button !== 0) return;
+    if (tool === 'stamp') { startStamp(e); return; }
+    if (tool === 'comment') { action = null; if (hit && hit.type === 'comment') openThread(id); else openDraft(toWorld(e.clientX, e.clientY)); return; }
+    const ropeEl = e.target.closest && e.target.closest('[data-link]');
+    if (ropeEl && !id) {
+      const lid = ropeEl.dataset.link; action = null;
+      if (dbl) { setSel([lid]); editRopeLabel(lid); return; }
+      setSel(e.shiftKey ? [...selected, lid] : [lid]); return;
+    }
+    if ((e.target.closest('.port') || tool === 'link') && LINKABLE(hit)) { startLink(id, e); return; }
+    if (tool === 'text' && (!hit || isSec(hit))) { pendingEdit = createTextAt(toWorld(e.clientX, e.clientY)).id; setTool('select'); action = null; return; }
+
+    if (dbl && !e.target.closest('.handle')) {
+      if (hit && (hit.type === 'sticky' || hit.type === 'text')) pendingEdit = id;
+      else if (hit && hit.type === 'web') openWeb(hit);
+      else if (hit && isSec(hit) && e.target.closest('.stitle')) pendingEdit = id;
+      else if (!hit || isSec(hit)) pendingEdit = createStickyAt(toWorld(e.clientX, e.clientY)).id;
+      action = null; return;
+    }
+    if (tool === 'section' && (!hit || isSec(hit))) {
+      const p = toWorld(e.clientX, e.clientY);
+      action = { type: 'draw', x: p.x, y: p.y, sx: e.clientX, sy: e.clientY };
+      return;
+    }
+    const handle = e.target.closest('.handle');
+    if (handle && id) {
+      action = { type: 'resize', id, sx: e.clientX, sy: e.clientY, w: hit.w, h: hit.h, before: snapIds([id]), moved: false };
+      active.add(id); itemEl.classList.add('resizing'); return;
+    }
+    if (id) {
+      if (e.shiftKey) { const s = new Set(selected); s.has(id) ? s.delete(id) : s.add(id); setSel(s); }
+      else if (!selected.has(id)) setSel([id]);
+      const selList = [...items.values()].filter((i) => selected.has(i.id));
+      const ids = new Set(selList.map((i) => i.id));
+      selList.filter(isSec).forEach((sec) => contained(sec).forEach((i) => ids.add(i.id)));
+      // stamps and comment pins sitting on a moved card travel with it
+      const carriers = [...ids].map((k) => items.get(k)).filter(isCard);
+      if (carriers.length) items.forEach((i) => { if (isMark(i) && !ids.has(i.id) && carriers.some((c) => centerIn(i, c))) ids.add(i.id); });
+      const starts = [...ids].map((k) => items.get(k)).map((i) => ({ it: i, x: i.x, y: i.y }));
+      ids.forEach((k) => active.add(k));
+      const tilt = !reduceMotion && !selList.some(isSec);
+      action = { type: 'move', id, sx: e.clientX, sy: e.clientY, starts, ids, before: snapIds([...ids]), moved: false, shift: e.shiftKey, tilt, vx: 0, r: 0, lastX: e.clientX };
+      return;
+    }
+    if (tool === 'sticky') { pendingEdit = createStickyAt(toWorld(e.clientX, e.clientY)).id; setTool('select'); action = null; return; }
+    const base = e.shiftKey ? new Set(selected) : new Set();
+    if (!e.shiftKey) setSel([]);
+    action = { type: 'marquee', sx: e.clientX, sy: e.clientY, base };
+  });
+
+  vp.addEventListener('pointermove', (e) => {
+    lastPointer = { x: e.clientX, y: e.clientY };
+    const w = toWorld(e.clientX, e.clientY);
+    sendPresence({ cursor: { x: Math.round(w.x), y: Math.round(w.y) } });
+    if (tool === 'stamp') moveStampGhost(w);
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (!action) return;
+    if (action.type === 'pinch' && pointers.size === 2) {
+      const [a, b] = [...pointers.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      view.x += mx - action.mx; view.y += my - action.my;
+      zoomAt(mx, my, d / action.d);
+      Object.assign(action, { d, mx, my });
+      return;
+    }
+    const dx = e.clientX - action.sx, dy = e.clientY - action.sy;
+    if (action.type === 'pan') {
+      const now = performance.now(), dt = Math.max(1, now - action.t);
+      action.vx = action.vx * 0.4 + (dx / dt) * 0.6; action.vy = action.vy * 0.4 + (dy / dt) * 0.6; action.t = now;
+      view.x += dx; view.y += dy; action.sx = e.clientX; action.sy = e.clientY; applyView();
+    } else if (action.type === 'move') {
+      if (!action.moved && Math.hypot(dx, dy) < 3) return;
+      if (!action.moved) {
+        action.moved = true; ctxHidden = true;
+        action.starts.forEach((s) => { active.add(s.it.id); const d = els.get(s.it.id); if (d) d.classList.add('dragging', 'lifted'); });
+        if (action.tilt) requestAnimationFrame(() => tiltLoop(action));
+      }
+      action.vx = action.vx * 0.6 + (e.clientX - action.lastX) * 0.4; action.lastX = e.clientX;
+      const wdx = Math.round(dx / view.z), wdy = Math.round(dy / view.z);
+      action.starts.forEach((s) => { s.it.x = s.x + wdx; s.it.y = s.y + wdy; render(s.it); });
+      if (action.tilt) setDropTarget(sectionAt(w, action.ids));
+      sendPresence({ drag: { ids: action.starts.slice(0, 60).map((s) => s.it.id), dx: wdx, dy: wdy } });
+      updateCtx(); schedule('boxes'); if (threadId && action.ids.has(threadId)) schedule('thread');
+    } else if (action.type === 'resize') {
+      const it = items.get(action.id); action.moved = true;
+      if (it.type === 'text') it.w = Math.round(Math.max(60, action.w + dx / view.z));
+      else if (it.type === 'web') it.w = Math.round(clamp(action.w + dx / view.z, 220, 720));
+      else if (it.type === 'image') { const ar = action.w / action.h; const w2 = Math.max(40, action.w + dx / view.z); it.w = Math.round(w2); it.h = Math.round(w2 / ar); }
+      else {
+        const minW = isSec(it) ? 200 : 90, minH = isSec(it) ? 140 : 90;
+        it.w = Math.round(Math.max(minW, action.w + dx / view.z)); it.h = Math.round(Math.max(minH, action.h + dy / view.z));
+      }
+      sendPresence({ resize: { id: it.id, w: it.w, h: it.h } });
+      render(it); updateCtx(); schedule('boxes');
+    } else if (action.type === 'link') {
+      tempRope.p = w;
+      const under = document.elementFromPoint(e.clientX, e.clientY), ie = under && under.closest && under.closest('.item');
+      const tid = ie && ie.dataset.id;
+      const tgt = tid && tid !== action.from && LINKABLE(items.get(tid)) ? tid : null;
+      if (tgt !== action.to) { setLinkTarget(tgt); action.to = tgt; tempRope.to = tgt; }
+      schedule('links');
+    } else if (action.type === 'draw') {
+      if (!ghostEl) { ghostEl = document.createElement('div'); ghostEl.id = 'ghostSection'; world.appendChild(ghostEl); }
+      Object.assign(ghostEl.style, { left: Math.min(action.x, w.x) + 'px', top: Math.min(action.y, w.y) + 'px', width: Math.abs(w.x - action.x) + 'px', height: Math.abs(w.y - action.y) + 'px' });
+    } else if (action.type === 'marquee') {
+      const x1 = Math.min(action.sx, e.clientX), y1 = Math.min(action.sy, e.clientY);
+      const x2 = Math.max(action.sx, e.clientX), y2 = Math.max(action.sy, e.clientY);
+      if (x2 - x1 < 3 && y2 - y1 < 3) return;
+      marquee.hidden = false;
+      Object.assign(marquee.style, { left: x1 + 'px', top: y1 + 'px', width: x2 - x1 + 'px', height: y2 - y1 + 'px' });
+      const a = toWorld(x1, y1), b = toWorld(x2, y2);
+      const s = new Set(action.base);
+      items.forEach((i) => {
+        if (isLink(i)) return;
+        const inside = isSec(i) ? (i.x >= a.x && i.y >= a.y && i.x + i.w <= b.x && i.y + i.h <= b.y) : (i.x < b.x && i.x + i.w > a.x && i.y < b.y && i.y + i.h > a.y);
+        if (inside) s.add(i.id);
+      });
+      if (s.size !== selected.size || [...s].some((k) => !selected.has(k))) setSel(s);
+    }
+  });
+
+  function addSection(x, y, w, h, color = 'gray', title = 'Нова секція') {
+    const it = { id: uid(), type: 'section', x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h), z: topZ(), color, title, by: me.name };
+    items.set(it.id, it); return it;
+  }
+  function wrapSelection() {
+    const list = selItems().filter((i) => !isSec(i) && i.type !== 'comment'); if (!list.length) return;
+    const b = bbox(list), pad = 40;
+    const sec = addSection(b.x1 - pad, b.y1 - pad, b.x2 - b.x1 + pad * 2, b.y2 - b.y1 + pad * 2);
+    sec.n = contained(sec).length;
+    commit({}, [sec.id]); setSel([sec.id]); renderAll(); pendingEdit = null; startEdit(sec.id);
+  }
+
+  function endPointer(e) {
+    pointers.delete(e.pointerId);
+    if (action && action.type === 'pinch') { if (pointers.size < 2) action = null; return; }
+    if (action) {
+      if (action.type === 'move') {
+        if (action.moved) {
+          const z = topZ(); action.starts.forEach((s, i) => { if (!isSec(s.it)) s.it.z = z + i; });
+          action.starts.forEach((s) => {
+            active.delete(s.it.id);
+            const d = els.get(s.it.id); if (!d) return;
+            d.classList.remove('dragging', 'lifted'); d.classList.add('settle'); d.style.rotate = ''; d.style.scale = '';
+            setTimeout(() => d.classList.remove('settle'), 520);
+          });
+          setDropTarget(null);
+          commit(action.before); sendPresence({ drag: null }); renderAll();
+        } else {
+          action.ids.forEach((k) => active.delete(k));
+          if (!action.shift && selected.size > 1) setSel([action.id]);
+          const it = items.get(action.id);
+          if (it && it.type === 'comment' && !action.shift) openThread(action.id);
+        }
+      }
+      if (action.type === 'resize') {
+        active.delete(action.id); const d = els.get(action.id); if (d) d.classList.remove('resizing');
+        if (action.moved) {
+          const it = items.get(action.id);
+          if (it && isSec(it) && it.autofit !== false) { it.autofit = false; toast('Розмір задано вручну, автопідгонку вимкнено'); }
+          commit(action.before); sendPresence({ resize: null });
+        }
+      }
+      if (action.type === 'draw') {
+        const p = lastPointer ? toWorld(lastPointer.x, lastPointer.y) : { x: action.x, y: action.y };
+        let x = Math.min(action.x, p.x), y = Math.min(action.y, p.y), w = Math.abs(p.x - action.x), h = Math.abs(p.y - action.y);
+        if (w < 80 || h < 60) { w = 640; h = 420; x = action.x - w / 2; y = action.y - h / 2; }
+        if (ghostEl) { ghostEl.remove(); ghostEl = null; }
+        const sec = addSection(x, y, w, h);
+        commit({}, [sec.id]); setTool('select'); setSel([sec.id]); renderAll(); pendingEdit = sec.id;
+      }
+      if (action.type === 'pan') { vp.classList.remove('grabbing'); if (performance.now() - action.t < 70) glide(action.vx, action.vy); }
+      if (action.type === 'stamp') finishStamp(action);
+      if (action.type === 'link') finishLink(action);
+    }
+    marquee.hidden = true; action = null;
+    if (ctxHidden) { ctxHidden = false; updateCtx(); }
+    if (pendingEdit) { const id = pendingEdit; pendingEdit = null; startEdit(id); }
+  }
+  vp.addEventListener('pointerup', endPointer);
+  vp.addEventListener('pointercancel', endPointer);
+  vp.addEventListener('pointerleave', () => { if (!action) { lastPointer = null; sendPresence({ cursor: null }); hideStampGhost(); } });
+
+  vp.addEventListener('wheel', (e) => {
+    e.preventDefault(); stopGlide(); cancelFly();
+    if (e.ctrlKey || e.metaKey) {
+      const lines = e.deltaMode === 1, dy = lines ? e.deltaY * 16 : e.deltaY;
+      // a trackpad pinch sends small deltas: follow them 1:1; a mouse wheel sends big notches: glide to them
+      if (!lines && Math.abs(dy) < 40) { stopZoom(); zoomAt(e.clientX, e.clientY, Math.exp(-dy * 0.01)); }
+      else smoothZoom(e.clientX, e.clientY, Math.exp(-clamp(dy, -240, 240) * 0.0022));
+    } else {
+      let dx = e.deltaX, dy = e.deltaY;
+      if (e.deltaMode === 1) { dx *= 16; dy *= 16; }
+      if (e.shiftKey && !dx) { dx = dy; dy = 0; }
+      view.x -= dx; view.y -= dy; applyView();
+    }
+  }, { passive: false });
+
+  // ---------- links: a rope between two cards, with a little physics so it sags and sways ----------
+  const NS = 'http://www.w3.org/2000/svg';
+  const linksSvg = document.createElementNS(NS, 'svg'); linksSvg.id = 'links'; linksSvg.setAttribute('aria-hidden', 'true'); world.appendChild(linksSvg);
+  const ropeLabels = document.createElement('div'); ropeLabels.id = 'ropeLabels'; world.appendChild(ropeLabels);
+  let ropeEditId = null, pulseRaf = 0, pulseLast = 0;
+  const ropes = new Map(); // id -> rope state and its SVG
+  let tempRope = null, ropeRaf = 0, ropeLast = 0, linkTargetEl = null;
+  function edgePoint(g, tx, ty, gap) {
+    const cx = g.x + g.w / 2, cy = g.y + g.h / 2, dx = tx - cx, dy = ty - cy, len = Math.hypot(dx, dy);
+    if (len < 0.01) return { x: cx, y: cy };
+    const k = Math.min(dx ? g.w / 2 / Math.abs(dx) : Infinity, dy ? g.h / 2 / Math.abs(dy) : Infinity);
+    return { x: cx + dx * k + (dx / len) * gap, y: cy + dy * k + (dy / len) * gap };
+  }
+  function ropeEnds(l) {
+    const A = items.get(l.a); if (!A) return null;
+    const ga = geom(A);
+    let gb;
+    if (l.temp) gb = l.to && items.get(l.to) ? geom(items.get(l.to)) : { x: l.p.x, y: l.p.y, w: 0, h: 0 };
+    else { const B = items.get(l.b); if (!B) return null; gb = geom(B); }
+    const ca = { x: ga.x + ga.w / 2, y: ga.y + ga.h / 2 }, cb = { x: gb.x + gb.w / 2, y: gb.y + gb.h / 2 };
+    return [edgePoint(ga, cb.x, cb.y, -1), gb.w ? edgePoint(gb, ca.x, ca.y, -1) : cb]; // ends tuck just under the cards
+  }
+  function ropeTarget(p0, p1) { // a rope of fixed length: close cards sag more, far ones pull it taut
+    const d = Math.hypot(p1.x - p0.x, p1.y - p0.y), sag = clamp((560 - d) * 0.26, 10, 110);
+    return { x: (p0.x + p1.x) / 2, y: (p0.y + p1.y) / 2 + sag * 2 };
+  }
+  function makeRope(id, ends, temp) {
+    const g = document.createElementNS(NS, 'g');
+    if (!temp) g.dataset.link = id;
+    const mk = (tag, cls) => { const e = document.createElementNS(NS, tag); e.setAttribute('class', cls); g.appendChild(e); return e; };
+    const r = { g, halo: mk('path', 'halo'), hit: mk('path', 'rope-hit'), path: mk('path', 'rope'), pulse: mk('g', 'pulse'), lab: null, ph: Math.random(), flowOn: false };
+    const c1 = document.createElementNS(NS, 'circle'); c1.setAttribute('class', 'glow'); c1.setAttribute('r', 9);
+    const c2 = document.createElementNS(NS, 'circle'); c2.setAttribute('class', 'core'); c2.setAttribute('r', 4.2);
+    r.pulse.append(c1, c2);
+    const t = ropeTarget(ends[0], ends[1]);
+    // new ropes drop in from above and swing; ropes already there when the board opens just sit still
+    if (temp) { r.cx = ends[0].x; r.cy = ends[0].y; } else if (booted) { r.cx = t.x; r.cy = t.y - 120; } else { r.cx = t.x; r.cy = t.y; }
+    r.vx = 0; r.vy = 0;
+    linksSvg.appendChild(g); return r;
+  }
+  function renderLinks() {
+    const seen = new Set();
+    const list = [...items.values()].filter(isLink);
+    if (tempRope) list.push({ ...tempRope, id: '__temp' });
+    for (const l of list) {
+      const ends = ropeEnds(l); if (!ends) continue;
+      seen.add(l.id);
+      let r = ropes.get(l.id);
+      if (!r) { r = makeRope(l.id, ends, !!l.temp); ropes.set(l.id, r); }
+      r.p0 = ends[0]; r.p1 = ends[1]; r.t = ropeTarget(ends[0], ends[1]);
+      r.g.classList.toggle('sel', selected.has(l.id));
+      r.g.classList.toggle('temp', !!l.temp);
+      const rc = l.temp ? 'var(--accent)' : ropeColor(l);
+      if (r.rc !== rc) { r.rc = rc; r.g.style.setProperty('--rc', rc); if (r.lab) r.lab.style.setProperty('--rc', rc); }
+      r.flowOn = !l.temp && l.flow !== false && !reduceMotion;
+      if (!r.flowOn) r.pulse.style.opacity = 0;
+      if (!l.temp) syncLabel(r, l);
+    }
+    for (const [id, r] of ropes) if (!seen.has(id)) {
+      ropes.delete(id); r.g.classList.add('gone'); setTimeout(() => r.g.remove(), 220);
+      if (r.lab) { const lab = r.lab; lab.classList.add('gone'); setTimeout(() => lab.remove(), 220); }
+      if (ropeEditId === id) ropeEditId = null;
+    }
+    if (!ropeRaf) { ropeLast = performance.now(); ropeRaf = requestAnimationFrame(ropeStep); }
+    pulseKick();
+  }
+  const ropeAt = (r, s) => { const m = 1 - s; return { x: m * m * r.p0.x + 2 * m * s * r.cx + s * s * r.p1.x, y: m * m * r.p0.y + 2 * m * s * r.cy + s * s * r.p1.y }; };
+  const ropeMid = (r) => ropeAt(r, 0.5);
+  function syncLabel(r, l) {
+    const text = l.label || '';
+    if (!text && ropeEditId !== l.id) { if (r.lab) r.lab.hidden = true; return; }
+    if (!r.lab) {
+      r.lab = document.createElement('div'); r.lab.className = 'rope-label'; r.lab.dataset.link = l.id;
+      r.lab.style.setProperty('--rc', r.rc || ropeColor(l)); ropeLabels.appendChild(r.lab);
+    }
+    r.lab.dataset.link = l.id; r.lab.hidden = false;
+    r.lab.classList.toggle('sel', selected.has(l.id));
+    if (ropeEditId !== l.id && r.lab.textContent !== text) r.lab.textContent = text;
+    r.lab.title = l.by ? 'Зв’язок · ' + l.by : '';
+    placeLabel(r);
+  }
+  function placeLabel(r) {
+    if (!r.lab || r.lab.hidden || !r.p0) return;
+    const m = ropeMid(r); r.lab.style.translate = `${m.x.toFixed(1)}px ${m.y.toFixed(1)}px`;
+  }
+  function editRopeLabel(id) {
+    const l = items.get(id), r = ropes.get(id); if (!l || !isLink(l) || !r) return;
+    finishEdit(); if (ropeEditId && ropeEditId !== id) commitRopeLabel();
+    ropeEditId = id; syncLabel(r, l);
+    const lab = r.lab; lab.classList.add('editing');
+    try { lab.contentEditable = 'plaintext-only'; } catch (e) { lab.contentEditable = 'true'; }
+    if (lab.contentEditable !== 'plaintext-only') lab.contentEditable = 'true';
+    lab.textContent = l.label || '';
+    lab.onblur = () => commitRopeLabel();
+    lab.oninput = () => { if (lab.textContent.length > 60) { lab.textContent = lab.textContent.slice(0, 60); placeCaretEnd(lab); } };
+    updateCtx(); lab.focus(); placeCaretEnd(lab, true);
+  }
+  function placeCaretEnd(el, all) {
+    const rg = document.createRange(); rg.selectNodeContents(el); if (!all) rg.collapse(false);
+    const s = getSelection(); s.removeAllRanges(); s.addRange(rg);
+  }
+  function commitRopeLabel() {
+    const id = ropeEditId; if (!id) return; ropeEditId = null;
+    const r = ropes.get(id), l = items.get(id);
+    if (r && r.lab) { r.lab.onblur = null; r.lab.oninput = null; r.lab.contentEditable = 'false'; r.lab.removeAttribute('contenteditable'); r.lab.classList.remove('editing'); }
+    if (l) {
+      const v = (r && r.lab ? r.lab.textContent : '').replace(/\s+/g, ' ').trim().slice(0, 60);
+      if (v !== (l.label || '')) { const before = snapIds([id]); if (v) l.label = v; else delete l.label; commit(before); }
+    }
+    schedule('links'); updateCtx();
+  }
+  function pulseKick() { if (!pulseRaf && !reduceMotion) { pulseLast = performance.now(); pulseRaf = requestAnimationFrame(pulseStep); } }
+  function pulseStep(t) { // one glowing dot per rope, gliding from its start (a) to its end (b), then a short rest
+    const dt = Math.min(50, Math.max(0, t - pulseLast)); pulseLast = t;
+    let any = false;
+    for (const r of ropes.values()) {
+      if (!r.flowOn || !r.p0) continue; any = true;
+      const len = (Math.hypot(r.cx - r.p0.x, r.cy - r.p0.y) + Math.hypot(r.p1.x - r.cx, r.p1.y - r.cy) + Math.hypot(r.p1.x - r.p0.x, r.p1.y - r.p0.y)) / 2;
+      r.ph = ((r.ph || 0) + dt / Math.max(1400, len / 0.16)) % 1.3;
+      if (r.ph >= 1) { if (r.pulseVis) { r.pulse.style.opacity = 0; r.pulseVis = false; } continue; }
+      const u = r.ph, s = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2, p = ropeAt(r, s);
+      r.pulse.setAttribute('transform', `translate(${p.x.toFixed(1)},${p.y.toFixed(1)})`);
+      r.pulse.style.opacity = Math.min(1, Math.sin(Math.PI * u) * 1.6).toFixed(3); r.pulseVis = true;
+    }
+    pulseRaf = any ? requestAnimationFrame(pulseStep) : 0;
+  }
+  function drawRope(r) {
+    const f = (n) => n.toFixed(1), d = `M${f(r.p0.x)},${f(r.p0.y)} Q${f(r.cx)},${f(r.cy)} ${f(r.p1.x)},${f(r.p1.y)}`;
+    r.path.setAttribute('d', d); r.hit.setAttribute('d', d); r.halo.setAttribute('d', d);
+    placeLabel(r);
+  }
+  function ropeStep(t) {
+    const dt = Math.min(0.033, Math.max(0.001, (t - ropeLast) / 1000)); ropeLast = t;
+    let moving = false;
+    for (const r of ropes.values()) {
+      if (!r.t) continue;
+      if (reduceMotion) { r.cx = r.t.x; r.cy = r.t.y; r.vx = r.vy = 0; }
+      else { // damped spring on the rope's middle: it lags behind moving cards, then settles with a soft sway
+        r.vx += (150 * (r.t.x - r.cx) - 8.5 * r.vx) * dt; r.vy += (150 * (r.t.y - r.cy) - 8.5 * r.vy) * dt;
+        r.cx += r.vx * dt; r.cy += r.vy * dt;
+        if (Math.abs(r.vx) + Math.abs(r.vy) > 3 || Math.abs(r.t.x - r.cx) + Math.abs(r.t.y - r.cy) > 0.6) moving = true;
+        else { r.cx = r.t.x; r.cy = r.t.y; r.vx = r.vy = 0; }
+      }
+      drawRope(r);
+    }
+    ropeRaf = moving ? requestAnimationFrame(ropeStep) : 0;
+  }
+  function setLinkTarget(id) {
+    if (linkTargetEl) linkTargetEl.classList.remove('link-target');
+    linkTargetEl = id ? els.get(id) || null : null;
+    if (linkTargetEl) linkTargetEl.classList.add('link-target');
+  }
+  function startLink(id, e) {
+    tempRope = { a: id, p: toWorld(e.clientX, e.clientY), to: null, temp: true };
+    action = { type: 'link', from: id, to: null };
+    schedule('links');
+  }
+  function finishLink(a) {
+    setLinkTarget(null);
+    const to = a.to;
+    const dup = to && [...items.values()].some((i) => isLink(i) && ((i.a === a.from && i.b === to) || (i.a === to && i.b === a.from)));
+    if (to && !dup) {
+      const it = { id: uid(), type: 'link', a: a.from, b: to, z: topZ(), by: me.name };
+      items.set(it.id, it);
+      const r = ropes.get('__temp'); // the rope in your hand becomes the real one, mid-swing
+      if (r) { ropes.delete('__temp'); ropes.set(it.id, r); r.g.dataset.link = it.id; r.g.classList.remove('temp'); r.ph = 0; }
+      tempRope = null; commit({}, [it.id]); renderAll();
+    } else {
+      if (dup) toast('Ці картки вже з’єднані');
+      tempRope = null; schedule('links');
+    }
+  }
+
+  // ---------- stamps: click to press one on; hold to make it grow, up to twice the size ----------
+  const STAMP_BASE = 64;
+  let stampGhost = null;
+  function showStampGhost(p, size, press) {
+    if (!stampGhost) { stampGhost = document.createElement('div'); stampGhost.id = 'stampGhost'; world.appendChild(stampGhost); }
+    stampGhost.hidden = false;
+    if (stampGhost.textContent !== stampEmoji) stampGhost.textContent = stampEmoji;
+    stampGhost.classList.toggle('press', !!press);
+    const sz = Math.round(size);
+    stampGhost.style.width = stampGhost.style.height = sz + 'px';
+    stampGhost.style.fontSize = Math.round(sz * 0.8) + 'px';
+    stampGhost.style.translate = `${p.x - sz / 2}px ${p.y - sz / 2}px`;
+  }
+  function hideStampGhost() { if (stampGhost) stampGhost.hidden = true; }
+  function moveStampGhost(p) { if (action && action.type === 'stamp') { action.p = p; return; } showStampGhost(p, STAMP_BASE, false); }
+  function startStamp(e) {
+    const a = { type: 'stamp', p: toWorld(e.clientX, e.clientY), t0: performance.now(), size: STAMP_BASE };
+    action = a; showStampGhost(a.p, a.size, true);
+    const grow = (now) => {
+      if (action !== a) return;
+      const k = clamp((now - a.t0 - 160) / 900, 0, 1); // a quick click stays normal size; holding grows it with ease-out
+      a.size = STAMP_BASE * (2 - Math.pow(1 - k, 3));
+      showStampGhost(a.p, a.size, true);
+      requestAnimationFrame(grow);
+    };
+    requestAnimationFrame(grow);
+  }
+  function finishStamp(a) {
+    const size = Math.round(Math.min(STAMP_BASE * 2, a.size));
+    const it = { id: uid(), type: 'stamp', emoji: stampEmoji, x: Math.round(a.p.x - size / 2), y: Math.round(a.p.y - size / 2), w: size, h: size, z: topZ(), by: me.name };
+    items.set(it.id, it); hideStampGhost(); commit({}, [it.id]); renderAll();
+  }
+
+  // ---------- comments: a pin on the board with a thread ----------
+  const thread = $('#thread'), thMsgs = $('#thMsgs'), thInput = $('#thInput');
+  let threadId = null, draft = null, draftEl = null, thCount = -1;
+  function safeColor(c) { return typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c) ? c : 'var(--accent)'; }
+  function hhmm(t) { try { return new Date(t).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } }
+  function openDraft(p) {
+    closeThread();
+    draft = { x: Math.round(p.x), y: Math.round(p.y - 36) }; // the pin's tip lands where you clicked
+    draftEl = document.createElement('div'); draftEl.className = 'item comment open pop';
+    draftEl.innerHTML = '<div class="pin"><span class="pe"></span><b></b></div>';
+    draftEl.firstChild.style.setProperty('--pc', me.color); draftEl.querySelector('.pe').textContent = me.emoji;
+    Object.assign(draftEl.style, { translate: `${draft.x}px ${draft.y}px`, width: '36px', height: '36px', zIndex: 100001 });
+    world.appendChild(draftEl);
+    showThread();
+  }
+  function openThread(id) {
+    if (threadId === id && !thread.hidden) return;
+    closeThread(); threadId = id;
+    const d = els.get(id); if (d) d.classList.add('open');
+    showThread();
+  }
+  function showThread() {
+    const it = threadId ? items.get(threadId) : null;
+    $('#thResolve').hidden = !it;
+    thInput.placeholder = it ? 'Відповісти…' : 'Напишіть коментар…';
+    thread.hidden = false; refreshThread(); placeThread();
+    setTimeout(() => thInput.focus({ preventScroll: true }), 0);
+  }
+  function refreshThread() {
+    if (thread.hidden) return;
+    if (threadId && !items.has(threadId)) { closeThread(); return; }
+    const it = threadId ? items.get(threadId) : null, msgs = it ? it.msgs || [] : [];
+    $('#thTitle').textContent = it ? (msgs.length > 1 ? `Коментарі · ${msgs.length}` : 'Коментар') : 'Новий коментар';
+    if (msgs.length !== thCount) {
+      const append = thCount >= 0 && msgs.length > thCount; // add only new replies, so earlier ones don't re-animate
+      if (!append) thMsgs.innerHTML = '';
+      msgs.slice(append ? thCount : 0).forEach((m) => {
+        const row = document.createElement('div'); row.className = 'msg';
+        if (!append) row.style.animation = 'none';
+        const av = document.createElement('span'); av.className = 'av'; av.style.setProperty('--pc', safeColor(m.c)); av.textContent = m.e || '🙂';
+        const body = document.createElement('div');
+        const b = document.createElement('b'); b.textContent = m.n || 'Гість';
+        const tm = document.createElement('time'); tm.textContent = hhmm(m.at);
+        const tx = document.createElement('p'); tx.textContent = m.t;
+        body.append(b, tm, tx); row.append(av, body); thMsgs.appendChild(row);
+      });
+      thCount = msgs.length; thMsgs.scrollTop = thMsgs.scrollHeight;
+    }
+    schedule('thread');
+  }
+  function placeThread() {
+    if (thread.hidden) return;
+    const it = threadId ? items.get(threadId) : draft; if (!it) return;
+    const g = threadId ? geom(it) : it;
+    const sx = g.x * view.z + view.x, tipY = (g.y + 36) * view.z + view.y;
+    const w = thread.offsetWidth, h = thread.offsetHeight;
+    let left = sx + 46;
+    if (left + w > innerWidth - 12) left = sx - w - 12;
+    left = clamp(left, 12, Math.max(12, innerWidth - w - 12));
+    const top = clamp(tipY - 44, 64, Math.max(64, innerHeight - h - 84));
+    thread.style.left = left + 'px'; thread.style.top = top + 'px';
+  }
+  function closeThread() {
+    if (draftEl) { const d = draftEl; d.classList.add('gone'); setTimeout(() => d.remove(), 180); draftEl = null; }
+    draft = null;
+    if (threadId) { const d = els.get(threadId); if (d) d.classList.remove('open'); }
+    threadId = null; thread.hidden = true; thInput.value = ''; growInput(); thCount = -1;
+  }
+  function growInput() { thInput.style.height = 'auto'; thInput.style.height = Math.min(140, thInput.scrollHeight + 2) + 'px'; $('#thSend').disabled = !thInput.value.trim(); }
+  function sendComment() {
+    const t = thInput.value.trim(); if (!t) return;
+    const m = { n: me.name, e: me.emoji, c: me.color, t: t.slice(0, 1000), at: Date.now() };
+    if (draft) {
+      const it = { id: uid(), type: 'comment', x: draft.x, y: draft.y, w: 36, h: 36, z: topZ(), by: me.name, msgs: [m] };
+      items.set(it.id, it); quiet.add(it.id);
+      if (draftEl) { draftEl.remove(); draftEl = null; } draft = null;
+      threadId = it.id; thCount = 0;
+      commit({}, [it.id]); renderAll();
+      if (tool === 'comment') setTool('select');
+    } else {
+      const it = items.get(threadId); if (!it) return;
+      const before = snapIds([it.id]);
+      it.msgs = [...(it.msgs || []), m]; commit(before); renderAll();
+    }
+    thInput.value = ''; growInput(); showThread();
+  }
+  thInput.addEventListener('input', growInput);
+  $('#thForm').addEventListener('submit', (e) => { e.preventDefault(); sendComment(); });
+  $('#thClose').addEventListener('click', closeThread);
+  $('#thResolve').addEventListener('click', () => {
+    const id = threadId; if (!id || !items.has(id)) return;
+    const before = snapIds([id]); items.delete(id); selected.delete(id);
+    closeThread(); commit(before); renderAll(); toast('Коментар вирішено. Ctrl+Z поверне його');
+  });
+  addEventListener('pointerdown', (e) => { if (!thread.hidden && !e.target.closest('#thread, .comment')) closeThread(); }, true);
+
+  // ---------- selection actions ----------
+  const selItems = () => sorted().filter((i) => selected.has(i.id));
+  function bringToFront() {
+    const sel = selItems(); if (!sel.length) return;
+    const before = snapIds(sel.map((i) => i.id)); const z = topZ();
+    sel.forEach((i, k) => { i.z = z + k; }); commit(before); renderAll();
+  }
+  function deleteSelected() {
+    const ids = new Set([...selected].filter((id) => items.has(id))); if (!ids.size) return;
+    items.forEach((i) => { if (isLink(i) && (ids.has(i.a) || ids.has(i.b))) ids.add(i.id); }); // ropes go with their cards
+    const before = snapIds([...ids]);
+    ids.forEach((id) => items.delete(id)); selected.clear(); commit(before); renderAll(); setSel([]);
+  }
+  function cloneInto(list, dx, dy) {
+    const z = topZ();
+    const clones = list.map((i, k) => ({ ...clean(i), id: uid(), x: Math.round(i.x + dx), y: Math.round(i.y + dy), z: z + k, by: i.type === 'sticky' ? me.name : i.by }));
+    clones.forEach((c) => items.set(c.id, c));
+    commit({}, clones.map((c) => c.id)); setSel(clones.map((c) => c.id)); renderAll();
+  }
+  function duplicateSelected() { const sel = selItems(); if (sel.length) cloneInto(sel, 28, 28); }
+  $('#frontBtn').addEventListener('click', bringToFront);
+  $('#dupBtn').addEventListener('click', duplicateSelected);
+  $('#delBtn').addEventListener('click', deleteSelected);
+  $('#wrapBtn').addEventListener('click', wrapSelection);
+
+  // ---------- FigJam / Figma clipboard ----------
+  // FigJam puts its selection on the clipboard as HTML with a base64 "(figma)" buffer: "fig-kiwi" header, a compressed
+  // kiwi schema and a compressed kiwi message whose nodeChanges hold the stickies, shapes, text and sections.
+  const FigJam = (() => {
+    const TYPES = ['bool', 'byte', 'int', 'uint', 'float', 'string', 'int64', 'uint64'];
+    const KINDS = ['ENUM', 'STRUCT', 'MESSAGE'];
+    const i32 = new Int32Array(1), f32 = new Float32Array(i32.buffer);
+    class BB {
+      constructor(u8) { this.d = u8; this.i = 0; }
+      byte() { if (this.i >= this.d.length) throw new Error('eof'); return this.d[this.i++]; }
+      bytes() { const n = this.uint(); const out = this.d.subarray(this.i, this.i + n); this.i += n; return out; }
+      uint() { let v = 0, s = 0, b; do { b = this.byte(); v |= (b & 127) << s; s += 7; } while (b & 128 && s < 35); return v >>> 0; }
+      int() { const v = this.uint() | 0; return v & 1 ? ~(v >>> 1) : v >>> 1; }
+      uint64() { let v = 0, m = 1, b; do { b = this.byte(); v += (b & 127) * m; m *= 128; } while (b & 128 && m < 2 ** 63); return v; }
+      int64() { const v = this.uint64(); return v % 2 ? -(v + 1) / 2 : v / 2; }
+      float() {
+        const first = this.byte(); if (first === 0) return 0;
+        let bits = first | this.byte() << 8 | this.byte() << 16 | this.byte() << 24;
+        bits = bits << 23 | bits >>> 9; i32[0] = bits; return f32[0];
+      }
+      str() {
+        const parts = [];
+        for (;;) {
+          const a = this.byte(); let cp;
+          if (a < 192) cp = a;
+          else { const b = this.byte(); if (a < 224) cp = (a & 31) << 6 | b & 63; else { const c = this.byte(); if (a < 240) cp = (a & 15) << 12 | (b & 63) << 6 | c & 63; else { const d = this.byte(); cp = (a & 7) << 18 | (b & 63) << 12 | (c & 63) << 6 | d & 63; } } }
+          if (cp === 0) break;
+          parts.push(String.fromCodePoint(cp));
+        }
+        return parts.join('');
+      }
+    }
+    function schemaOf(u8) {
+      const bb = new BB(u8), n = bb.uint(), defs = [];
+      for (let i = 0; i < n; i++) {
+        const name = bb.str(), kind = KINDS[bb.byte()], fc = bb.uint(), fields = [];
+        for (let j = 0; j < fc; j++) fields.push({ name: bb.str(), type: bb.int(), isArray: !!(bb.byte() & 1), value: bb.uint() });
+        defs.push({ name, kind, fields });
+      }
+      const byName = {};
+      defs.forEach((d) => {
+        d.fields.forEach((f) => { f.typeName = d.kind === 'ENUM' ? null : f.type < 0 ? TYPES[~f.type] : defs[f.type].name; });
+        d.byValue = {}; d.fields.forEach((f) => { d.byValue[f.value] = f; });
+        byName[d.name] = d;
+      });
+      return byName;
+    }
+    function decode(bb, schema, def) {
+      const one = (t) => {
+        switch (t) {
+          case 'bool': return !!bb.byte(); case 'byte': return bb.byte(); case 'int': return bb.int(); case 'uint': return bb.uint();
+          case 'float': return bb.float(); case 'string': return bb.str(); case 'int64': return bb.int64(); case 'uint64': return bb.uint64();
+        }
+        const d = schema[t];
+        if (d.kind === 'ENUM') { const v = bb.uint(); return d.byValue[v] ? d.byValue[v].name : v; }
+        return decode(bb, schema, d);
+      };
+      const field = (f) => {
+        if (!f.isArray) return one(f.typeName);
+        if (f.typeName === 'byte') return bb.bytes();
+        const n = bb.uint(), arr = new Array(n); for (let i = 0; i < n; i++) arr[i] = one(f.typeName); return arr;
+      };
+      const out = {};
+      if (def.kind === 'STRUCT') { def.fields.forEach((f) => { out[f.name] = field(f); }); return out; }
+      for (;;) { const v = bb.uint(); if (v === 0) return out; const f = def.byValue[v]; if (!f) throw new Error('bad field ' + v); out[f.name] = field(f); }
+    }
+    async function inflate(u8) {
+      if (u8[0] === 0x28 && u8[1] === 0xb5 && u8[2] === 0x2f && u8[3] === 0xfd) {
+        if (window.fzstd) return window.fzstd.decompress(u8);
+        throw new Error('zstd decoder not loaded');
+      }
+      for (const fmt of ['deflate-raw', 'deflate']) {
+        try { return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream(fmt))).arrayBuffer()); } catch (e) {}
+      }
+      return u8;
+    }
+    function fromB64(s) { const bin = atob(s.replace(/[^A-Za-z0-9+/=]/g, '')); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
+    const has = (html) => /\(figma\)/.test(html || '');
+    async function parse(html) {
+      const m = html.match(/\(figma\)([\s\S]*?)\(\/figma\)/); if (!m) return null;
+      const u8 = fromB64(m[1]);
+      const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+      let off = 8 + 4; const chunks = [];
+      while (off + 4 <= u8.length) { const len = dv.getUint32(off, true); off += 4; chunks.push(u8.subarray(off, off + len)); off += len; }
+      if (chunks.length < 2) throw new Error('no chunks');
+      const schema = schemaOf(await inflate(chunks[0]));
+      if (!schema.Message) throw new Error('no Message');
+      return decode(new BB(await inflate(chunks[1])), schema, schema.Message);
+    }
+    function plainText(html) {
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      doc.querySelectorAll('[data-metadata], [data-buffer], meta, style, script').forEach((n) => n.remove());
+      return (doc.body.innerText || doc.body.textContent || '').trim();
+    }
+    // Turn decoded nodes into JamBoard items, keeping their layout relative to each other.
+    function toItems(msg) {
+      const nodes = (msg && msg.nodeChanges || []).filter((n) => n && n.guid && n.phase !== 'REMOVED' && n.visible !== false);
+      const key = (g) => g ? g.sessionID + ':' + g.localID : '';
+      const byId = new Map(nodes.map((n) => [key(n.guid), n]));
+      const parentOf = (n) => n.parentIndex ? byId.get(key(n.parentIndex.guid)) : null;
+      const pos = (n) => {
+        let x = 0, y = 0, cur = n, guard = 0;
+        while (cur && guard++ < 64) {
+          const t = cur.transform || {}; x += t.m02 || 0; y += t.m12 || 0;
+          const p = parentOf(cur); if (!p || p.type === 'CANVAS' || p.type === 'DOCUMENT') break; cur = p;
+        }
+        return { x, y };
+      };
+      const fill = (n) => { const p = (n.fillPaints || []).find((f) => f && f.type === 'SOLID' && f.visible !== false && f.color); return p ? p.color : null; };
+      // Text can sit in textData, derivedTextData or another nested "characters" field, or in a child TEXT node.
+      const chars = (o, depth = 0) => {
+        if (!o || typeof o !== 'object' || depth > 4) return '';
+        if (typeof o.characters === 'string' && o.characters.trim()) return o.characters;
+        for (const k of ['textData', 'derivedTextData', 'textContent']) { const t = chars(o[k], depth + 1); if (t) return t; }
+        for (const k in o) { if (k === 'parentIndex' || k === 'guid' || k === 'fillPaints') continue; const v = o[k]; if (v && typeof v === 'object' && !ArrayBuffer.isView(v)) { const t = chars(v, depth + 1); if (t) return t; } }
+        return '';
+      };
+      const childText = new Map();
+      for (const n of nodes) {
+        const p = parentOf(n);
+        if (n.type === 'TEXT' && p && (p.type === 'STICKY' || p.type === 'SHAPE_WITH_TEXT')) { const k = key(p.guid); childText.set(k, [childText.get(k), chars(n)].filter(Boolean).join('\n')); }
+      }
+      const DEFAULT_NAMES = /^(sticky|sticky note|shape|shape with text|стікер|фігура|text|текст)( \d+)?$/i;
+      const text = (n) => {
+        let t = chars(n) || childText.get(key(n.guid)) || '';
+        if (!t && n.name && !DEFAULT_NAMES.test(n.name.trim())) t = n.name;
+        return t.replace(/\u2028/g, '\n').trim();
+      };
+      const out = [];
+      for (const n of nodes) {
+        const p = parentOf(n);
+        if (n.type === 'TEXT' && p && (p.type === 'STICKY' || p.type === 'SHAPE_WITH_TEXT')) continue;
+        const { x, y } = pos(n), w = (n.size && n.size.x) || 0, h = (n.size && n.size.y) || 0;
+        if (n.type === 'STICKY' || n.type === 'SHAPE_WITH_TEXT') {
+          out.push({ type: 'sticky', x, y, w: Math.max(120, w || 240), h: Math.max(120, h || 240), text: text(n), color: nearestTone(fill(n), 'caution'), card: true, fk: key(n.guid) });
+        } else if (n.type === 'TEXT') {
+          const t = text(n); if (!t) continue;
+          const fs = +n.fontSize || 16, style = (n.fontName && n.fontName.style) || '';
+          const ts = fs >= 32 ? 'h1' : fs >= 22 ? 'h2' : fs >= 14 ? 'p' : 's';
+          const o = { type: 'text', x, y, w: Math.max(80, w || 240), h: Math.max(24, h || 40), text: t, ts, fk: key(n.guid) };
+          if (ts !== 'h1' && /bold|black|heavy|semi/i.test(style)) o.b = true;
+          out.push(o); continue;
+        } else if (n.type === 'CONNECTOR') {
+          const a = n.connectorStart && n.connectorStart.endpointNodeID, b = n.connectorEnd && n.connectorEnd.endpointNodeID;
+          if (a && b) out.push({ type: 'link', fa: key(a), fb: key(b) });
+          continue;
+        } else if (n.type === 'SECTION') {
+          out.push({ type: 'section', x, y, w: Math.max(200, w), h: Math.max(140, h), title: (n.name || 'Секція').slice(0, 80), color: nearestTone(fill(n), 'gray'), autofit: false });
+        }
+      }
+      return out;
+    }
+    return { has, parse, plainText, toItems };
+  })();
+  const TONE_RGB = { caution: [255, 225, 122], warn: [255, 195, 158], pink: [255, 184, 209], purple: [216, 198, 255], info: [181, 214, 255], ok: [189, 232, 196], teal: [166, 233, 225], gray: [227, 227, 232] };
+  function nearestTone(c, fallback) {
+    if (!c) return fallback;
+    const r = c.r * 255, g = c.g * 255, b = c.b * 255;
+    if (Math.max(r, g, b) - Math.min(r, g, b) < 18) return 'gray';
+    let best = fallback, bd = Infinity;
+    for (const [name, [R, G, B]] of Object.entries(TONE_RGB)) { const d = (R - r) ** 2 + (G - g) ** 2 + (B - b) ** 2; if (d < bd) { bd = d; best = name; } }
+    return best;
+  }
+  async function pasteFigJam(html, text, p) {
+    try {
+      const list = FigJam.toItems(await FigJam.parse(html));
+      if (!list.length) throw new Error('nothing usable');
+      // If the cards came through without text, fill them in reading order from the clipboard's plain text.
+      const cards = list.filter((i) => i.card);
+      if (cards.length && cards.every((c) => !c.text)) {
+        const plain = ((text && text.trim()) || FigJam.plainText(html)).replace(/\r/g, '');
+        if (plain) {
+          let parts = plain.split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean);
+          if (parts.length !== cards.length) { const lines = plain.split('\n').map((x) => x.trim()).filter(Boolean); if (lines.length === cards.length) parts = lines; }
+          const order = [...cards].sort((a, b) => (Math.abs(a.y - b.y) > 40 ? a.y - b.y : a.x - b.x));
+          if (parts.length === cards.length) order.forEach((c, i) => { c.text = parts[i]; });
+          else if (cards.length === 1) cards[0].text = plain;
+          else order.forEach((c, i) => { c.text = parts[i] || ''; if (i === order.length - 1 && parts.length > order.length) c.text = parts.slice(i).join('\n'); });
+        }
+      }
+      const geo = list.filter((i) => i.type !== 'link');
+      if (!geo.length) throw new Error('nothing usable');
+      const b = bbox(geo), dx = p.x - (b.x1 + b.x2) / 2, dy = p.y - (b.y1 + b.y2) / 2;
+      let z = topZ(); const newId = new Map();
+      const made = geo.map((i) => {
+        const { card, fk, ...rest } = i; const it = { ...rest, id: uid(), x: Math.round(i.x + dx), y: Math.round(i.y + dy), w: Math.round(i.w), h: Math.round(i.h), z: z++, by: me.name };
+        if (fk) newId.set(fk, it.id);
+        items.set(it.id, it); return it;
+      });
+      list.filter((i) => i.type === 'link').forEach((l) => { // FigJam connectors between pasted cards become ropes
+        const a = newId.get(l.fa), bb = newId.get(l.fb);
+        if (a && bb && a !== bb) { const it = { id: uid(), type: 'link', a, b: bb, z: z++, by: me.name }; items.set(it.id, it); made.push(it); }
+      });
+      made.filter(isSec).forEach((s) => { s.n = contained(s).length; });
+      commit({}, made.map((m) => m.id)); setSel(made.filter((m) => !isLink(m)).map((m) => m.id)); renderAll();
+      const cnt = (t) => made.filter((m) => m.type === t).length;
+      const st = cnt('sticky'), se = cnt('section'), tx = cnt('text'), ln = cnt('link');
+      toast('Вставлено з FigJam: ' + [st ? `стікерів ${st}` : '', tx ? `текстів ${tx}` : '', se ? `секцій ${se}` : '', ln ? `з’єднань ${ln}` : ''].filter(Boolean).join(', '));
+    } catch (err) {
+      const t = (text && text.trim()) || FigJam.plainText(html);
+      if (t) { pasteText(t, p); toast('Формат FigJam не розпізнано, тому вставив текст карток'); }
+      else toast('Не вдалося прочитати картки з FigJam');
+    }
+  }
+
+  // Right click: put an invisible editable spot under the pointer so the browser's own menu offers «Вставити».
+  const catcher = $('#pasteCatcher');
+  let catcherPoint = null;
+  function showCatcher(e) {
+    catcherPoint = toWorld(e.clientX, e.clientY);
+    Object.assign(catcher.style, { left: e.clientX - 24 + 'px', top: e.clientY - 24 + 'px' });
+    catcher.hidden = false; catcher.textContent = '';
+  }
+  catcher.addEventListener('contextmenu', () => catcher.focus({ preventScroll: true }));
+  function hideCatcher() { catcher.hidden = true; catcher.textContent = ''; }
+  catcher.addEventListener('blur', () => setTimeout(hideCatcher, 0));
+  catcher.addEventListener('input', () => { catcher.textContent = ''; });
+  catcher.addEventListener('pointerdown', (e) => { if (e.button !== 2) hideCatcher(); });
+
+  // ---------- sections fit their cards ----------
+  const SEC_PAD = 40;
+  // Keeps a section snug around the cards whose centre is inside it: grows when cards come in, shrinks when they leave.
+  function autofitSections() {
+    const changed = [];
+    for (const sec of items.values()) {
+      if (!isSec(sec) || sec.autofit === false || active.has(sec.id)) continue;
+      const inside = contained(sec).filter((i) => i.type !== 'comment'), n = inside.length;
+      if (inside.some((i) => active.has(i.id))) continue;
+      let x1 = sec.x, y1 = sec.y, x2 = sec.x + sec.w, y2 = sec.y + sec.h;
+      if (n) { const b = bbox(inside); x1 = b.x1 - SEC_PAD; y1 = b.y1 - SEC_PAD; x2 = b.x2 + SEC_PAD; y2 = b.y2 + SEC_PAD; }
+      const next = { x: Math.round(x1), y: Math.round(y1), w: Math.round(Math.max(200, x2 - x1)), h: Math.round(Math.max(140, y2 - y1)), n };
+      if (next.x !== sec.x || next.y !== sec.y || next.w !== sec.w || next.h !== sec.h || next.n !== sec.n) {
+        changed.push([sec.id, { ...clean(sec), id: sec.id }]);
+        Object.assign(sec, next);
+      }
+    }
+    return changed;
+  }
+  function fitSectionNow(sec) {
+    const inside = contained(sec).filter((i) => i.type !== 'comment'); if (!inside.length) return;
+    const b = bbox(inside);
+    Object.assign(sec, { x: Math.round(b.x1 - SEC_PAD), y: Math.round(b.y1 - SEC_PAD), w: Math.round(Math.max(200, b.x2 - b.x1 + SEC_PAD * 2)), h: Math.round(Math.max(140, b.y2 - b.y1 + SEC_PAD * 2)), n: inside.length });
+  }
+  $('#fitSecBtn').addEventListener('click', () => {
+    const secs = selItems().filter(isSec); if (!secs.length) return;
+    const turnOn = secs.some((s) => s.autofit === false);
+    const before = snapIds(secs.map((s) => s.id));
+    secs.forEach((s) => { s.autofit = turnOn; if (turnOn) fitSectionNow(s); });
+    commit(before); renderAll();
+    toast(turnOn ? 'Секція підганяє розмір під картки' : 'Автопідгонку вимкнено');
+  });
+
+  // ---------- clipboard ----------
+  let internalClip = null, pasteCount = 0, lastPasteAt = 0;
+  function pastePoint() {
+    const now = Date.now();
+    pasteCount = now - lastPasteAt < 4000 ? pasteCount + 1 : 0; lastPasteAt = now;
+    const base = lastPointer ? toWorld(lastPointer.x, lastPointer.y) : center();
+    const off = lastPointer ? 0 : pasteCount * 28;
+    return { x: base.x + off, y: base.y + off };
+  }
+  const isTyping = (t) => t && t.closest && t.closest('input, textarea, [contenteditable="true"], [contenteditable="plaintext-only"]');
+  function copySel(e) {
+    const sel = selItems();
+    const text = sel.filter((i) => i.type === 'sticky').map((i) => i.text).join('\n') || 'JamBoard';
+    internalClip = { text, items: sel.map((i) => ({ ...clean(i) })) };
+    e.clipboardData.setData('text/plain', text); e.preventDefault();
+  }
+  document.addEventListener('copy', (e) => { if (editingId || isTyping(e.target) || !selected.size) return; copySel(e); toast(selected.size === 1 ? 'Скопійовано' : `Скопійовано: ${selected.size}`); });
+  document.addEventListener('cut', (e) => { if (editingId || isTyping(e.target) || !selected.size) return; copySel(e); deleteSelected(); });
+  document.addEventListener('paste', (e) => {
+    const dt = e.clipboardData; if (!dt) return;
+    if (editingId) { e.preventDefault(); document.execCommand('insertText', false, dt.getData('text/plain')); return; }
+    const fromMenu = e.target && e.target.closest && e.target.closest('#pasteCatcher');
+    if (isTyping(e.target) && !fromMenu) return;
+    const at = fromMenu && catcherPoint ? () => catcherPoint : pastePoint;
+    if (fromMenu) { e.preventDefault(); hideCatcher(); }
+    const html0 = dt.getData('text/html');
+    if (FigJam.has(html0)) { e.preventDefault(); pasteFigJam(html0, dt.getData('text/plain'), at()); return; }
+    const files = [...dt.items].filter((i) => i.kind === 'file' && i.type.startsWith('image/')).map((i) => i.getAsFile()).filter(Boolean);
+    e.preventDefault();
+    if (files.length) { addImages(files, at()); return; }
+    const text = dt.getData('text/plain');
+    if (internalClip && text === internalClip.text) {
+      const p = at(), b = bbox(internalClip.items);
+      cloneInto(internalClip.items, p.x - (b.x1 + b.x2) / 2, p.y - (b.y1 + b.y2) / 2); return;
+    }
+    const html = dt.getData('text/html');
+    const m = html && html.match(/<img[^>]+src="(data:image\/[^"]+)"/i);
+    if (m) { fetch(m[1]).then((r) => r.blob()).then((b) => addImages([b], at())).catch(() => toast('Не вдалося прочитати зображення')); return; }
+    const one = text.trim();
+    if (/^https?:\/\/\S+$/i.test(one) && one.length <= 2048) { pasteUrl(one, at()); return; }
+    if (one) { pasteText(text, at()); return; }
+    toast('У буфері немає зображення чи тексту');
+  });
+  // ---------- link cards: YouTube gets its thumbnail and title, other sites their Open Graph preview ----------
+  const YT_RE = /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([\w-]{11})/;
+  function pasteUrl(raw, p) {
+    const url = safeHttps(raw.replace(/^http:/i, 'https:'));
+    if (!url) { pasteText(raw, p); return; }
+    const ym = YT_RE.exec(url), w = ym ? 360 : 320;
+    const it = { id: uid(), type: 'web', url, x: Math.round(p.x - w / 2), y: Math.round(p.y - 130), w, h: 260, z: topZ(), by: me.name };
+    if (ym) it.yt = ym[1];
+    items.set(it.id, it); metaPending.add(it.id);
+    commit({}, [it.id]); setSel([it.id]); renderAll();
+    toast(ym ? 'Додано відео з YouTube' : 'Додано картку посилання');
+    loadMeta(it.id);
+  }
+  async function getJson(url) {
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 6000);
+    try { const r = await fetch(url, { signal: ctl.signal, credentials: 'omit', referrerPolicy: 'no-referrer' }); if (!r.ok) return null; return await r.json(); }
+    catch (e) { return null; } finally { clearTimeout(timer); }
+  }
+  const str = (v, n) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, n) : undefined);
+  async function loadMeta(id) {
+    const it0 = items.get(id); if (!it0) return;
+    let meta = {};
+    if (it0.yt) {
+      const j = await getJson('https://noembed.com/embed?url=' + encodeURIComponent(it0.url));
+      if (j && !j.error) meta = { title: str(j.title, 160), site: str(j.author_name, 160) };
+    } else {
+      const j = await getJson('https://api.microlink.io/?url=' + encodeURIComponent(it0.url));
+      const d = j && j.status === 'success' && j.data;
+      if (d) meta = { title: str(d.title, 160), desc: str(d.description, 300), site: str(d.publisher, 160), img: safeHttps(d.image && d.image.url) || undefined, icon: safeHttps(d.logo && d.logo.url) || undefined };
+    }
+    metaPending.delete(id);
+    const it = items.get(id); if (!it) return;
+    Object.keys(meta).forEach((k) => meta[k] === undefined && delete meta[k]);
+    if (Object.keys(meta).length) {
+      Object.assign(it, meta); write(it);
+      for (const op of undoStack) if (op.after[id]) Object.assign(op.after[id], meta); // redo keeps the preview
+    }
+    renderAll();
+  }
+  function openWeb(it) { const u = safeHttps(it.url); if (u) window.open(u, '_blank', 'noopener,noreferrer'); }
+  function pasteText(text, p) {
+    const lines = text.split(/\r?\n/).map((l) => l.replace(/^\s*([-*•·]|\d+[.)])\s+/, '').trim()).filter(Boolean);
+    const many = lines.length > 1 && lines.length <= 40 && lines.every((l) => l.length <= 160);
+    const list = many ? lines : [text.trim()];
+    const size = 200, gap = 24, cols = Math.ceil(Math.sqrt(list.length)), rows = Math.ceil(list.length / cols);
+    const ox = p.x - (cols * (size + gap) - gap) / 2 + size / 2, oy = p.y - (rows * (size + gap) - gap) / 2 + size / 2;
+    const made = list.map((t, i) => addSticky(ox + (i % cols) * (size + gap), oy + Math.floor(i / cols) * (size + gap), t));
+    commit({}, made.map((m) => m.id)); setSel(made.map((m) => m.id)); renderAll();
+    toast(made.length > 1 ? `Додано стікерів: ${made.length}` : 'Текст додано стікером');
+  }
+
+  // ---------- images ----------
+  const loadImage = (src) => new Promise((res, rej) => { const img = new Image(); img.onload = () => res(img); img.onerror = rej; img.src = src; });
+  const toBlob = (c, type, q) => new Promise((res) => c.toBlob(res, type, q));
+  const blobToData = (b) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(b); });
+  async function encode(img, max, q) {
+    const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    let b = await toBlob(c, 'image/webp', q);
+    if (!b || b.type !== 'image/webp') b = await toBlob(c, 'image/jpeg', q);
+    return b;
+  }
+  async function storeImage(file) {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await loadImage(url);
+      const w = img.naturalWidth, h = img.naturalHeight;
+      if (assetsCap) {
+        try {
+          const blob = (w > 2400 || h > 2400 || file.size > 4e6) ? await encode(img, 2400, 0.9) : file;
+          const r = await assetsCap.upload(blob);
+          return { w, h, url: r.url, asset: r.id };
+        } catch (e) { /* fall through to an inline copy */ }
+      }
+      // No asset store in this view: keep a compressed copy inside the item (fits one shared document).
+      const limit = mode === 'shared' ? 240000 : 1500000;
+      let max = mode === 'shared' ? 1200 : 1800, q = 0.85, data = '';
+      for (let i = 0; i < 6; i++) {
+        data = await blobToData(await encode(img, max, q));
+        if (data.length <= limit) break;
+        max = Math.round(max * 0.75); q = Math.max(0.6, q - 0.08);
+      }
+      return { w, h, src: data };
+    } finally { URL.revokeObjectURL(url); }
+  }
+  async function addImages(files, p) {
+    toast(files.length > 1 ? 'Додаю зображення…' : 'Додаю зображення…');
+    let stored;
+    try { stored = await Promise.all(files.map(storeImage)); } catch (e) { toast('Не вдалося прочитати зображення'); return; }
+    const dpr = window.devicePixelRatio || 1, gap = 24;
+    const sizes = stored.map((im) => {
+      const screenW = Math.min(im.w / dpr, innerWidth * (stored.length > 1 ? 0.3 : 0.45), 640);
+      const w = Math.max(60, screenW / view.z);
+      return { w: Math.round(w), h: Math.round(w * im.h / im.w) };
+    });
+    const total = sizes.reduce((s, z) => s + z.w, 0) + gap * (stored.length - 1);
+    let x = p.x - total / 2; const z = topZ();
+    const made = stored.map((im, i) => {
+      const it = { id: uid(), type: 'image', x: Math.round(x), y: Math.round(p.y - sizes[i].h / 2), w: sizes[i].w, h: sizes[i].h, z: z + i, by: me.name };
+      if (im.url) { it.url = im.url; it.asset = im.asset; } else it.src = im.src;
+      x += sizes[i].w + gap; items.set(it.id, it); return it;
+    });
+    commit({}, made.map((m) => m.id)); setSel(made.map((m) => m.id)); renderAll();
+    toast(made.length > 1 ? `Додано зображень: ${made.length}` : 'Зображення додано');
+  }
+  $('#imageBtn').addEventListener('click', () => $('#fileInput').click());
+  $('#fileInput').addEventListener('change', (e) => {
+    const files = [...e.target.files].filter((f) => f.type.startsWith('image/'));
+    if (files.length) addImages(files, center());
+    e.target.value = '';
+  });
+  let dragDepth = 0;
+  addEventListener('dragenter', (e) => { if ([...(e.dataTransfer?.types || [])].includes('Files')) { dragDepth++; $('#dropzone').hidden = false; } });
+  addEventListener('dragleave', () => { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) $('#dropzone').hidden = true; });
+  addEventListener('dragover', (e) => e.preventDefault());
+  addEventListener('drop', (e) => {
+    e.preventDefault(); dragDepth = 0; $('#dropzone').hidden = true;
+    const files = [...(e.dataTransfer?.files || [])].filter((f) => f.type.startsWith('image/'));
+    if (files.length) addImages(files, toWorld(e.clientX, e.clientY));
+  });
+
+  // ---------- presence: people, cursors, what others hold ----------
+  let presenceState = {};
+  // Presence is merged and sent at most every 40 ms: smooth enough for others, light on the connection.
+  let presPending = null, presTimer = 0, presLast = 0;
+  function sendPresence(patch) {
+    Object.assign(presenceState, patch);
+    if (!room) return;
+    presPending = Object.assign(presPending || {}, patch);
+    const wait = 40 - (performance.now() - presLast);
+    if (wait <= 0) flushPresence(); else if (!presTimer) presTimer = setTimeout(flushPresence, wait);
+  }
+  function flushPresence() {
+    presTimer = 0; if (!presPending || !room) return;
+    const p = presPending; presPending = null; presLast = performance.now();
+    room.presence(p).catch(() => {});
+  }
+  function peerColor(p) { const c = p.presence && p.presence.color; return typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c) ? c : '#aab1bb'; }
+  function peerName(p) { const n = p.presence && p.presence.name; return typeof n === 'string' && n.trim() ? n.trim().slice(0, 32) : 'Гість'; }
+  function peerEmoji(p) { const e = p.presence && p.presence.emoji; return typeof e === 'string' && e.length <= 8 ? e : '🙂'; }
+  const peerBoard = (p) => { const b = p.presence && p.presence.board; return validBoard(b) ? b : 'main'; };
+  const others = () => peers.filter((p) => !p.sameTab && peerBoard(p) === boardId);
+  let boardSig = '';
+  function onPeers(change) {
+    peers = change.peers;
+    const prevPos = new Map(remotePos), prevSize = [...remoteSize.keys()];
+    const nextBase = new Map();
+    remotePos.clear(); remoteSize.clear();
+    for (const p of others()) {
+      const pr = p.presence || {};
+      const d = pr.drag;
+      if (d && Array.isArray(d.ids) && isFinite(d.dx) && isFinite(d.dy)) d.ids.forEach((raw) => {
+        const id = String(raw), key = p.peer + '|' + id, it = items.get(id);
+        if (!it) return;
+        const base = dragBase.get(key) || { x: it.x, y: it.y };
+        nextBase.set(key, base);
+        remotePos.set(id, { x: base.x + +d.dx, y: base.y + +d.dy });
+      });
+      const r = pr.resize;
+      if (r && isFinite(r.w) && isFinite(r.h)) remoteSize.set(String(r.id), { w: clamp(+r.w, 20, 20000), h: clamp(+r.h, 20, 20000) });
+    }
+    for (const key of dragBase.keys()) {
+      if (nextBase.has(key)) continue;
+      const id = key.slice(key.indexOf('|') + 1), last = prevPos.get(id);
+      if (last && !remotePos.has(id)) ghost.set(id, { x: last.x, y: last.y, until: Date.now() + 2500 });
+    }
+    dragBase = nextBase;
+    // Cursor moves arrive many times a second: redraw only what changed. A peer's drag touches just the items it holds.
+    const sig = JSON.stringify(others().map((p) => { const pr = p.presence || {}; return [p.peer, pr.sel || null, pr.editing || null, pr.color || null, pr.name || null]; }));
+    if (sig !== boardSig) { boardSig = sig; renderAll(); }
+    else {
+      const touched = new Set([...prevPos.keys(), ...remotePos.keys(), ...prevSize, ...remoteSize.keys()]);
+      touched.forEach((id) => { const it = items.get(id); if (it) render(it); });
+      if (touched.size) { schedule('boxes'); updateCtx(); }
+    }
+    renderPeople(); renderCursors(); if (!$('#boardMenu').hidden) renderBoardMenu();
+  }
+  let peopleSig = '';
+  function renderPeople() {
+    const list = [{ me: true, color: me.color, name: me.name, emoji: me.emoji }].concat(others().map((p) => ({ color: peerColor(p), name: peerName(p), emoji: peerEmoji(p), other: p.isMe })));
+    const sig = JSON.stringify(list);
+    if (sig === peopleSig) return;
+    peopleSig = sig;
+    const box = $('#avatars'); box.innerHTML = '';
+    list.slice(0, 5).forEach((u) => {
+      const b = document.createElement(u.me ? 'button' : 'div');
+      b.className = 'av' + (u.me ? ' me' : ''); b.style.setProperty('--pc', u.color);
+      b.textContent = u.emoji; b.title = u.me ? `${u.name} (ви) · змінити ім’я` : u.name + (u.other ? ' (ваша інша вкладка)' : '');
+      if (u.me) { b.setAttribute('aria-label', 'Змінити ім’я'); b.addEventListener('click', openMe); }
+      box.appendChild(b);
+    });
+    if (list.length > 5) { const m = document.createElement('div'); m.className = 'av more'; m.textContent = '+' + (list.length - 5); m.title = 'Ще ' + (list.length - 5); box.appendChild(m); }
+    $('#meName').textContent = me.name;
+    const pl = $('#peopleList'); pl.innerHTML = '';
+    list.forEach((u) => {
+      const row = document.createElement('div');
+      const av = document.createElement('span'); av.className = 'av'; av.style.setProperty('--pc', u.color); av.textContent = u.emoji;
+      const nm = document.createElement('span'); nm.textContent = u.name;
+      row.append(av, nm);
+      if (u.me || u.other) { const em = document.createElement('em'); em.textContent = u.me ? 'ви' : 'ваша інша вкладка'; row.append(em); }
+      pl.appendChild(row);
+    });
+    $('#peopleLabel').textContent = `Зараз на дошці · ${list.length}`;
+  }
+  // Peer cursors ease towards each new position every frame, so 25 updates a second still look like 60+.
+  const cursorEls = new Map();
+  let cursorRaf = 0, cursorLast = 0;
+  function renderCursors() {
+    const seen = new Set();
+    for (const p of others()) {
+      const c = p.presence && p.presence.cursor;
+      if (!c || !isFinite(c.x) || !isFinite(c.y)) continue;
+      seen.add(p.peer);
+      let k = cursorEls.get(p.peer);
+      if (!k) {
+        const el = document.createElement('div'); el.className = 'cursor';
+        el.innerHTML = '<svg viewBox="0 0 18 18"><path d="M2 1.5l13 6.2-5.6 1.7-2.5 5.6z" stroke="#121418" stroke-width="1.2" stroke-linejoin="round"/></svg><span></span>';
+        cursorsEl.appendChild(el); k = { el, x: +c.x, y: +c.y, col: '', name: '' }; cursorEls.set(p.peer, k);
+      }
+      k.tx = +c.x; k.ty = +c.y;
+      const col = peerColor(p), name = peerName(p);
+      if (k.col !== col) { k.col = col; k.el.style.setProperty('--pc', col); k.el.querySelector('path').setAttribute('fill', col); }
+      if (k.name !== name) { k.name = name; k.el.lastChild.textContent = name; }
+    }
+    for (const [peer, k] of cursorEls) if (!seen.has(peer)) { k.el.remove(); cursorEls.delete(peer); }
+    paintCursors();
+    if (!cursorRaf && cursorEls.size) { cursorLast = performance.now(); cursorRaf = requestAnimationFrame(cursorStep); }
+  }
+  function paintCursors() { for (const k of cursorEls.values()) k.el.style.transform = `translate3d(${k.x * view.z + view.x - 2}px, ${k.y * view.z + view.y - 2}px, 0)`; }
+  function cursorStep(t) {
+    const dt = Math.min(50, Math.max(1, t - cursorLast)); cursorLast = t;
+    const f = reduceMotion ? 1 : 1 - Math.exp(-dt / 40);
+    let moving = false;
+    for (const k of cursorEls.values()) {
+      const dx = k.tx - k.x, dy = k.ty - k.y;
+      if (Math.abs(dx * view.z) < 0.3 && Math.abs(dy * view.z) < 0.3) { k.x = k.tx; k.y = k.ty; continue; }
+      k.x += dx * f; k.y += dy * f; moving = true;
+    }
+    paintCursors();
+    cursorRaf = moving ? requestAnimationFrame(cursorStep) : 0;
+  }
+  // Boxes around what others have selected: kept and moved, not rebuilt on every update.
+  const peerBoxEls = new Map();
+  function renderPeerBoxes() {
+    const seen = new Set();
+    for (const p of others()) {
+      const pr = p.presence || {};
+      const ids = new Set(Array.isArray(pr.sel) ? pr.sel.map(String) : []);
+      if (typeof pr.editing === 'string') ids.add(pr.editing);
+      let first = true;
+      ids.forEach((id) => {
+        const it = items.get(id); if (!it || it.type === 'comment' || isLink(it)) return;
+        const key = p.peer + '|' + id; seen.add(key);
+        let b = peerBoxEls.get(key);
+        if (!b) { b = document.createElement('div'); b.className = 'peer-box'; b.style.zIndex = 100000; b.appendChild(document.createElement('span')); world.appendChild(b); peerBoxEls.set(key, b); }
+        const g = geom(it);
+        b.style.setProperty('--pc', peerColor(p));
+        b.style.translate = `${g.x}px ${g.y}px`; b.style.width = g.w + 'px'; b.style.height = g.h + 'px';
+        const label = first ? peerName(p) + (pr.editing === id ? ' пише…' : '') : '';
+        const sp = b.firstChild; sp.hidden = !label; if (sp.textContent !== label) sp.textContent = label;
+        first = false;
+      });
+    }
+    for (const [k, b] of peerBoxEls) if (!seen.has(k)) { b.remove(); peerBoxEls.delete(k); }
+  }
+  function setStatus(s, text) { const el = $('#status'); el.dataset.s = s; el.lastChild.textContent = text; el.title = text; }
+
+  // ---------- me popover ----------
+  function openMe() {
+    $('#mePop').hidden = false; $('#nameInput').value = me.name;
+    buildSwatches($('#meColors'), (c) => { me.color = c; saveMe(); openMe(); }, (c) => c === me.color, PEOPLE_COLORS, (c) => c, {});
+    renderPeople(); $('#nameInput').focus(); $('#nameInput').select();
+  }
+  function saveMe() {
+    store.set(ME_KEY, JSON.stringify(me));
+    sendPresence({ name: me.name, emoji: me.emoji, color: me.color }); renderPeople();
+  }
+  $('#meName').addEventListener('click', openMe);
+  $('#nameInput').addEventListener('input', (e) => { const v = e.target.value.trim(); if (v) { me.name = v.slice(0, 32); saveMe(); } });
+  $('#rerollBtn').addEventListener('click', () => {
+    const wasAnimal = ANIMALS.some(([, n]) => n === me.name);
+    let next; do { next = pick(ANIMALS); } while (next[0] === me.emoji && ANIMALS.length > 1);
+    me.emoji = next[0]; if (wasAnimal) me.name = next[1];
+    $('#nameInput').value = me.name; saveMe();
+  });
+  $('#mePopDone').addEventListener('click', () => { $('#mePop').hidden = true; });
+  addEventListener('pointerdown', (e) => { if (!$('#mePop').hidden && !e.target.closest('#mePop, .av.me, #meName')) $('#mePop').hidden = true; }, true);
+
+  // ---------- keyboard ----------
+  addEventListener('keydown', (e) => {
+    const mod = e.ctrlKey || e.metaKey;
+    if (e.target === thInput) {
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendComment(); }
+      else if (e.key === 'Escape') { e.preventDefault(); closeThread(); }
+      return;
+    }
+    if (editingId && mod && e.code === 'KeyB') { e.preventDefault(); toggleBold(); return; }
+    if (editingId) { if (e.key === 'Escape' || (mod && e.key === 'Enter') || (e.key === 'Enter' && items.get(editingId) && isSec(items.get(editingId)))) { e.preventDefault(); els.get(editingId).firstChild.blur(); } return; }
+    if (isTyping(e.target)) { if (e.key === 'Enter' || e.key === 'Escape') { if (e.target.classList && e.target.classList.contains('rope-label')) e.preventDefault(); if (e.key === 'Escape' && ropeEditId && e.target.classList.contains('rope-label')) { const l = items.get(ropeEditId); e.target.textContent = (l && l.label) || ''; } e.target.blur(); if (e.target.id === 'nameInput') $('#mePop').hidden = true; } return; }
+    const k = e.key.toLowerCase();
+    if (e.code === 'Space') { if (!spaceDown) { spaceDown = true; vp.classList.add('grab'); } e.preventDefault(); return; }
+    if (mod && k === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+    if (mod && k === 'y') { e.preventDefault(); redo(); return; }
+    if (mod && k === 'd') { e.preventDefault(); duplicateSelected(); return; }
+    if (mod && e.code === 'KeyG') { e.preventDefault(); wrapSelection(); return; }
+    if (mod && e.code === 'KeyB') { e.preventDefault(); toggleBold(); return; }
+    if (mod && k === 'a') { e.preventDefault(); setSel([...items.keys()]); return; }
+    if (mod && (k === '=' || k === '+')) { e.preventDefault(); smoothZoom(innerWidth / 2, innerHeight / 2, 1.25); return; }
+    if (mod && k === '-') { e.preventDefault(); smoothZoom(innerWidth / 2, innerHeight / 2, 1 / 1.25); return; }
+    if (mod && k === '0') { e.preventDefault(); smoothZoomTo(innerWidth / 2, innerHeight / 2, 1); return; }
+    if (mod) return;
+    if (e.shiftKey && e.code === 'Digit1') { e.preventDefault(); fitAll(); return; }
+    if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteSelected(); return; }
+    if (e.key === 'Escape') { closeThread(); closeBoardUi(); setSel([]); setTool('select'); $('#mePop').hidden = true; return; }
+    if (e.key === 'Enter' && selected.size === 1) {
+      e.preventDefault(); const id = [...selected][0], it = items.get(id);
+      if (it && it.type === 'comment') openThread(id); else if (it && isLink(it)) editRopeLabel(id); else if (it && it.type === 'web') openWeb(it); else startEdit(id);
+      return;
+    }
+    if (e.key.startsWith('Arrow') && selected.size) {
+      e.preventDefault();
+      const step = e.shiftKey ? 24 : 2;
+      const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+      const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+      const sel = selItems(); const before = snapIds(sel.map((i) => i.id));
+      sel.forEach((i) => { i.x += dx; i.y += dy; render(i); }); commit(before); updateCtx(); schedule('boxes');
+      return;
+    }
+    if (e.code === 'KeyV') setTool('select');
+    else if (e.code === 'KeyH') setTool('hand');
+    else if (e.code === 'KeyS' || e.code === 'KeyN') setTool('sticky');
+    else if (e.code === 'KeyF') setTool('section');
+    else if (e.code === 'KeyE') setTool('stamp');
+    else if (e.code === 'KeyC') setTool('comment');
+    else if (e.code === 'KeyT') setTool('text');
+    else if (e.code === 'KeyL') setTool('link');
+  });
+  addEventListener('keyup', (e) => { if (e.code === 'Space') { spaceDown = false; vp.classList.remove('grab'); } });
+  addEventListener('blur', () => { spaceDown = false; vp.classList.remove('grab'); });
+
+  // ---------- chrome ----------
+  document.querySelectorAll('[data-tool]').forEach((b) => b.addEventListener('click', () => setTool(b.dataset.tool)));
+  $('#undoBtn').addEventListener('click', undo);
+  $('#redoBtn').addEventListener('click', redo);
+  $('#zoomIn').addEventListener('click', () => smoothZoom(innerWidth / 2, innerHeight / 2, 1.25));
+  $('#zoomOut').addEventListener('click', () => smoothZoom(innerWidth / 2, innerHeight / 2, 1 / 1.25));
+  $('#zoomLabel').addEventListener('click', () => smoothZoomTo(innerWidth / 2, innerHeight / 2, 1));
+  $('#fitBtn').addEventListener('click', () => fitAll());
+  let titleTimer = null;
+  $('#title').addEventListener('input', () => {
+    clearTimeout(titleTimer);
+    titleTimer = setTimeout(() => {
+      const title = $('#title').value.slice(0, 120);
+      if (boardId === 'main') mainTitle = title; else boards.set(boardId, { ...(boards.get(boardId) || { at: Date.now(), by: me.name }), title });
+      if (mode === 'shared') {
+        if (boardId === 'main') db.doc('board/meta').set({ title }).catch(dbError);
+        else { const b = boards.get(boardId); db.doc('boards/' + boardId).set({ title, at: b.at || Date.now(), by: b.by || me.name }).catch(dbError); }
+      } else if (mode === 'local') { saveLocal(); saveLocalBoards(); }
+    }, 400);
+  });
+  let clearArmed = null;
+  $('#clearBtn').addEventListener('click', (e) => {
+    const b = e.currentTarget;
+    if (!clearArmed) {
+      b.textContent = 'Очистити для всіх?'; b.classList.add('danger');
+      clearArmed = setTimeout(() => { clearArmed = null; b.textContent = 'Очистити'; b.classList.remove('danger'); }, 3000);
+      return;
+    }
+    clearTimeout(clearArmed); clearArmed = null; b.textContent = 'Очистити'; b.classList.remove('danger');
+    finishEdit(); const before = snapIds([...items.keys()]);
+    items.clear(); selected.clear(); commit(before); renderAll();
+    toast('Дошку очищено. Ctrl+Z поверне все назад');
+  });
+  function setHints(open) { $('#hints').hidden = !open; $('#hintsOpen').hidden = open; store.set('jamboard:hints', open ? '1' : '0'); }
+  $('#hintsClose').addEventListener('click', () => setHints(false));
+  $('#hintsOpen').addEventListener('click', () => setHints(true));
+  let toastTimer = null;
+  function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600); }
+  addEventListener('resize', () => { updateCtx(); schedule('cursors'); schedule('thread'); });
+  setInterval(() => { if (ghost.size) { let changed = false; for (const [id, g] of ghost) if (g.until < Date.now()) { ghost.delete(id); changed = true; } if (changed) renderAll(); } }, 800);
+
+  // ---------- theme: auto (follows the app/system), light, dark ----------
+  const THEMES = { auto: ['як у системі', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="7.5"/><path d="M12 4.5a7.5 7.5 0 010 15z" fill="currentColor"/></svg>'],
+    light: ['світла', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></svg>'],
+    dark: ['темна', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M19.5 14.5A7.5 7.5 0 019.5 4.5a7.5 7.5 0 1010 10z"/></svg>'] };
+  const hostTheme = document.documentElement.getAttribute('data-theme');
+  let themePref = store.get('jamboard:theme');
+  if (!THEMES[themePref]) themePref = 'auto';
+  function applyTheme() {
+    const r = document.documentElement;
+    if (themePref === 'auto') { if (hostTheme) r.setAttribute('data-theme', hostTheme); else r.removeAttribute('data-theme'); }
+    else r.setAttribute('data-theme', themePref);
+    const [label, icon] = THEMES[themePref], b = $('#themeBtn');
+    b.innerHTML = icon; b.title = 'Тема: ' + label; b.setAttribute('aria-label', 'Тема: ' + label + '. Натисніть, щоб змінити');
+  }
+  $('#themeBtn').addEventListener('click', () => {
+    themePref = { auto: 'light', light: 'dark', dark: 'auto' }[themePref];
+    store.set('jamboard:theme', themePref); applyTheme(); toast('Тема: ' + THEMES[themePref][0]);
+  });
+  applyTheme();
+
+  // ---------- boards menu, switching, share link ----------
+  function boardIds() {
+    const list = [...boards.entries()].sort((a, b) => (a[1].at || 0) - (b[1].at || 0)).map(([id]) => id);
+    return ['main', ...list.filter((id) => id !== 'main')];
+  }
+  function renderBoardMenu() {
+    const box = $('#boardList'); box.innerHTML = '';
+    const ids = boardIds(); if (!ids.includes(boardId)) ids.push(boardId);
+    ids.forEach((id) => {
+      const b = document.createElement('button'); b.className = 'menu-item'; b.setAttribute('role', 'menuitem');
+      if (id === boardId) b.setAttribute('aria-current', 'true');
+      const tick = document.createElement('span'); tick.className = 'tick'; tick.textContent = id === boardId ? '✓' : '';
+      const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = titleOf(id);
+      const who = document.createElement('span'); who.className = 'who';
+      const here = peers.filter((p) => !p.sameTab && peerBoard(p) === id);
+      who.textContent = here.slice(0, 4).map(peerEmoji).join(''); who.title = here.map(peerName).join(', ');
+      b.append(tick, nm, who);
+      b.addEventListener('click', () => { closeBoardUi(); if (id !== boardId) openBoard(id); });
+      box.appendChild(b);
+    });
+  }
+  function closeBoardUi() { $('#boardMenu').hidden = true; $('#sharePop').hidden = true; $('#boardsBtn').setAttribute('aria-expanded', 'false'); }
+  $('#boardsBtn').addEventListener('click', () => {
+    const open = $('#boardMenu').hidden; closeBoardUi();
+    if (open) { renderBoardMenu(); $('#boardMenu').hidden = false; $('#boardsBtn').setAttribute('aria-expanded', 'true'); }
+  });
+  $('#shareBtn').addEventListener('click', () => {
+    const open = $('#sharePop').hidden; closeBoardUi(); if (!open) return;
+    $('#shareUrl').value = ARTIFACT_URL + '#b=' + boardId;
+    $('#shareLabel').textContent = 'Посилання на «' + titleOf(boardId) + '»';
+    $('#copyBtn').textContent = 'Скопіювати';
+    $('#sharePop').hidden = false; $('#shareUrl').select();
+  });
+  $('#copyBtn').addEventListener('click', async () => {
+    const url = $('#shareUrl').value; let ok = false;
+    try { await navigator.clipboard.writeText(url); ok = true; } catch (e) { $('#shareUrl').select(); try { ok = document.execCommand('copy'); } catch (e2) {} }
+    $('#copyBtn').textContent = ok ? 'Скопійовано' : 'Виділено, натисніть ⌘C';
+    if (ok) toast('Посилання на дошку скопійовано');
+  });
+  $('#newBoardBtn').addEventListener('click', () => {
+    closeBoardUi();
+    const id = 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const meta = { title: 'Нова дошка', at: Date.now(), by: me.name };
+    boards.set(id, meta);
+    if (mode === 'shared') db.doc('boards/' + id).set(meta).catch(dbError); else saveLocalBoards();
+    openBoard(id);
+    setTimeout(() => { $('#title').focus(); $('#title').select(); }, 260);
+    toast('Нову дошку створено');
+  });
+  addEventListener('pointerdown', (e) => { if (!e.target.closest('#boardMenu, #sharePop, #boardsBtn, #shareBtn')) closeBoardUi(); }, true);
+  addEventListener('hashchange', () => { const b = boardFromUrl(); if (b && b !== boardId) openBoard(b); });
+  function saveLocalBoards() { store.set('jamboard:boards', JSON.stringify([...boards.entries()].map(([id, b]) => ({ id, ...b })))); }
+
+  let unsubItems = null;
+  let switchToken = 0;
+  function openBoard(id) {
+    if (!validBoard(id)) id = 'main';
+    finishEdit(); closeThread();
+    if (mode === 'local' && localTimer) saveLocal(true); // keep the old board's last change before leaving it
+    const first = !els.size && !items.size, token = ++switchToken;
+    if (first) { doOpen(id); return; }
+    world.classList.add('switching'); // fade the old board out, then swap
+    setTimeout(() => { if (token === switchToken) doOpen(id); }, 130);
+  }
+  function doOpen(id) {
+    if (unsubItems) { try { unsubItems(); } catch (e) {} unsubItems = null; }
+    boardId = id; store.set(BOARD_KEY, id);
+    try { if (location.hash && boardFromUrl() !== id) history.replaceState(null, '', '#b=' + id); } catch (e) {}
+    items.clear(); revs.clear(); selected.clear(); remotePos.clear(); remoteSize.clear(); ghost.clear(); dragBase = new Map();
+    undoStack.length = 0; redoStack.length = 0; updateHistoryButtons();
+    for (const d of els.values()) d.remove(); els.clear();
+    for (const r of ropes.values()) { r.g.remove(); if (r.lab) r.lab.remove(); } ropes.clear(); tempRope = null; ropeEditId = null;
+    booted = false; loadingBoard = true; ctx.hidden = true;
+    showTitle(); sendPresence({ board: id, sel: [], drag: null, resize: null, editing: null });
+    boardSig = ''; renderPeople(); renderCursors(); renderAll();
+    if (mode === 'shared') subscribeItems(); else loadLocalBoard();
+  }
+  function boardReady() {
+    loadingBoard = false;
+    if (!restoreView()) fitAll(true);
+    renderAll(); world.classList.remove('switching');
+    const b = boardId; setTimeout(() => { if (b === boardId) booted = true; }, 300);
+  }
+  function loadLocalBoard() {
+    try {
+      const d = JSON.parse(store.get(localKey()) || 'null');
+      if (d) {
+        (d.items || []).forEach((i) => items.set(i.id, full(i.id, i)));
+        if (typeof d.title === 'string') { if (boardId === 'main') mainTitle = d.title; else boards.set(boardId, { ...(boards.get(boardId) || {}), title: d.title }); }
+      }
+    } catch (e) {}
+    showTitle(); boardReady();
+  }
+
+  // ---------- boot ----------
+  function restoreView() {
+    try { const v = JSON.parse(store.get(viewKey()) || 'null'); if (v && isFinite(v.x) && isFinite(v.z)) { view = v; applyView(); return true; } } catch (e) {}
+    return false;
+  }
+  function startLocal() {
+    mode = 'local';
+    setStatus('', 'Лише на цьому пристрої');
+    try { (JSON.parse(store.get('jamboard:boards') || '[]') || []).forEach((b) => { if (b && validBoard(b.id)) boards.set(b.id, { title: String(b.title || 'Нова дошка').slice(0, 120), at: +b.at || 0 }); }); } catch (e) {}
+    openBoard(startBoard());
+  }
+  function startBoard() {
+    const fromUrl = boardFromUrl(), saved = store.get(BOARD_KEY);
+    return fromUrl || (validBoard(saved) ? saved : 'main');
+  }
+  function subscribeItems() {
+    const myBoard = boardId; let first = true;
+    unsubItems = db.collection(itemsPath()).onSnapshot((snap) => {
+      if (myBoard !== boardId) return;
+      for (const ch of snap.docChanges()) {
+        const id = ch.doc.id;
+        const data = ch.type === 'removed' ? null : ch.doc.data();
+        if (data && typeof data.rev === 'number') {
+          const seen = revs.get(id) || 0;
+          if (data.rev < seen) continue; // an older state arriving late: keep the newer one
+          revs.set(id, data.rev);
+        }
+        if (ch.type === 'removed') { items.delete(id); continue; }
+        ghost.delete(id);
+        if (active.has(id)) continue;
+        if (!data || typeof data !== 'object') continue;
+        if (!TYPES_OK.includes(data.type)) continue;
+        putItem(id, full(id, data));
+      }
+      selected = new Set([...selected].filter((id) => items.has(id)));
+      if (first) { first = false; boardReady(); } else renderAll();
+    }, (e) => { dbError(e); setStatus('bad', 'Немає зв’язку'); });
+  }
+  async function startShared() {
+    mode = 'shared';
+    db.collection('boards').onSnapshot((snap) => {
+      for (const ch of snap.docChanges()) {
+        if (ch.type === 'removed') { boards.delete(ch.doc.id); continue; }
+        const d = ch.doc.data() || {};
+        boards.set(ch.doc.id, { title: typeof d.title === 'string' ? d.title.slice(0, 120) : 'Без назви', at: +d.at || 0, by: typeof d.by === 'string' ? d.by : '' });
+      }
+      showTitle(); if (!$('#boardMenu').hidden) renderBoardMenu();
+    }, () => {});
+    db.doc('board/meta').onSnapshot((s) => {
+      const t = s.exists && s.data() && s.data().title;
+      if (typeof t === 'string') mainTitle = t;
+      showTitle(); if (!$('#boardMenu').hidden) renderBoardMenu();
+    }, () => {});
+    openBoard(startBoard());
+  }
+  // ---------- own hosting: Supabase stands in for the claude.ai db / room / assets capabilities ----------
+  // config.js (next to index.html) sets window.JAMBOARD_CONFIG = { supabaseUrl, supabaseAnonKey, bucket }.
+  // The shims below expose the same small surface the board already uses, so the rest of the code is unchanged.
+  function loadScript(src) {
+    return new Promise((res, rej) => { const el = document.createElement('script'); el.src = src; el.async = true; el.onload = res; el.onerror = rej; document.head.appendChild(el); });
+  }
+  async function startSupabase(cfg) {
+    if (!window.supabase) await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.js');
+    const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth: { persistSession: false }, realtime: { params: { eventsPerSecond: 20 } } });
+    const T = 'docs', parent = (p) => p.slice(0, p.lastIndexOf('/'));
+    const rnd = () => Math.random().toString(36).slice(2, 10);
+    const fail = (e) => { const x = new Error((e && e.message) || 'db error'); x.code = (e && e.code) || 'unknown'; return x; };
+    const docSnap = (row) => ({ id: row.path.slice(row.path.lastIndexOf('/') + 1), data: () => row.data });
+    function watch(filterCol, value, onRow, onGone, onError, ready) {
+      // live changes first (buffered), then the current rows, so nothing slips between the two
+      let loaded = false; const queue = [];
+      const take = (fn) => (pl) => { if (loaded) fn(pl); else queue.push(() => fn(pl)); };
+      const up = take((pl) => pl.new && onRow([pl.new]));
+      const gone = take((pl) => { const p = pl.old && pl.old.path; if (p && (filterCol === 'path' ? p === value : parent(p) === value)) onGone(p); });
+      const ch = sb.channel('db:' + value + ':' + rnd())
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: T, filter: `${filterCol}=eq.${value}` }, up)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: T, filter: `${filterCol}=eq.${value}` }, up)
+        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: T }, gone)
+        .subscribe((st) => {
+          if (st === 'SUBSCRIBED' && !loaded && !ch._jbLoading) {
+            ch._jbLoading = true;
+            sb.from(T).select('path,data').eq(filterCol, value).then(({ data, error }) => {
+              if (error) { onError && onError(fail(error)); return; }
+              ready(data || []); loaded = true; queue.splice(0).forEach((f) => f());
+            });
+          } else if (st === 'SUBSCRIBED' && loaded) { // back after a drop: catch up on what changed meanwhile
+            sb.from(T).select('path,data').eq(filterCol, value).then(({ data }) => { if (data && data.length) onRow(data); });
+          } else if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') onError && onError(fail({ code: 'unavailable' }));
+        });
+      return () => { sb.removeChannel(ch); };
+    }
+    const sdb = {
+      doc(path) {
+        return {
+          set: (data) => sb.from(T).upsert({ path, coll: parent(path), data }).then(({ error }) => { if (error) throw fail(error); }),
+          delete: () => sb.from(T).delete().eq('path', path).then(({ error }) => { if (error) throw fail(error); }),
+          onSnapshot(next, onError) {
+            const snap = (row) => ({ exists: !!row, data: () => (row ? row.data : undefined) });
+            return watch('path', path, (rows) => next(snap(rows[0])), () => next(snap(null)), onError, (rows) => next(snap(rows[0] || null)));
+          },
+        };
+      },
+      collection(path) {
+        return {
+          onSnapshot(next, onError) {
+            const send = (changes) => next({ docChanges: () => changes });
+            return watch('coll', path,
+              (rows) => send(rows.map((r) => ({ type: 'modified', doc: docSnap(r) }))),
+              (p) => send([{ type: 'removed', doc: { id: p.slice(p.lastIndexOf('/') + 1), data: () => null } }]),
+              onError,
+              (rows) => send(rows.map((r) => ({ type: 'added', doc: docSnap(r) }))));
+          },
+        };
+      },
+    };
+    // room: who is here right now. Presence tells joins and leaves; a broadcast carries each person's full state.
+    const myPeer = 'p' + rnd() + rnd(), state = {}, others = new Map();
+    let peersCb = null, connCb = null, sendTimer = 0, lastSend = 0, online = false;
+    const ch = sb.channel('room', { config: { broadcast: { self: false }, presence: { key: myPeer } } });
+    const emitPeers = () => peersCb && peersCb({ peers: [{ peer: myPeer, sameTab: true, presence: { ...state } }, ...[...others].map(([peer, v]) => ({ peer, presence: v.presence }))] });
+    const sendNow = () => { sendTimer = 0; lastSend = Date.now(); if (online) ch.send({ type: 'broadcast', event: 'p', payload: { peer: myPeer, s: state } }).catch(() => {}); };
+    const sendSoon = () => { if (sendTimer) return; const wait = Math.max(0, 70 - (Date.now() - lastSend)); sendTimer = setTimeout(sendNow, wait); };
+    ch.on('broadcast', { event: 'p' }, ({ payload }) => {
+      if (!payload || typeof payload.peer !== 'string' || payload.peer === myPeer || !payload.s || typeof payload.s !== 'object') return;
+      others.set(payload.peer, { presence: payload.s, at: Date.now() }); emitPeers();
+    });
+    ch.on('presence', { event: 'join' }, () => sendSoon());
+    ch.on('presence', { event: 'leave' }, ({ key }) => { if (others.delete(key)) emitPeers(); });
+    ch.subscribe((st) => {
+      online = st === 'SUBSCRIBED';
+      if (online) { ch.track({ at: Date.now() }).catch(() => {}); sendSoon(); }
+      connCb && connCb(online);
+    });
+    setInterval(() => { // heartbeat, and forget anyone silent for a while
+      if (online && Date.now() - lastSend > 4000) sendNow();
+      let changed = false; const cut = Date.now() - 15000;
+      for (const [k, v] of others) if (v.at < cut) { others.delete(k); changed = true; }
+      if (changed) emitPeers();
+    }, 2000);
+    addEventListener('pagehide', () => { try { ch.untrack(); } catch (e) {} });
+    const sroom = {
+      presence(patch) { Object.assign(state, patch); for (const k in state) if (state[k] === null) delete state[k]; sendSoon(); emitPeers(); return Promise.resolve(); },
+      onPeers(fn) { peersCb = fn; emitPeers(); return () => { peersCb = null; }; },
+      onConnection(fn) { connCb = fn; fn(online); return () => { connCb = null; }; },
+    };
+    const bucket = cfg.bucket || 'jamboard';
+    const sassets = {
+      async upload(blob) {
+        const ext = (blob.type.split('/')[1] || 'bin').replace(/[^a-z0-9]/gi, '').slice(0, 8);
+        const name = `${boardId}/${Date.now().toString(36)}-${rnd()}.${ext}`;
+        const { error } = await sb.storage.from(bucket).upload(name, blob, { contentType: blob.type, upsert: false });
+        if (error) throw fail(error);
+        return { id: name, url: sb.storage.from(bucket).getPublicUrl(name).data.publicUrl };
+      },
+    };
+    return { db: sdb, room: sroom, assets: sassets };
+  }
+  async function boot() {
+    $('#stampIco').textContent = stampEmoji; updateStickyDot(); setTool('select'); updateHistoryButtons(); renderPeople(); applyView();
+    setHints(store.get('jamboard:hints') !== '0');
+    const cfg = window.JAMBOARD_CONFIG, use = window.claude && window.claude.use;
+    if (cfg && cfg.supabaseUrl && cfg.supabaseAnonKey) {
+      const caps = await startSupabase(cfg).catch((e) => { console.error(e); return null; });
+      if (!caps) { toast('Не вдалося під’єднатися до спільної дошки'); startLocal(); return; }
+      db = caps.db; room = caps.room; assetsCap = caps.assets;
+    } else if (!use) { startLocal(); return; }
+    else {
+      const [d, r, a] = await Promise.all([claude.use('db'), claude.use('room'), claude.use('assets')].map((p) => p.catch(() => null)));
+      db = d; room = r; assetsCap = a;
+    }
+    if (db) await startShared(); else startLocal();
+    if (room) {
+      room.presence({ name: me.name, emoji: me.emoji, color: me.color, board: boardId }).catch(() => {});
+      room.onPeers(onPeers, () => {});
+      room.onConnection((ok) => {
+        if (mode !== 'shared') return;
+        setStatus(ok ? 'ok' : 'warn', ok ? 'Спільна дошка' : 'Перепідключення…');
+      }, () => setStatus(mode === 'shared' ? 'ok' : '', mode === 'shared' ? 'Спільна дошка' : 'Лише на цьому пристрої'));
+    } else if (mode === 'shared') setStatus('ok', 'Спільна дошка');
+  }
+  boot();
+})();
+</script>
+</html>
