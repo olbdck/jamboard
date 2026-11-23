@@ -2699,7 +2699,15 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
       }
       selected = new Set([...selected].filter((id) => items.has(id)));
       if (first) { first = false; boardReady(); } else renderAll();
-    }, (e) => { dbError(e); setStatus('bad', 'Немає зв’язку'); });
+    }, (e) => {
+      dbDown = true; dbError(e); setStatus('bad', 'Немає зв’язку');
+      const m = (e && e.message) || '';
+      if (m) {
+        console.error('JamBoard:', e);
+        const why = /docs/.test(m) && /(does not exist|schema cache)/i.test(m) ? 'у Supabase немає таблиці docs. Виконайте supabase/schema.sql' : m.slice(0, 140);
+        $('#status').title = 'Немає зв’язку: ' + why; toast('Немає зв’язку: ' + why);
+      }
+    });
   }
   async function startShared() {
     mode = 'shared';
@@ -2731,28 +2739,55 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
     const rnd = () => Math.random().toString(36).slice(2, 10);
     const fail = (e) => { const x = new Error((e && e.message) || 'db error'); x.code = (e && e.code) || 'unknown'; return x; };
     const docSnap = (row) => ({ id: row.path.slice(row.path.lastIndexOf('/') + 1), data: () => row.data });
+    let liveOk = null;
+    function liveState(ok, why) { // realtime is a bonus: without it the board still syncs by polling
+      if (liveOk === ok) return; liveOk = ok;
+      if (!ok) console.warn('JamBoard: Supabase realtime unavailable, polling instead', why || '');
+      if (mode === 'shared' && !dbDown) setStatus(ok ? 'ok' : 'warn', ok ? 'Спільна дошка' : 'Спільна дошка · оновлення раз на 2 с');
+    }
     function watch(filterCol, value, onRow, onGone, onError, ready) {
-      // live changes first (buffered), then the current rows, so nothing slips between the two
-      let loaded = false; const queue = [];
+      let alive = true, loaded = false, live = false, pollT = 0;
+      const queue = [], known = new Map(); // path -> JSON of what we last delivered
+      const remember = (rows) => rows.forEach((r) => known.set(r.path, JSON.stringify(r.data)));
+      const fetchRows = () => sb.from(T).select('path,data').eq(filterCol, value);
       const take = (fn) => (pl) => { if (loaded) fn(pl); else queue.push(() => fn(pl)); };
-      const up = take((pl) => pl.new && onRow([pl.new]));
-      const gone = take((pl) => { const p = pl.old && pl.old.path; if (p && (filterCol === 'path' ? p === value : parent(p) === value)) onGone(p); });
+      const up = take((pl) => { if (pl.new && pl.new.path) { remember([pl.new]); onRow([pl.new]); } });
+      const gone = take((pl) => { const p = pl.old && pl.old.path; if (p && (filterCol === 'path' ? p === value : parent(p) === value)) { known.delete(p); onGone(p); } });
+      async function poll() {
+        pollT = 0; if (!alive) return;
+        const { data, error } = await fetchRows();
+        if (!alive) return;
+        if (!error && data) {
+          const seen = new Set(), changed = [];
+          for (const r of data) { seen.add(r.path); const j = JSON.stringify(r.data); if (known.get(r.path) !== j) { known.set(r.path, j); changed.push(r); } }
+          if (changed.length) onRow(changed);
+          for (const p of [...known.keys()]) if (!seen.has(p)) { known.delete(p); onGone(p); }
+        }
+        if (!live && !pollT) pollT = setTimeout(poll, 2000);
+      }
+      // the current rows load straight away; live changes arriving meanwhile wait in the queue
+      fetchRows().then(({ data, error }) => {
+        if (!alive) return;
+        if (error) { onError && onError(fail(error)); return; }
+        remember(data || []); ready(data || []); loaded = true; queue.splice(0).forEach((f) => f());
+        if (!live && !pollT) pollT = setTimeout(poll, 2000);
+      }, (e) => onError && onError(fail(e)));
       const ch = sb.channel('db:' + value + ':' + rnd())
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: T, filter: `${filterCol}=eq.${value}` }, up)
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: T, filter: `${filterCol}=eq.${value}` }, up)
         .on('postgres_changes', { event: 'DELETE', schema: 'public', table: T }, gone)
-        .subscribe((st) => {
-          if (st === 'SUBSCRIBED' && !loaded && !ch._jbLoading) {
-            ch._jbLoading = true;
-            sb.from(T).select('path,data').eq(filterCol, value).then(({ data, error }) => {
-              if (error) { onError && onError(fail(error)); return; }
-              ready(data || []); loaded = true; queue.splice(0).forEach((f) => f());
-            });
-          } else if (st === 'SUBSCRIBED' && loaded) { // back after a drop: catch up on what changed meanwhile
-            sb.from(T).select('path,data').eq(filterCol, value).then(({ data }) => { if (data && data.length) onRow(data); });
-          } else if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') onError && onError(fail({ code: 'unavailable' }));
+        .subscribe((st, err) => {
+          if (!alive) return;
+          if (st === 'SUBSCRIBED') {
+            const was = live; live = true; liveState(true);
+            if (pollT) { clearTimeout(pollT); pollT = 0; }
+            if (loaded && !was) poll(); // catch up on what changed while live was down
+          } else if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT' || st === 'CLOSED') {
+            live = false; liveState(false, (err && err.message) || st);
+            if (loaded && !pollT) pollT = setTimeout(poll, 2000);
+          }
         });
-      return () => { sb.removeChannel(ch); };
+      return () => { alive = false; if (pollT) clearTimeout(pollT); sb.removeChannel(ch); };
     }
     const sdb = {
       doc(path) {
@@ -2820,6 +2855,7 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
     };
     return { db: sdb, room: sroom, assets: sassets };
   }
+  let dbDown = false; // the shared store refused us: keep that on the status, whatever the room says
   async function boot() {
     $('#stampIco').textContent = stampEmoji; updateStickyDot(); setTool('select'); updateHistoryButtons(); renderPeople(); applyView();
     setHints(store.get('jamboard:hints') !== '0');
@@ -2838,7 +2874,7 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
       room.presence({ name: me.name, emoji: me.emoji, color: me.color, board: boardId }).catch(() => {});
       room.onPeers(onPeers, () => {});
       room.onConnection((ok) => {
-        if (mode !== 'shared') return;
+        if (mode !== 'shared' || dbDown) return;
         setStatus(ok ? 'ok' : 'warn', ok ? 'Спільна дошка' : 'Перепідключення…');
       }, () => setStatus(mode === 'shared' ? 'ok' : '', mode === 'shared' ? 'Спільна дошка' : 'Лише на цьому пристрої'));
     } else if (mode === 'shared') setStatus('ok', 'Спільна дошка');
