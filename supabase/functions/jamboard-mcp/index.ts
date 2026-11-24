@@ -217,6 +217,8 @@ const Flow = (() => {
     const out = new Map(), inn = new Map(), nb = new Map(); U.forEach((_, k) => { out.set(k, []); inn.set(k, []); nb.set(k, []); });
     const state = new Map(), dag = new Set();
     const visit = (k) => { state.set(k, 1); for (const e of edges) if (e.a === k && e.a !== e.b) { const s = state.get(e.b); if (s === 1) continue; dag.add(e.a + '\n' + e.b); if (!s) visit(e.b); } state.set(k, 2); };
+    const hasIn = new Set(edges.filter((e) => e.a !== e.b).map((e) => e.b));
+    for (const k of U.keys()) if (!hasIn.has(k) && !state.get(k)) visit(k); // start from sources, so cycles break at their far end
     for (const k of U.keys()) if (!state.get(k)) visit(k);
     const ks = (l) => [...new Set(l.map((x) => x.k))];
     for (const e of edges) if (dag.has(e.a + '\n' + e.b)) { out.get(e.a).push({ k: e.b, o: e.bo || 0, s: e.ao || 0 }); inn.get(e.b).push({ k: e.a, o: e.ao || 0, s: e.bo || 0 }); }
@@ -282,9 +284,10 @@ const Flow = (() => {
       const x1 = Math.min(...ms.map((n) => c.get(n.id).x - n.w / 2)), y1 = Math.min(...ms.map((n) => c.get(n.id).y - n.h / 2));
       const x2 = Math.max(...ms.map((n) => c.get(n.id).x + n.w / 2)), y2 = Math.max(...ms.map((n) => c.get(n.id).y + n.h / 2));
       inner.set(sid, { c, x1, y1 });
-      boxes.push({ key: sid, w: x2 - x1 + PAD * 2, h: y2 - y1 + PAD * 2 + TITLE });
+      boxes.push({ key: sid, w: x2 - x1 + PAD * 2, h: y2 - y1 + PAD * 2 + TITLE, order: Math.min(...ms.map((n) => n.order)) });
     }
-    N.filter((n) => !n.sub).forEach((n) => boxes.push({ key: n.id, w: n.w, h: n.h }));
+    N.filter((n) => !n.sub).forEach((n) => boxes.push({ key: n.id, w: n.w, h: n.h, order: n.order }));
+    boxes.sort((p, q) => p.order - q.order); // keep the order things appear in the text
     const B = new Map(boxes.map((b) => [b.key, b])), H = g.dir === 'LR' || g.dir === 'RL';
     const off = (n) => { // where a node sits across the layer, relative to its subgraph box centre
       if (!n.sub) return 0;
