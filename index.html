@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* Layout: full-screen shared canvas; frosted tool dock bottom-centre, board pill top-left, people + zoom pills top-right, context bar over the selection.
+/* Layout: full-screen shared canvas; frosted tool dock bottom-centre, board pill top-left, people pill top-right, vertical zoom dock + help bottom-right, context bar over the selection.
    Tokens follow Orbit Pro (Apple-style DESIGN.md v1): system SF type, pill controls, frosted bars, 160/320/500 ms motion. Accent is JamBoard raspberry instead of Orbit blue. */
 :root {
   --bg: #f5f5f7;            /* color-bg-alt: the board */
@@ -323,7 +323,12 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
 .primary:hover { background: var(--accent-hover); }
 
 .top-right { position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); right: calc(12px + env(safe-area-inset-right, 0px)); display: flex; gap: var(--s2); align-items: flex-start; }
-.zoom-pill, .people { display: flex; align-items: center; gap: 2px; padding: 4px; height: 44px; box-sizing: border-box; border-radius: var(--r-pill); }
+.people { display: flex; align-items: center; gap: 2px; padding: 4px; height: 44px; box-sizing: border-box; border-radius: var(--r-pill); }
+.br-dock { position: fixed; right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; align-items: center; gap: var(--s2); z-index: 5; }
+.zoom-pill { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px; width: 44px; box-sizing: border-box; border-radius: var(--r-pill); }
+.zoom-pill .hsep { width: 22px; height: 1px; background: var(--line); margin: 3px 0; }
+#hintsOpen { width: 44px; height: 44px; border-radius: 50%; font: 600 17px var(--f-display, inherit); color: var(--text); }
+#hintsOpen[aria-expanded="true"] { background: var(--accent); color: var(--accent-fg); border-color: transparent; }
 .people { padding: 4px 6px 4px 14px; gap: var(--s2); }
 .status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); white-space: nowrap; }
 .status i { width: 7px; height: 7px; border-radius: 50%; background: var(--subtle); }
@@ -347,7 +352,7 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
 .icon-btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
 .icon-btn:disabled { opacity: .35; cursor: default; background: transparent; transform: none; }
 .icon-btn svg { width: 20px; height: 20px; }
-#zoomLabel { min-width: 52px; height: 32px; border: 0; background: transparent; border-radius: var(--r-pill); cursor: pointer; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--text); }
+#zoomLabel { width: 36px; padding: 0; height: 28px; font-size: 11px; font-weight: 600; letter-spacing: -.02em; border: 0; background: transparent; border-radius: var(--r-pill); cursor: pointer; font-variant-numeric: tabular-nums; color: var(--text); }
 #zoomLabel:hover { background: var(--chip); }
 
 .rail { position: fixed; left: 50%; translate: -50% 0; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: row; align-items: center; gap: 4px; padding: 6px; border-radius: var(--r-pill); z-index: 5; }
@@ -432,13 +437,12 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
 .people-list .av { width: 26px; height: 26px; font-size: 14px; margin: 0; border: 0; animation: none; }
 .people-list em { font-style: normal; color: var(--subtle); }
 
-.hints { position: fixed; right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); width: 290px; padding: var(--s4) var(--s5); font-size: 12px; color: var(--muted); }
+.hints { position: fixed; right: calc(12px + 44px + 10px + env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 5; width: 290px; padding: var(--s4) var(--s5); font-size: 12px; color: var(--muted); }
 .hints h2 { margin: 0 0 10px; display: flex; justify-content: space-between; align-items: center; }
 .hints ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 7px; }
 .hints li { display: flex; justify-content: space-between; gap: 12px; }
 .hints li b { color: var(--text); font-weight: 500; white-space: nowrap; }
 .hints .close { border: 0; background: var(--chip); color: var(--muted); cursor: pointer; font-size: 15px; line-height: 1; width: 22px; height: 22px; border-radius: 50%; }
-#hintsOpen { position: fixed; right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); font-weight: 600; width: 40px; height: 40px; }
 
 #empty { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; padding: var(--s6); max-width: min(380px, calc(100vw - 48px)); pointer-events: none; }
 #empty b { display: block; font: 600 28px/1.14 var(--f-display); color: var(--text); margin-bottom: 8px; letter-spacing: 0.007em; }
@@ -453,7 +457,7 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
 #toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
 #dropzone { position: fixed; inset: 10px; border: 2px dashed var(--accent); border-radius: var(--r-xl); background: var(--accent-soft); pointer-events: none; display: grid; place-items: center; font: 600 21px var(--f-display); color: var(--accent); }
 :focus-visible { outline: none; box-shadow: var(--focus); }
-@media (max-width: 1180px) {
+@media (max-width: 1320px) {
   .hints { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
 }
 @media (max-width: 520px) {
@@ -462,8 +466,9 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
   .rail { gap: 2px; padding: 5px; }
 }
 @media (max-width: 760px) {
-  .hints, #hintsOpen, #fitBtn, .logo span, .status span, .me-name, #clearBtn, #shareBtn span, #timerPill .st { display: none !important; }
+  .hints, #hintsOpen, .logo span, .status span, .me-name, #clearBtn, #shareBtn span, #timerPill .st { display: none !important; }
   #shareBtn.primary { padding: 0 10px; }
+  .br-dock { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
   .board-pill { max-width: calc(100vw - 250px); }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -504,13 +509,18 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
     <button id="timerPill" data-s="idle" aria-label="Таймер для всіх" aria-haspopup="dialog" aria-expanded="false" title="Таймер для всіх"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7"/><path d="M12 10v3.8l2.4 1.6M9.5 3.5h5M18.6 6.4l1.2-1.2"/></svg><span class="ring"></span><span class="tm digits" id="tmText">00:00</span><span class="st" id="tmState"></span></button>
     <button class="primary" id="shareBtn" title="Скопіювати посилання на цю дошку"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg><span>Поділитися</span></button>
   </div>
+</div>
+
+<div class="br-dock">
   <div class="panel zoom-pill">
-    <button class="icon-btn" id="zoomOut" aria-label="Зменшити"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 12h12"/></svg></button>
+    <button class="icon-btn" id="zoomIn" aria-label="Збільшити" title="Збільшити"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 12h12M12 6v12"/></svg></button>
     <button id="zoomLabel" title="Масштаб 100%">100%</button>
-    <button class="icon-btn" id="zoomIn" aria-label="Збільшити"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 12h12M12 6v12"/></svg></button>
-    <button class="txt-btn" id="fitBtn" title="Shift+1">Показати все</button>
+    <button class="icon-btn" id="zoomOut" aria-label="Зменшити" title="Зменшити"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 12h12"/></svg></button>
+    <span class="hsep"></span>
+    <button class="icon-btn" id="fitBtn" aria-label="Показати все" title="Показати все · Shift+1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V5.5A1.5 1.5 0 015.5 4H9M15 4h3.5A1.5 1.5 0 0120 5.5V9M20 15v3.5a1.5 1.5 0 01-1.5 1.5H15M9 20H5.5A1.5 1.5 0 014 18.5V15"/><rect x="8.5" y="8.5" width="7" height="7" rx="1.5"/></svg></button>
     <button class="icon-btn" id="themeBtn" aria-label="Тема: як у системі" title="Тема: як у системі"></button>
   </div>
+  <button class="panel icon-btn" id="hintsOpen" aria-label="Підказки" title="Підказки" aria-expanded="false" aria-controls="hints">?</button>
 </div>
 
 <div class="panel popover" id="mePop" hidden>
@@ -616,7 +626,6 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
     <li>Змінити своє ім’я <b>Клік на аватарці</b></li>
   </ul>
 </div>
-<button class="panel icon-btn" id="hintsOpen" aria-label="Показати підказки" hidden>?</button>
 <div id="toast" role="status"></div>
 <div id="pasteCatcher" contenteditable="true" aria-hidden="true" hidden></div>
 <input type="file" id="fileInput" accept="image/*" multiple hidden>
@@ -2644,9 +2653,9 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
     items.clear(); selected.clear(); commit(before); renderAll();
     toast('Дошку очищено. Ctrl+Z поверне все назад');
   });
-  function setHints(open) { $('#hints').hidden = !open; $('#hintsOpen').hidden = open; store.set('jamboard:hints', open ? '1' : '0'); }
+  function setHints(open) { $('#hints').hidden = !open; $('#hintsOpen').setAttribute('aria-expanded', String(open)); store.set('jamboard:hints', open ? '1' : '0'); }
   $('#hintsClose').addEventListener('click', () => setHints(false));
-  $('#hintsOpen').addEventListener('click', () => setHints(true));
+  $('#hintsOpen').addEventListener('click', () => setHints($('#hints').hidden));
   let toastTimer = null;
   function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600); }
   addEventListener('resize', () => { updateCtx(); schedule('cursors'); schedule('thread'); });
