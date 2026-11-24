@@ -323,6 +323,13 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
 .bc-x:focus-visible { outline: none; box-shadow: var(--focus); }
 @media (hover: none) { .bc-x { opacity: 1; scale: 1; } .bcard:hover { translate: none; } .bcard:hover .bc-thumb svg { scale: none; } }
 #boardsBtn svg { transition: rotate var(--base) var(--ease-em); }
+/* view-only boards (the demo): pan, zoom and read; every editing control is gone */
+body.view-only .rail [data-tool]:not([data-tool="select"]):not([data-tool="hand"]), body.view-only #mermaidBtn, body.view-only #imageBtn, body.view-only #undoBtn, body.view-only #redoBtn, body.view-only .rail .rule, body.view-only #palette, body.view-only #ctx, body.view-only #timerPill, body.view-only #timerPill + .vsep, body.view-only .port, body.view-only .handle { display: none !important; }
+body.view-only #viewport, body.view-only #viewport .item { cursor: grab; }
+body.view-only #viewport.grabbing, body.view-only #viewport.grabbing .item { cursor: grabbing; }
+.ro-note { display: none; align-items: center; gap: 6px; padding: 0 12px 0 8px; font-size: 13px; color: var(--muted); white-space: nowrap; }
+.ro-note svg { width: 16px; height: 16px; flex: none; }
+body.view-only .ro-note { display: flex; animation: palIn var(--base) var(--ease-em) both; }
 #boardsBtn[aria-expanded="true"] svg { rotate: 180deg; }
 .panel.popover.share { right: calc(12px + env(safe-area-inset-right, 0px)); left: auto; width: 360px; max-width: calc(100vw - 24px); box-sizing: border-box; transform-origin: 90% 0; }
 .share .row { flex-wrap: nowrap; }
@@ -374,9 +381,13 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
 .pill { border-radius: var(--r-pill); }
 .board-pill {
   position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); left: calc(12px + env(safe-area-inset-left, 0px));
-  display: flex; align-items: center; gap: var(--s2); padding: 5px 5px 5px 16px; max-width: calc(100vw - 380px); min-width: 0; height: 44px; box-sizing: border-box;
+  display: flex; align-items: center; gap: var(--s2); padding: 5px 5px 5px 15px; max-width: calc(100vw - 380px); min-width: 0; height: 44px; box-sizing: border-box;
 }
-.logo { font: 600 17px var(--f-display); letter-spacing: -0.022em; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.logo { font: 600 17px var(--f-display); letter-spacing: -0.022em; display: flex; align-items: center; gap: 6px; white-space: nowrap; border: 0; background: transparent; color: var(--text); height: 34px; padding: 0 8px 0 10px; margin-left: -10px; border-radius: var(--r-pill); cursor: pointer; transition: background-color var(--fast) var(--ease), scale var(--fast) var(--ease-spring); }
+.logo:hover, .logo[aria-expanded="true"] { background: var(--chip); }
+.logo:active { scale: .96; }
+.logo:focus-visible { outline: none; box-shadow: var(--focus); }
+.logo svg { width: 15px; height: 15px; color: var(--muted); margin-left: -1px; }
 .logo i { font-style: normal; color: var(--accent); }
 .sep { width: 1px; align-self: stretch; background: var(--line); margin: 6px 2px; flex: none; }
 #title { border: 0; background: transparent; color: var(--text); font: 400 14px var(--f-text); letter-spacing: -0.016em; min-width: 0; width: 14em; max-width: 100%; padding: 6px 10px; border-radius: var(--r-pill); text-overflow: ellipsis; }
@@ -553,7 +564,7 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
   .rail { gap: 2px; padding: 5px; }
 }
 @media (max-width: 760px) {
-  .hints, #hintsOpen, .logo span, .status span, .me-name, #clearBtn, #shareBtn span, #timerPill .st { display: none !important; }
+  .hints, #hintsOpen, .logo span, .status span, .me-name, #shareBtn span, #timerPill .st { display: none !important; }
   #shareBtn.primary { padding: 0 10px; }
   .br-dock { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
   .board-pill { max-width: calc(100vw - 250px); }
@@ -570,11 +581,9 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
 <div id="empty" hidden><b>Дошка порожня</b><p>Подвійний клік створює стікер, а Ctrl+V (⌘V) вставляє зображення з буфера.</p></div>
 
 <div class="panel pill board-pill">
-  <div class="logo"><i>◐</i><span>JamBoard</span></div>
+  <button class="logo" id="boardsBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="boardMenu" title="Мої дошки"><i aria-hidden="true">◐</i><span>JamBoard</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg></button>
   <div class="sep"></div>
   <input id="title" aria-label="Назва дошки" value="Спринт 48 · планінг">
-  <button class="icon-btn" id="boardsBtn" aria-label="Мої дошки" aria-expanded="false" title="Мої дошки"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10l5 5 5-5"/></svg></button>
-  <button class="txt-btn" id="clearBtn">Очистити</button>
 </div>
 <div class="panel gallery" id="boardMenu" role="dialog" aria-label="Мої дошки" hidden>
   <div class="gal-head">
@@ -631,6 +640,7 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
 </div>
 
 <div class="panel rail" role="toolbar" aria-label="Інструменти">
+  <span class="ro-note" id="roNote" title="Демо-дошку ніхто не змінює. Свою дошку створіть у меню JamBoard зліва вгорі"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></svg>Лише перегляд</span>
   <button class="icon-btn" data-tool="select" aria-label="Виділення"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 3.5l13 7.2-5.6 1.6-2.4 5.4z"/></svg><span class="tip">Виділення<kbd>V</kbd></span></button>
   <button class="icon-btn" data-tool="hand" aria-label="Рука"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12V5.5a1.5 1.5 0 013 0V11M11 10.5V4a1.5 1.5 0 013 0v7M14 10.5V5.5a1.5 1.5 0 013 0V14c0 4-2.5 6.5-6 6.5-2.6 0-4-1.3-5.4-3.3L4 14.4a1.5 1.5 0 012.4-1.8L8 14"/></svg><span class="tip">Рука<kbd>H · Пробіл</kbd></span></button>
   <div class="rule"></div>
@@ -1181,6 +1191,7 @@ const Flow = (() => {
   // so a late or out-of-order copy of an older state is ignored instead of pulling the item back.
   const revs = new Map();
   function write(it) {
+    if (viewOnly()) return;
     if (mode === 'shared') {
       const r = Math.max(Date.now(), (revs.get(it.id) || 0) + 1);
       it.rev = r; revs.set(it.id, r);
@@ -1189,6 +1200,7 @@ const Flow = (() => {
     else if (mode === 'local') saveLocal();
   }
   function remove(id) {
+    if (viewOnly()) return;
     if (mode === 'shared') db.doc(itemsPath() + '/' + id).delete().catch(dbError);
     else if (mode === 'local') saveLocal();
   }
@@ -1239,17 +1251,20 @@ const Flow = (() => {
   // its name can't be changed, and «Очистити» there gives you a new empty board instead of wiping the demo.
   const demoId = () => { const c = window.JAMBOARD_CONFIG; return privateLinks && c && secretBoard(c.defaultBoard) ? c.defaultBoard : null; };
   const isDemo = (id = boardId) => !!id && id === demoId();
+  // The demo, and any board whose meta has ro: true (set only from SQL / the MCP), can be looked at but not changed.
+  const viewOnly = (id = boardId) => isDemo(id) || !!(boards.get(id) && boards.get(id).ro);
   function showTitle() {
     const t = $('#title'), demo = isDemo();
     t.readOnly = demo; t.title = demo ? 'Демо-дошку бачать усі, її назва не змінюється' : '';
-    $('#clearBtn').textContent = demo ? 'Моя порожня дошка' : 'Очистити';
-    $('#clearBtn').title = demo ? 'Створити свою порожню дошку. Демо лишиться як є і відкривається з меню дошок' : '';
+    const ro = viewOnly(); t.readOnly = ro; if (ro) t.title = 'Дошка лише для перегляду';
+    if (document.body.classList.contains('view-only') !== ro) { document.body.classList.toggle('view-only', ro); if (ro) { setSel([]); setTool('select'); } }
     if (document.activeElement !== t) t.value = titleOf(boardId);
   }
 
   // ---------- history (per action, only the items it touched, so undo never clobbers others' work) ----------
   function snapIds(ids) { const m = {}; ids.forEach((id) => { const it = items.get(id); m[id] = it ? { ...clean(it), id } : null; }); return m; }
   function commit(before, newIds = []) {
+    if (viewOnly()) return; // nothing on a view-only board is ever saved
     newIds.forEach((id) => { if (!(id in before)) before[id] = null; });
     for (const [id, prev] of autofitSections()) if (!(id in before)) before[id] = prev;
     const after = snapIds(Object.keys(before));
@@ -1996,7 +2011,7 @@ const Flow = (() => {
     if (editingId && itemEl && itemEl.dataset.id === editingId && e.target.closest('.txt, .stitle')) return;
     if (e.button === 0 && e.target.closest('.web-go[href]')) return; // let the browser open the link
     if (e.target.closest('.rope-label.editing')) return;
-    if (e.button === 2) { if (!editingId) showCatcher(e); return; }
+    if (e.button === 2) { if (!editingId && !viewOnly()) showCatcher(e); return; }
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     try { vp.setPointerCapture(e.pointerId); } catch (_) {}
     if (pointers.size === 2) {
@@ -2010,7 +2025,8 @@ const Flow = (() => {
     const hit = id ? items.get(id) : null;
     const dbl = e.button === 0 && now - lastTap.t < 380 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 10 && id === lastTap.id;
     lastTap = dbl ? { t: 0 } : { t: now, x: e.clientX, y: e.clientY, id };
-    if (e.button === 1 || spaceDown || tool === 'hand') { action = { type: 'pan', sx: e.clientX, sy: e.clientY, vx: 0, vy: 0, t: performance.now() }; vp.classList.add('grabbing'); return; }
+    if (viewOnly() && e.button === 0 && dbl && hit && hit.type === 'web') { action = null; openWeb(hit); return; }
+    if (e.button === 1 || spaceDown || tool === 'hand' || (viewOnly() && e.button === 0)) { action = { type: 'pan', sx: e.clientX, sy: e.clientY, vx: 0, vy: 0, t: performance.now() }; vp.classList.add('grabbing'); return; }
     if (e.button !== 0) return;
     if (tool === 'stamp') { startStamp(e); return; }
     if (tool === 'comment') { action = null; if (hit && hit.type === 'comment') openThread(id); else openDraft(toWorld(e.clientX, e.clientY)); return; }
@@ -2847,6 +2863,7 @@ const Flow = (() => {
   document.addEventListener('cut', (e) => { if (editingId || isTyping(e.target) || !selected.size) return; copySel(e); deleteSelected(); });
   document.addEventListener('paste', (e) => {
     const dt = e.clipboardData; if (!dt) return;
+    if (viewOnly() && !isTyping(e.target)) { toast('Це дошка лише для перегляду. Свою створіть у меню JamBoard'); return; }
     if (editingId) { e.preventDefault(); document.execCommand('insertText', false, dt.getData('text/plain')); return; }
     const fromMenu = e.target && e.target.closest && e.target.closest('#pasteCatcher');
     if (isTyping(e.target) && !fromMenu) return;
@@ -3044,11 +3061,12 @@ const Flow = (() => {
     e.target.value = '';
   });
   let dragDepth = 0;
-  addEventListener('dragenter', (e) => { if ([...(e.dataTransfer?.types || [])].includes('Files')) { dragDepth++; $('#dropzone').hidden = false; } });
+  addEventListener('dragenter', (e) => { if (!viewOnly() && [...(e.dataTransfer?.types || [])].includes('Files')) { dragDepth++; $('#dropzone').hidden = false; } });
   addEventListener('dragleave', () => { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) $('#dropzone').hidden = true; });
   addEventListener('dragover', (e) => e.preventDefault());
   addEventListener('drop', (e) => {
     e.preventDefault(); dragDepth = 0; $('#dropzone').hidden = true;
+    if (viewOnly()) return;
     const files = [...(e.dataTransfer?.files || [])].filter((f) => f.type.startsWith('image/'));
     if (files.length) addImages(files, toWorld(e.clientX, e.clientY));
   });
@@ -3234,6 +3252,10 @@ const Flow = (() => {
     if (editingId) { if (e.key === 'Escape' || (mod && e.key === 'Enter') || (e.key === 'Enter' && items.get(editingId) && isSec(items.get(editingId)))) { e.preventDefault(); els.get(editingId).firstChild.blur(); } return; }
     if (isTyping(e.target)) { if (e.key === 'Enter' || e.key === 'Escape') { if (e.target.classList && e.target.classList.contains('rope-label')) e.preventDefault(); if (e.key === 'Escape' && ropeEditId && e.target.classList.contains('rope-label')) { const l = items.get(ropeEditId); e.target.textContent = (l && l.label) || ''; } e.target.blur(); if (e.target.id === 'nameInput') $('#mePop').hidden = true; } return; }
     const k = e.key.toLowerCase();
+    if (viewOnly() && (mod ? !['=', '+', '-', '0'].includes(k) : !(e.code === 'Space' || e.key === 'Escape' || e.code === 'KeyV' || e.code === 'KeyH' || (e.shiftKey && e.code === 'Digit1')))) {
+      if (e.key === 'Delete' || e.key === 'Backspace' || (mod && 'zyda'.includes(k))) e.preventDefault();
+      return;
+    }
     if (e.code === 'Space') { if (!spaceDown) { spaceDown = true; vp.classList.add('grab'); } e.preventDefault(); return; }
     if (mod && k === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
     if (mod && k === 'y') { e.preventDefault(); redo(); return; }
@@ -3297,20 +3319,6 @@ const Flow = (() => {
         if (privateLinks) saveLocalBoards();
       } else if (mode === 'local') { saveLocal(); saveLocalBoards(); }
     }, 400);
-  });
-  let clearArmed = null;
-  $('#clearBtn').addEventListener('click', (e) => {
-    const b = e.currentTarget;
-    if (isDemo()) { createBoard('Моя дошка', 'Демо лишилося як було. Ваша порожня дошка готова, демо завжди є в меню дошок'); return; }
-    if (!clearArmed) {
-      b.textContent = 'Очистити для всіх?'; b.classList.add('danger');
-      clearArmed = setTimeout(() => { clearArmed = null; b.textContent = 'Очистити'; b.classList.remove('danger'); }, 3000);
-      return;
-    }
-    clearTimeout(clearArmed); clearArmed = null; b.textContent = 'Очистити'; b.classList.remove('danger');
-    finishEdit(); const before = snapIds([...items.keys()]);
-    items.clear(); selected.clear(); commit(before); renderAll();
-    toast('Дошку очищено. Ctrl+Z поверне все назад');
   });
   function setHints(open) { $('#hints').hidden = !open; $('#hintsOpen').setAttribute('aria-expanded', String(open)); store.set('jamboard:hints', open ? '1' : '0'); }
   $('#hintsClose').addEventListener('click', () => setHints(false));
@@ -3470,7 +3478,7 @@ const Flow = (() => {
     const name = id === boardId ? $('#title').value || titleOf(id) : titleOf(id);
     if (c.nm.textContent !== name) c.nm.textContent = name;
     c.pin.hidden = !isDemo(id);
-    const by = isDemo(id) ? 'Демо для всіх' : [b.by ? 'Автор: ' + b.by : '', dateUk(b.at)].filter(Boolean).join(' · ');
+    const by = isDemo(id) ? 'Демо · лише перегляд' : viewOnly(id) ? 'Лише перегляд' : [b.by ? 'Автор: ' + b.by : '', dateUk(b.at)].filter(Boolean).join(' · ');
     if (c.by.textContent !== by) c.by.textContent = by;
     c.by.title = by;
     c.main.setAttribute('aria-label', name + (by ? '. ' + by : '') + (id === boardId ? '. Ви тут' : ''));
@@ -3573,7 +3581,7 @@ const Flow = (() => {
         const [meta, cov] = await Promise.all([db.peek('boards/' + id), db.peek(coverPath(id))]);
         if (meta && boards.has(id)) {
           const cur = boards.get(id);
-          boards.set(id, { ...cur, title: typeof meta.title === 'string' ? meta.title.slice(0, 120) : cur.title, at: +meta.at || cur.at || 0, by: typeof meta.by === 'string' ? meta.by.slice(0, 40) : cur.by || '' });
+          boards.set(id, { ...cur, title: typeof meta.title === 'string' ? meta.title.slice(0, 120) : cur.title, at: +meta.at || cur.at || 0, by: typeof meta.by === 'string' ? meta.by.slice(0, 40) : cur.by || '', ro: meta.ro === true });
         }
         let c = cleanCover(cov);
         if (!c) { // no cover yet (an older board, or one built by the MCP): make it from the items once
@@ -3856,7 +3864,7 @@ const Flow = (() => {
     if (privateLinks) unsubMeta = db.doc('boards/' + myBoard).onSnapshot((s) => {
       const d = s.exists && s.data(); if (myBoard !== boardId || !d) return;
       const cur = boards.get(myBoard) || {};
-      boards.set(myBoard, { ...cur, title: typeof d.title === 'string' ? d.title.slice(0, 120) : cur.title, at: +d.at || cur.at || Date.now(), by: typeof d.by === 'string' ? d.by : cur.by || '' });
+      boards.set(myBoard, { ...cur, title: typeof d.title === 'string' ? d.title.slice(0, 120) : cur.title, at: +d.at || cur.at || Date.now(), by: typeof d.by === 'string' ? d.by : cur.by || '', ro: d.ro === true });
       saveLocalBoards(); showTitle(); if (!$('#boardMenu').hidden) renderBoardMenu();
     }, () => {});
     const unsubList = db.collection(itemsPath()).onSnapshot((snap) => {
