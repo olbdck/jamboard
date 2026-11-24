@@ -10,4 +10,5 @@
 - Sections: cards remember their section in `sec` (set on drop, wrap, section draw/resize); overlapping sections never take each other's cards. Stamps/pins and legacy cards fall back to geometry (smallest containing section).
 - Shared timer per board: doc `board/timer` or `boards/<bid>/timer/state` = { dur, run, end } | { dur, left } | { dur } (epoch ms).
 - MCP server: `supabase/functions/jamboard-mcp/index.ts` (Supabase Edge Function, no deps, stateless JSON-RPC; also runs under Node for tests). Auth: `?key=` = secret `JAMBOARD_MCP_KEY`; DB key from `JAMBOARD_DB_KEY` or the default service-role env. Keep its item shapes in sync with index.html when adding item types.
-
+- `config.js` `defaultBoard` = demo board «Знайомство з JamBoard» (id budslw073hv, built via MCP) where new visitors land. Timer chip and Share button live in the top-right people panel; timer digits use the vendored DSEG7 font (fonts/, OFL).
+- The jamboard MCP may be connected to Claude sessions (mcp__jamboard__*): use it to read/edit live boards.

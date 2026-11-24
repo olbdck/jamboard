@@ -10,8 +10,8 @@ create table if not exists public.docs (
 create index if not exists docs_coll_idx on public.docs (coll);
 
 -- newer Supabase projects don't expose new tables to the browser roles by default
-grant usage on schema public to anon, authenticated;
-grant select, insert, update, delete on table public.docs to anon, authenticated;
+grant usage on schema public to anon, authenticated, service_role;
+grant select, insert, update, delete on table public.docs to anon, authenticated, service_role;
 
 alter table public.docs enable row level security;
 drop policy if exists "open board read"   on public.docs;

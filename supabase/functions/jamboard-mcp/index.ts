@@ -111,7 +111,7 @@ const TOOLS = [
   { name: 'get_board', description: 'Read everything on a board: stickies, text, sections, ropes (links), link cards, stamps, comments. Coordinates are board pixels; a sticky is 200×200. A card\'s "section" is the id of the section it belongs to.', inputSchema: { type: 'object', properties: { board: boardArg } } },
   {
     name: 'add_items',
-    description: 'Add items to a board in one go. Types: sticky (text, color), text (text, style h1|h2|p|s), section (title, color; give other items "section": its ref to put them inside — the section grows to fit), link (a rope from "from" to "to", optional label and color), web (url: a link card with preview; YouTube shows the video thumbnail). Leave x/y out to let the board lay items out in a tidy grid (inside their section if given). Use "ref" to name a new item so links and "section" can point at it in the same call; existing ids work too.',
+    description: 'Add items to a board in one go. Types: stamp (emoji, on: a card to stamp, size), comment (text: a comment pin, on: a card), sticky (text, color), text (text, style h1|h2|p|s), section (title, color; give other items "section": its ref to put them inside — the section grows to fit), link (a rope from "from" to "to", optional label and color), web (url: a link card with preview; YouTube shows the video thumbnail). Leave x/y out to let the board lay items out in a tidy grid (inside their section if given). Use "ref" to name a new item so links and "section" can point at it in the same call; existing ids work too.',
     inputSchema: {
       type: 'object', required: ['items'],
       properties: {
@@ -121,7 +121,10 @@ const TOOLS = [
           items: {
             type: 'object', required: ['type'],
             properties: {
-              type: { type: 'string', enum: ['sticky', 'text', 'section', 'link', 'web'] },
+              type: { type: 'string', enum: ['sticky', 'text', 'section', 'link', 'web', 'stamp', 'comment'] },
+              emoji: { type: 'string', description: 'Stamp emoji, e.g. 👍 ❤️ 🔥 ⭐ ✅ 💡 🎉 🚀.' },
+              on: { type: 'string', description: 'Stamp or comment: ref or id of the card to put it on (it then moves with the card).' },
+              size: { type: 'number', description: 'Stamp size 64–128 (default 64).' },
               ref: { type: 'string', description: 'Your temporary name for this item, used by other items in this call.' },
               text: { type: 'string' }, title: { type: 'string', description: 'Section title.' },
               style: { type: 'string', enum: TEXT_STYLES, description: 'Text style: h1 heading, h2 subheading, p body, s small.' },
@@ -232,6 +235,22 @@ async function callTool(name, a) {
         else { const p = sec ? secSlot(sec, it.w, it.h) : slot(it.w, it.h); it.x = p.x; it.y = p.y; }
         it.sec = sec ? sec.id : null;
         if (sec) touched.add(sec);
+      } else if (t === 'stamp' || t === 'comment') {
+        const card = spec.on != null ? resolve(spec.on) : null;
+        if (spec.on != null && (!card || !isCard(card))) throw new Error(`No card "${spec.on}" for the ${t}`);
+        const n = made.filter((m) => m.type === t && m._on === (card && card.id)).length; // spread several on one card
+        if (t === 'stamp') {
+          const size = Math.max(64, Math.min(128, num(spec.size) ?? 64));
+          it = { id: uid(), type: 'stamp', emoji: typeof spec.emoji === 'string' && spec.emoji.length <= 16 ? spec.emoji : '👍', w: size, h: size };
+          if (card && (spec.x == null || spec.y == null)) { it.x = Math.round(card.x + card.w - size * 0.7 - n * size * 0.55); it.y = Math.round(card.y + card.h - size * 0.75); }
+        } else {
+          const text = str(spec.text, 1000); if (!text || !text.trim()) throw new Error('comment needs text');
+          it = { id: uid(), type: 'comment', w: 36, h: 36, msgs: [{ n: BY, e: '🤖', c: '#c2185b', t: text.trim(), at: Date.now() }] };
+          if (card && (spec.x == null || spec.y == null)) { it.x = Math.round(card.x + card.w - 22 - n * 30); it.y = Math.round(card.y - 14); }
+        }
+        if (it.x == null) { if (spec.x != null && spec.y != null) { it.x = num(spec.x); it.y = num(spec.y); } else { const p = slot(it.w, it.h); it.x = p.x; it.y = p.y; } }
+        Object.defineProperty(it, '_on', { value: card && card.id, enumerable: false });
+        it.z = ++z; it.by = BY;
       } else throw new Error('Unsupported type: ' + t);
       if (spec.ref) refs.set(String(spec.ref), it);
       made.push(it);

@@ -258,7 +258,7 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
 .menu-item .tick { width: 16px; color: var(--accent); flex: none; }
 .menu-item[aria-current="true"] { font-weight: 600; }
 .menu-item.add { color: var(--accent); border-top: 1px solid var(--line); border-radius: 0 0 10px 10px; margin-top: 4px; padding-top: 11px; }
-.panel.popover.share { left: calc(12px + env(safe-area-inset-left, 0px)); right: auto; width: 360px; max-width: calc(100vw - 24px); box-sizing: border-box; transform-origin: 10% 0; }
+.panel.popover.share { right: calc(12px + env(safe-area-inset-right, 0px)); left: auto; width: 360px; max-width: calc(100vw - 24px); box-sizing: border-box; transform-origin: 90% 0; }
 .share .row { flex-wrap: nowrap; }
 .share .field { font-size: 14px; height: 40px; min-width: 0; flex: 1; color: var(--muted); }
 .primary.sm { font-size: 14px; padding: 10px 16px; white-space: nowrap; }
@@ -352,21 +352,30 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
 
 .rail { position: fixed; left: 50%; translate: -50% 0; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: row; align-items: center; gap: 4px; padding: 6px; border-radius: var(--r-pill); z-index: 5; }
 /* shared timer: a pill at the top while it runs, settings in a popover above the toolbar */
-#timerPill { position: fixed; left: 50%; translate: -50% 0; top: calc(70px + env(safe-area-inset-top, 0px)); z-index: 5; display: flex; align-items: center; gap: 10px; padding: 6px 8px 6px 8px; border-radius: var(--r-pill); cursor: pointer; border: 0; color: var(--text); font: inherit; animation: popIn var(--base) var(--ease-em) both; transition: background-color var(--base) var(--ease), color var(--base) var(--ease); }
-#timerPill .ring { width: 26px; height: 26px; border-radius: 50%; background: conic-gradient(var(--accent) calc(var(--p, 0) * 1turn), color-mix(in srgb, var(--muted) 22%, transparent) 0); -webkit-mask: radial-gradient(circle, transparent 7.5px, #000 8px); mask: radial-gradient(circle, transparent 7.5px, #000 8px); }
-#timerPill .tm { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; min-width: 52px; text-align: left; }
-#timerPill .st { font-size: 13px; color: var(--muted); padding-right: 6px; }
-#timerPill[data-s="paused"] .tm { color: var(--muted); }
-#timerPill[data-s="low"] .tm { color: var(--accent); }
-#timerPill[data-s="done"] { background: var(--accent); color: var(--accent-fg); animation: popIn var(--base) var(--ease-em) both, tmDone 1.1s var(--ease) 3; }
-#timerPill[data-s="done"] .st { color: inherit; opacity: .85; }
+@font-face { font-family: "DSEG7"; src: url("fonts/DSEG7Classic-BoldItalic.woff2") format("woff2"); font-display: swap; }
+.digits { font-family: "DSEG7", ui-monospace, monospace; font-style: normal; letter-spacing: 0.02em; }
+.people .vsep { width: 1px; height: 22px; background: var(--line); margin: 0 2px; }
+#timerPill { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px 0 9px; border-radius: var(--r-pill); cursor: pointer; border: 0; font: inherit; color: var(--accent); background: color-mix(in srgb, var(--accent) 11%, var(--surface)); transition: background-color var(--base) var(--ease), color var(--base) var(--ease), padding var(--base) var(--ease-em); }
+#timerPill:hover { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); }
+#timerPill:focus-visible { outline: none; box-shadow: var(--focus); }
+#timerPill .ico { width: 20px; height: 20px; flex: none; }
+#timerPill .ring { width: 20px; height: 20px; flex: none; border-radius: 50%; background: conic-gradient(var(--accent) calc(var(--p, 0) * 1turn), color-mix(in srgb, var(--accent) 22%, transparent) 0); -webkit-mask: radial-gradient(circle, transparent 5.5px, #000 6px); mask: radial-gradient(circle, transparent 5.5px, #000 6px); }
+#timerPill .tm { font-size: 16px; line-height: 1; min-width: 4.2em; text-align: right; }
+#timerPill .st { font-size: 12px; font-weight: 500; }
+#timerPill[data-s="idle"] { padding: 0 9px; }
+#timerPill[data-s="idle"] .ring, #timerPill[data-s="idle"] .tm, #timerPill:not([data-s="idle"]) .ico { display: none; }
+#timerPill[data-s="paused"] { color: var(--muted); background: var(--chip); }
+#timerPill[data-s="paused"] .ring { background: conic-gradient(var(--muted) calc(var(--p, 0) * 1turn), color-mix(in srgb, var(--muted) 25%, transparent) 0); }
+#timerPill[data-s="done"] { background: var(--accent); color: var(--accent-fg); animation: tmDone 1.1s var(--ease) 3; }
 #timerPill[data-s="done"] .ring { background: var(--accent-fg); }
+#shareBtn.primary { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; font-size: 14px; font-weight: 500; }
+#shareBtn svg { width: 16px; height: 16px; }
 @keyframes tmDone { 0%, 100% { scale: 1; } 30% { scale: 1.08; } 60% { scale: .98; } }
-#timerPop { top: auto; right: auto; left: 50%; translate: -50% 0; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); width: 320px; max-width: calc(100vw - 24px); box-sizing: border-box; transform-origin: 50% 100%; gap: var(--s4); display: flex; flex-direction: column; }
+#timerPop { top: calc(64px + env(safe-area-inset-top, 0px)); right: calc(12px + env(safe-area-inset-right, 0px)); bottom: auto; left: auto; width: 320px; max-width: calc(100vw - 24px); box-sizing: border-box; transform-origin: 85% 0; gap: var(--s4); display: flex; flex-direction: column; }
 #timerPop > * { min-width: 0; }
 #timerPop .tm-head { display: flex; align-items: center; justify-content: space-between; }
 #timerPop .tm-set { display: flex; align-items: center; justify-content: center; gap: 10px; }
-#timerPop .tm-big { font-size: 44px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; min-width: 150px; text-align: center; line-height: 1.1; border: 0; background: transparent; color: var(--text); font-family: inherit; padding: 4px 0; border-radius: var(--r-md); }
+#timerPop .tm-big { font-size: 40px; color: var(--accent); letter-spacing: 0.02em; font-family: "DSEG7", ui-monospace, monospace; width: 100%; min-width: 0; flex: 1; text-align: center; line-height: 1.1; border: 0; background: transparent; padding: 4px 0; border-radius: var(--r-md); }
 #timerPop .tm-big:focus-visible { outline: none; box-shadow: var(--focus); }
 #timerPop .step { width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--chip); color: var(--text); font-size: 22px; line-height: 1; cursor: pointer; transition: background-color var(--fast) var(--ease), scale var(--fast) var(--ease-spring); }
 #timerPop .step:hover { background: color-mix(in srgb, var(--accent) 14%, var(--chip)); }
@@ -453,7 +462,8 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
   .rail { gap: 2px; padding: 5px; }
 }
 @media (max-width: 760px) {
-  .hints, #hintsOpen, #fitBtn, .logo span, .status span, .me-name, #clearBtn { display: none !important; }
+  .hints, #hintsOpen, #fitBtn, .logo span, .status span, .me-name, #clearBtn, #shareBtn span, #timerPill .st { display: none !important; }
+  #shareBtn.primary { padding: 0 10px; }
   .board-pill { max-width: calc(100vw - 250px); }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -472,7 +482,6 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
   <div class="sep"></div>
   <input id="title" aria-label="Назва дошки" value="Спринт 48 · планінг">
   <button class="icon-btn" id="boardsBtn" aria-label="Усі дошки" aria-expanded="false" title="Усі дошки"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10l5 5 5-5"/></svg></button>
-  <button class="icon-btn" id="shareBtn" aria-label="Посилання на цю дошку" title="Посилання на цю дошку"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg></button>
   <button class="txt-btn" id="clearBtn">Очистити</button>
 </div>
 <div class="panel menu" id="boardMenu" role="menu" hidden>
@@ -491,6 +500,9 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
     <div class="status" id="status" data-s="warn"><i></i><span>Підключення…</span></div>
     <div class="avatars" id="avatars"></div>
     <button class="me-name" id="meName" title="Змінити ім’я"></button>
+    <span class="vsep"></span>
+    <button id="timerPill" data-s="idle" aria-label="Таймер для всіх" aria-haspopup="dialog" aria-expanded="false" title="Таймер для всіх"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7"/><path d="M12 10v3.8l2.4 1.6M9.5 3.5h5M18.6 6.4l1.2-1.2"/></svg><span class="ring"></span><span class="tm digits" id="tmText">00:00</span><span class="st" id="tmState"></span></button>
+    <button class="primary" id="shareBtn" title="Скопіювати посилання на цю дошку"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg><span>Поділитися</span></button>
   </div>
   <div class="panel zoom-pill">
     <button class="icon-btn" id="zoomOut" aria-label="Зменшити"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 12h12"/></svg></button>
@@ -530,13 +542,11 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
   <button class="icon-btn" data-tool="link" aria-label="З’єднати картки"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="17" r="2.5"/><path d="M8.3 8.2c3.5 1.6 1.8 7.4 7.4 8.2"/></svg><span class="tip">З’єднати картки<kbd>L</kbd></span></button>
   <button class="icon-btn" data-tool="section" aria-label="Секція"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M4 7.5h4"/><rect x="3.5" y="10" width="17" height="10" rx="2.5"/><path d="M3.5 4.5h7"/></svg><span class="tip">Секція<kbd>F</kbd></span></button>
   <button class="icon-btn" id="imageBtn" aria-label="Зображення"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M20.5 16l-5-5-9 8.5"/></svg><span class="tip">Зображення<kbd>Ctrl+V</kbd></span></button>
-  <button class="icon-btn" id="timerBtn" aria-label="Таймер" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7"/><path d="M12 10v3.8l2.4 1.6M9.5 3.5h5M18.6 6.4l1.2-1.2"/></svg><span class="tip">Таймер для всіх</span></button>
   <div class="rule"></div>
   <button class="icon-btn" id="undoBtn" aria-label="Скасувати"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L4.5 11.5 9 16"/><path d="M5 11.5h9a5 5 0 010 10h-2"/></svg><span class="tip">Скасувати<kbd>Ctrl+Z</kbd></span></button>
   <button class="icon-btn" id="redoBtn" aria-label="Повторити"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7l4.5 4.5L15 16"/><path d="M19 11.5h-9a5 5 0 000 10h2"/></svg><span class="tip">Повторити<kbd>Ctrl+Shift+Z</kbd></span></button>
 </div>
 <div class="panel palette" id="palette" hidden></div>
-<button class="panel" id="timerPill" hidden aria-label="Таймер"><span class="ring"></span><span class="tm" id="tmText">00:00</span><span class="st" id="tmState"></span></button>
 <div class="panel popover" id="timerPop" role="dialog" aria-label="Таймер" hidden>
   <div class="tm-head"><span class="label">Таймер для всіх на дошці</span><button class="close" id="tmClose" aria-label="Закрити">×</button></div>
   <div class="tm-set">
@@ -670,7 +680,7 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
   const STAMPS = ['👍', '❤️', '🔥', '⭐', '✅', '❌', '❓', '💡', '🎉', '😂', '👀', '🚀'];
   let stampEmoji = STAMPS.includes(store.get('jamboard:stamp')) ? store.get('jamboard:stamp') : STAMPS[0];
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const metaPending = new Set(); // link cards still fetching their preview
+  const metaPending = new Set(), metaTried = new Set(); // link cards still fetching their preview
   const ROPE_COLORS = ['gray', 'pink', 'green', 'blue', 'orange', 'purple'];
   const ROPE_VAR = { gray: 'var(--rope)', pink: 'var(--accent)', green: '#2e9d5b', blue: '#2f7de1', orange: '#e07a2f', purple: '#8b5cf6' };
   const ROPE_NAMES = { gray: 'Сірий', pink: 'Малиновий', green: 'Зелений', blue: 'Синій', orange: 'Помаранчевий', purple: 'Фіолетовий' };
@@ -1015,6 +1025,7 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
   function renderWeb(d, it) {
     const url = safeHttps(it.url), host = hostOf(url || '');
     d.classList.toggle('yt', !!it.yt);
+    if (!it.title && !metaTried.has(it.id) && mode !== 'connecting') { metaTried.add(it.id); metaPending.add(it.id); setTimeout(() => loadMeta(it.id), 0); }
     d.classList.toggle('loading', metaPending.has(it.id) && !it.title);
     const imgSrc = it.yt ? `https://i.ytimg.com/vi/${it.yt}/hqdefault.jpg` : it.img || '';
     const img = d.querySelector('.web-img');
@@ -1650,7 +1661,7 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
     return [edgePoint(ga, cb.x, cb.y, -1), gb.w ? edgePoint(gb, ca.x, ca.y, -1) : cb]; // ends tuck just under the cards
   }
   function ropeTarget(p0, p1) { // a rope of fixed length: close cards sag more, far ones pull it taut
-    const d = Math.hypot(p1.x - p0.x, p1.y - p0.y), sag = clamp((560 - d) * 0.26, 10, 110);
+    const d = Math.hypot(p1.x - p0.x, p1.y - p0.y), sag = clamp((480 - d) * 0.12, 6, 44);
     return { x: (p0.x + p1.x) / 2, y: (p0.y + p1.y) / 2 + sag * 2 };
   }
   function makeRope(id, ends, temp) {
@@ -2264,7 +2275,7 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
     const ym = YT_RE.exec(url), w = ym ? 360 : 320;
     const it = { id: uid(), type: 'web', url, x: Math.round(p.x - w / 2), y: Math.round(p.y - 130), w, h: 260, z: topZ(), by: me.name };
     if (ym) it.yt = ym[1];
-    items.set(it.id, it); metaPending.add(it.id);
+    items.set(it.id, it); metaPending.add(it.id); metaTried.add(it.id);
     commit({}, [it.id]); setSel([it.id]); renderAll();
     toast(ym ? 'Додано відео з YouTube' : 'Додано картку посилання');
     loadMeta(it.id);
@@ -2509,6 +2520,8 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
       let first = true;
       ids.forEach((id) => {
         const it = items.get(id); if (!it || it.type === 'comment' || isLink(it)) return;
+        // while a card is being moved, only the person moving it shows a frame: others' frames would trail behind
+        if (active.has(id) || (remotePos.has(id) && !(pr.drag && Array.isArray(pr.drag.ids) && pr.drag.ids.map(String).includes(id)))) return;
         const key = p.peer + '|' + id; seen.add(key);
         let b = peerBoxEls.get(key);
         if (!b) { b = document.createElement('div'); b.className = 'peer-box'; b.style.zIndex = 100000; b.appendChild(document.createElement('span')); world.appendChild(b); peerBoxEls.set(key, b); }
@@ -2685,9 +2698,16 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
     const open = $('#boardMenu').hidden; closeBoardUi();
     if (open) { renderBoardMenu(); $('#boardMenu').hidden = false; $('#boardsBtn').setAttribute('aria-expanded', 'true'); }
   });
-  $('#shareBtn').addEventListener('click', () => {
-    const open = $('#sharePop').hidden; closeBoardUi(); if (!open) return;
-    $('#shareUrl').value = ARTIFACT_URL + '#b=' + boardId;
+  $('#shareBtn').addEventListener('click', async () => {
+    closeBoardUi(); openTimer(false);
+    const url = ARTIFACT_URL + '#b=' + boardId; let ok = false;
+    try { await navigator.clipboard.writeText(url); ok = true; } catch (e) {
+      const t = document.createElement('textarea'); t.value = url; t.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(t); t.select();
+      try { ok = document.execCommand('copy'); } catch (e2) {} t.remove();
+    }
+    if (ok) { toast('Посилання на «' + titleOf(boardId) + '» скопійовано'); return; }
+    // no clipboard here: show the link so it can be copied by hand
+    $('#shareUrl').value = url;
     $('#shareLabel').textContent = 'Посилання на «' + titleOf(boardId) + '»';
     $('#copyBtn').textContent = 'Скопіювати';
     $('#sharePop').hidden = false; $('#shareUrl').select();
@@ -2757,7 +2777,7 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
   function renderTimer() {
     const pill = $('#timerPill'), left = tmLeft(), active = tmActive();
     const done = timer.run && left <= 0;
-    pill.hidden = !active;
+    pill.dataset.s = 'idle'; $('#tmState').textContent = ''; pill.setAttribute('aria-label', 'Таймер для всіх');
     if (active) {
       $('#tmText').textContent = fmt(left);
       pill.style.setProperty('--p', (1 - Math.max(0, left) / timer.dur).toFixed(4));
@@ -2784,7 +2804,8 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
   }
   function openTimer(open) {
     const pop = $('#timerPop'); open = open != null ? open : pop.hidden;
-    pop.hidden = !open; $('#timerBtn').setAttribute('aria-expanded', open ? 'true' : 'false');
+    pop.hidden = !open; $('#timerPill').setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) closeBoardUi();
     if (open) { if (!tmActive()) tmDraft = timer.dur; renderTimer(); }
   }
   function parseTm(v) {
@@ -2797,8 +2818,7 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
     b.addEventListener('click', () => { tmDraft = m * 60000; renderTimer(); });
     $('#tmPresets').appendChild(b);
   });
-  $('#timerBtn').addEventListener('click', () => openTimer());
-  $('#timerPill').addEventListener('click', () => openTimer(true));
+  $('#timerPill').addEventListener('click', () => openTimer());
   $('#tmClose').addEventListener('click', () => openTimer(false));
   $('#tmMinus').addEventListener('click', () => { tmDraft = Math.max(60000, Math.round((tmDraft - 60000) / 60000) * 60000); renderTimer(); });
   $('#tmPlus').addEventListener('click', () => { tmDraft = Math.min(120 * 60000, Math.round((tmDraft + 60000) / 60000) * 60000); renderTimer(); });
@@ -2812,7 +2832,7 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
     chime.ac || (() => { try { const A = window.AudioContext || window.webkitAudioContext; if (A) chime.ac = new A(); } catch (e) {} })(); // unlock sound on this click
   });
   $('#tmReset').addEventListener('click', () => setTimer({ dur: timer.dur }));
-  addEventListener('pointerdown', (e) => { if (!$('#timerPop').hidden && !e.target.closest('#timerPop, #timerBtn, #timerPill')) openTimer(false); }, true);
+  addEventListener('pointerdown', (e) => { if (!$('#timerPop').hidden && !e.target.closest('#timerPop, #timerPill')) openTimer(false); }, true);
   addEventListener('visibilitychange', () => { if (!document.hidden) renderTimer(); });
   function watchTimer() {
     if (unsubTimer) { try { unsubTimer(); } catch (e) {} unsubTimer = null; }
@@ -2877,7 +2897,8 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
   }
   function startBoard() {
     const fromUrl = boardFromUrl(), saved = store.get(BOARD_KEY);
-    return fromUrl || (validBoard(saved) ? saved : 'main');
+    const cfg = window.JAMBOARD_CONFIG, dflt = cfg && validBoard(cfg.defaultBoard) ? cfg.defaultBoard : 'main';
+    return fromUrl || (validBoard(saved) ? saved : dflt);
   }
   function subscribeItems() {
     const myBoard = boardId; let first = true;

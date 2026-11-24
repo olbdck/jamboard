@@ -27,7 +27,8 @@
 4. Claude → Settings → Connectors → **Add custom connector**, URL:
    `https://<project>.supabase.co/functions/v1/jamboard-mcp?key=<JAMBOARD_MCP_KEY>`
 
-Інструменти: `list_boards`, `get_board`, `add_items`, `update_items`, `delete_items`, `create_board`, `timer`.
+Інструменти: `list_boards`, `get_board`, `add_items` (стікери, текст, секції, мотузки, картки-посилання, штампи, коментарі), `update_items`, `delete_items`, `create_board`, `timer`.
+У новому проєкті Supabase таблиці треба явно дати доступ ролям (див. `grant` у `schema.sql`), зокрема `service_role` для MCP.
 Зміни з’являються на відкритих дошках одразу.
 
 ## Безпека прототипу
