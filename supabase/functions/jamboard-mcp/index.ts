@@ -52,7 +52,10 @@ async function loadItems(board) {
   return rows.map((r) => ({ ...r.data, id: r.path.slice(r.path.lastIndexOf('/') + 1) }));
 }
 const strip = (it) => { const o = { ...it }; delete o.id; return o; };
-const save = (board, list) => putDocs(list.map((it) => ({ path: itemsColl(board) + '/' + it.id, data: { ...strip(it), rev: rev() } })));
+// The board's cover (thumbnail in «Мої дошки») is drawn by browsers; after an edit here we only mark it stale,
+// and the next browser that lists the board rebuilds it from the items.
+const coverStale = (board) => (board === 'main' ? null : putDocs([{ path: `boards/${board}/cover/v1`, data: { v: 0, stale: true, at: Date.now() } }]).catch(() => null));
+const save = async (board, list) => { await putDocs(list.map((it) => ({ path: itemsColl(board) + '/' + it.id, data: { ...strip(it), rev: rev() } }))); if (list.length) await coverStale(board); };
 
 // <flow> shared by index.html and the MCP server: keep both copies identical
 const Flow = (() => {
@@ -645,6 +648,7 @@ async function callTool(name, a) {
     const owners = new Set(all.filter((i) => ids.has(i.id)).map((i) => ownerOf(i, all)).filter((s) => s && !ids.has(s.id)));
     const rest = all.filter((i) => !ids.has(i.id)), refitted = [...owners].filter((s) => refit(s, rest));
     await delDocs([...ids].map((id) => itemsColl(board) + '/' + id));
+    await coverStale(board);
     if (freed.length || refitted.length) await save(board, [...new Set([...freed, ...refitted])]);
     return { deleted: [...ids] };
   }
