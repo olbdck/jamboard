@@ -7,6 +7,7 @@
 
 1. **Supabase.** Створіть проєкт на https://supabase.com (безкоштовний план).
    - Відкрийте SQL Editor і виконайте `supabase/schema.sql`. Це створить таблицю дошок, увімкне realtime і створить сховище картинок.
+   - Потім виконайте `supabase/security.sql`: обмеження на масове видалення чи перезапис, кошик видалених записів (`docs_trash`, з нього можна все відновити), ліміти розміру.
 2. **Ключі.** У Project Settings → API скопіюйте `Project URL` і публічний `anon` ключ. Вставте їх у `config.js` (зразок у `config.example.js`):
    ```js
    window.JAMBOARD_CONFIG = { supabaseUrl: 'https://xxxx.supabase.co', supabaseAnonKey: '...', bucket: 'jamboard' };
