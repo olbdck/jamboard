@@ -323,6 +323,82 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
 .bc-x:focus-visible { outline: none; box-shadow: var(--focus); }
 @media (hover: none) { .bc-x { opacity: 1; scale: 1; } .bcard:hover { translate: none; } .bcard:hover .bc-thumb svg { scale: none; } }
 #boardsBtn svg { transition: rotate var(--base) var(--ease-em); }
+/* board cards on the canvas: another board's cover, name and a preview button */
+.item.board { color: var(--text); }
+.bd-in { border-radius: var(--r-lg); overflow: hidden; background: var(--surface); box-shadow: var(--note-shadow); border: calc(1px / var(--z)) solid var(--line); transition: box-shadow var(--base) var(--ease-em); }
+.item.board:hover:not(.dragging) .bd-in { box-shadow: var(--shadow-lg); }
+.bd-media { position: relative; aspect-ratio: 16 / 10; margin: 6px 6px 0; border-radius: 12px; overflow: hidden; background-color: var(--bg); background-image: radial-gradient(circle, var(--dot) 0.9px, transparent 1.1px); background-size: 12px 12px; }
+.bd-media svg.bd-cover { position: absolute; inset: 0; width: 100%; height: 100%; display: block; animation: thumbIn var(--base) var(--ease) both; transition: scale var(--slow) var(--ease-em); }
+.item.board:hover:not(.dragging) .bd-media svg.bd-cover { scale: 1.04; }
+.bd-media .bd-empty { position: absolute; inset: 0; display: grid; place-items: center; font-size: 12px; color: var(--muted); }
+.bd-media.wait::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--surface) 55%, transparent) 50%, transparent 70%) -100% 0 / 200% 100% no-repeat; animation: shimmer 1.3s var(--ease) infinite; }
+.bd-peek { position: absolute; left: 50%; top: 50%; translate: -50% -50%; display: flex; align-items: center; gap: 7px; border: 0; padding: 9px 15px 9px 13px; border-radius: var(--r-pill); font: 600 14px var(--f-text); color: var(--text); background: var(--glass); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); box-shadow: 0 2px 10px rgba(0, 0, 0, .16); cursor: pointer; opacity: 0; scale: .9; transition: opacity var(--fast) var(--ease), scale var(--base) var(--ease-spring), background-color var(--fast) var(--ease), color var(--fast) var(--ease); }
+.bd-peek svg { width: 18px; height: 18px; }
+.item.board:hover .bd-peek, .item.board.sel .bd-peek, .bd-peek:focus-visible { opacity: 1; scale: 1; }
+.bd-peek:hover { background: var(--accent); color: var(--accent-fg); }
+.bd-peek:active { scale: .95; }
+.bd-peek:focus-visible { outline: none; box-shadow: var(--focus); }
+@media (hover: none) { .bd-peek { opacity: 1; scale: 1; } }
+.bd-body { padding: 11px 14px 13px; display: grid; gap: 4px; min-width: 0; }
+.bd-title { font: 600 15px/1.3 var(--f-text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.bd-open { display: flex; align-items: center; gap: 6px; font: 500 12px/1.3 var(--f-text); color: var(--muted); text-decoration: none; width: max-content; max-width: 100%; border-radius: 6px; transition: color var(--fast) var(--ease); }
+.bd-open:hover { color: var(--accent); }
+.bd-open .bd-logo { color: var(--accent); font-size: 13px; }
+.bd-open span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bd-open svg { width: 12px; height: 12px; flex: none; }
+.bd-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* board preview dialog */
+.peek-back { position: fixed; inset: 0; z-index: 20; background: rgba(0, 0, 0, .28); animation: fadeIn var(--base) var(--ease) both; }
+.peek-back.out { animation: fadeOut var(--fast) var(--ease) both; }
+@keyframes fadeIn { from { opacity: 0; } }
+@keyframes fadeOut { to { opacity: 0; } }
+.panel.peek { position: fixed; left: 50%; top: 50%; translate: -50% -50%; width: min(1080px, calc(100vw - 48px)); height: min(720px, calc(100vh - 48px)); z-index: 21; display: flex; flex-direction: column; border-radius: var(--r-xl); box-shadow: var(--shadow-lg), 0 30px 80px rgba(0, 0, 0, .25); overflow: hidden; }
+.panel.peek.in { animation: peekIn var(--slow) var(--ease-em) both; }
+.panel.peek.out { animation: peekOut 180ms var(--ease) both; pointer-events: none; }
+@keyframes peekIn { from { opacity: 0; scale: .55; } 40% { opacity: 1; } }
+@keyframes peekOut { to { opacity: 0; scale: .94; } }
+.peek-head { display: flex; align-items: center; gap: 8px; padding: 14px 14px 12px 22px; }
+.peek-hd { flex: 1; min-width: 0; }
+.peek-hd h2 { margin: 0; font: 600 19px/1.25 var(--f-display); letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.peek-hd p { margin: 2px 0 0; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.peek-new { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; color: var(--muted); transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease); }
+.peek-new:hover { background: var(--chip); color: var(--text); }
+.peek-new svg { width: 18px; height: 18px; }
+.peek-new:focus-visible, #peekClose:focus-visible, #peekGo:focus-visible { outline: none; box-shadow: var(--focus); }
+#peekGo:disabled { opacity: .5; cursor: default; }
+.peek-stage { position: relative; flex: 1; min-height: 0; margin: 0 8px 8px; border-radius: calc(var(--r-xl) - 8px); overflow: hidden; background-color: var(--bg); background-image: radial-gradient(circle, var(--dot) 1.2px, transparent 1.4px); background-size: 24px 24px; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.peek-stage.grabbing { cursor: grabbing; }
+.peek-stage.wait::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--surface) 45%, transparent) 50%, transparent 70%) -100% 0 / 200% 100% no-repeat; animation: shimmer 1.3s var(--ease) infinite; }
+.peek-world { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+.peek-world.glide { transition: transform var(--base) var(--ease-em); }
+.peek-world.show { animation: thumbIn var(--base) var(--ease) both; }
+.peek-msg { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--muted); font-size: 14px; pointer-events: none; }
+.peek-msg:empty { display: none; }
+.pv { position: absolute; box-sizing: border-box; }
+.pv-sec { border-radius: var(--r-lg); background: color-mix(in srgb, var(--c) 22%, var(--surface)); border: 1px solid color-mix(in srgb, var(--c) 70%, var(--line)); }
+.pv-st { position: absolute; left: 0; bottom: 100%; margin-bottom: 8px; max-width: 100%; font: 600 20px/1.2 var(--f-display); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pv-ropes { position: absolute; overflow: visible; pointer-events: none; }
+.pv-sticky { background: var(--c); color: var(--ink); border-radius: var(--r-md); box-shadow: var(--note-shadow); padding: 18px 18px 16px; font: 400 18px/1.3 var(--f-note); white-space: pre-wrap; overflow: hidden; overflow-wrap: anywhere; }
+.pv-text { color: var(--text); font: 400 16px/1.4 var(--f-text); white-space: pre-wrap; overflow-wrap: anywhere; }
+.pv-text[data-ts="h1"] { font: 700 32px/1.15 var(--f-display); letter-spacing: -0.02em; }
+.pv-text[data-ts="h2"] { font: 600 22px/1.25 var(--f-display); }
+.pv-text[data-ts="s"] { font-size: 13px; color: var(--muted); }
+.pv-node { display: grid; place-items: center; padding: 8px 14px; text-align: center; color: var(--ink); background: color-mix(in srgb, var(--c) 70%, var(--surface)); border: 1.5px solid color-mix(in srgb, var(--c) 55%, var(--text)); border-radius: 12px; font: 600 14px/1.25 var(--f-text); overflow: hidden; }
+.pv-node[data-shape="rect"] { border-radius: 6px; }
+.pv-node[data-shape="pill"] { border-radius: 999px; }
+.pv-node[data-shape="circle"] { border-radius: 50%; }
+.pv-node[data-shape="diamond"] { border: 0; background: none; }
+.pv-node[data-shape="diamond"]::before { content: ""; position: absolute; inset: 0; background: color-mix(in srgb, var(--c) 70%, var(--surface)); clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+.pv-node span { position: relative; overflow-wrap: anywhere; }
+.pv-img { border-radius: var(--r-md); overflow: hidden; background: color-mix(in srgb, var(--muted) 18%, var(--surface)); }
+.pv-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pv-web { border-radius: var(--r-md); overflow: hidden; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--note-shadow); display: grid; }
+.pv-web img { width: 100%; aspect-ratio: 1.91 / 1; object-fit: cover; display: block; }
+.pv-web b { padding: 12px 14px 0; font: 600 15px/1.3 var(--f-text); overflow-wrap: anywhere; }
+.pv-web small { padding: 4px 14px 12px; font-size: 12px; color: var(--muted); }
+.pv-stamp { display: grid; place-items: center; line-height: 1; }
+.pv-pin { display: grid; place-items: center; border-radius: 50% 50% 50% 4px; background: color-mix(in srgb, var(--pc) 30%, var(--surface)); box-shadow: 0 0 0 2px var(--pc), var(--note-shadow); font-size: 18px; }
+@media (max-width: 520px) { .panel.peek { width: calc(100vw - 16px); height: calc(100vh - 16px); } .peek-head { flex-wrap: wrap; padding: 12px 10px 10px 16px; } .peek-hd { flex-basis: 100%; } .peek-head .peek-new { margin-left: auto; } }
 /* view-only boards (the demo): pan, zoom and read; every editing control is gone */
 body.view-only .rail [data-tool]:not([data-tool="select"]):not([data-tool="hand"]), body.view-only #mermaidBtn, body.view-only #imageBtn, body.view-only #undoBtn, body.view-only #redoBtn, body.view-only .rail .rule, body.view-only #palette, body.view-only #ctx, body.view-only #timerPill, body.view-only #timerPill + .vsep, body.view-only .port, body.view-only .handle { display: none !important; }
 body.view-only #viewport, body.view-only #viewport .item { cursor: grab; }
@@ -716,6 +792,16 @@ body.view-only .ro-note { display: flex; animation: palIn var(--base) var(--ease
   <button class="icon-btn" id="delBtn" aria-label="Видалити"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13"/></svg><span class="tip">Видалити<kbd>Del</kbd></span></button>
 </div>
 
+<div class="peek-back" id="peekBack" hidden></div>
+<div class="panel peek" id="peek" role="dialog" aria-modal="true" aria-labelledby="peekTitle" hidden>
+  <div class="peek-head">
+    <div class="peek-hd"><h2 id="peekTitle">Дошка</h2><p id="peekSub"></p></div>
+    <a class="peek-new" id="peekNew" target="_blank" rel="noopener" title="Відкрити в новій вкладці" aria-label="Відкрити в новій вкладці"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4.5h5.5V10M19.5 4.5l-8 8M18 14v4.5a1 1 0 01-1 1H5.5a1 1 0 01-1-1V7a1 1 0 011-1H10"/></svg></a>
+    <button class="txt-btn" id="peekClose">Закрити</button>
+    <button class="primary sm" id="peekGo">Перейти в дошку</button>
+  </div>
+  <div class="peek-stage" id="peekStage"><div class="peek-world" id="peekWorld"></div><div class="peek-msg" id="peekMsg" role="status"></div></div>
+</div>
 <div class="panel thread" id="thread" role="dialog" aria-label="Коментар" hidden>
   <div class="th-head"><span class="label" id="thTitle">Новий коментар</span><span class="row" style="gap:4px"><button class="txt-btn" id="thResolve">Вирішено</button><button class="close" id="thClose" aria-label="Закрити">×</button></span></div>
   <div class="th-msgs" id="thMsgs"></div>
@@ -1090,7 +1176,7 @@ const Flow = (() => {
 })();
 // </flow>
   const isSec = (i) => i.type === 'section';
-  const isCard = (i) => i.type === 'sticky' || i.type === 'image' || i.type === 'text' || i.type === 'web' || i.type === 'node';
+  const isCard = (i) => i.type === 'sticky' || i.type === 'image' || i.type === 'text' || i.type === 'web' || i.type === 'node' || i.type === 'board';
   const isNode = (i) => !!i && i.type === 'node';
   const ICON_SVG = {
     service: '<rect x="4" y="4.5" width="16" height="6" rx="1.6"/><rect x="4" y="13.5" width="16" height="6" rx="1.6"/><path d="M7.5 7.5h.01M7.5 16.5h.01" stroke-width="2.6"/>',
@@ -1142,7 +1228,7 @@ const Flow = (() => {
   const RANK = { section: 0, stamp: 2, comment: 3 };
   const rank = (i) => (i.type in RANK ? RANK[i.type] : 1);
   const sorted = () => [...items.values()].filter((i) => !isLink(i)).sort((a, b) => rank(a) - rank(b) || (a.z || 0) - (b.z || 0) || (a.id < b.id ? -1 : 1));
-  const TYPES_OK = ['sticky', 'image', 'section', 'stamp', 'comment', 'text', 'link', 'web', 'node'];
+  const TYPES_OK = ['sticky', 'image', 'section', 'stamp', 'comment', 'text', 'link', 'web', 'node', 'board'];
   const STAMPS = ['👍', '❤️', '🔥', '⭐', '✅', '❌', '❓', '💡', '🎉', '😂', '👀', '🚀'];
   let stampEmoji = STAMPS.includes(store.get('jamboard:stamp')) ? store.get('jamboard:stamp') : STAMPS[0];
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1181,6 +1267,10 @@ const Flow = (() => {
       if (typeof o.yt !== 'string' || !/^[\w-]{11}$/.test(o.yt)) delete o.yt;
       ['img', 'icon'].forEach((k) => { if (!safeHttps(o[k])) delete o[k]; });
       ['title', 'desc', 'site'].forEach((k) => { if (typeof o[k] !== 'string') delete o[k]; else o[k] = o[k].slice(0, k === 'desc' ? 300 : 160); });
+    }
+    if (o.type === 'board') { // a card that links to another JamBoard board
+      o.bid = typeof o.bid === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(o.bid) ? o.bid : '';
+      if (typeof o.title !== 'string') delete o.title; else o.title = o.title.slice(0, 120);
     }
     if (o.ts != null && !TEXT_TS.includes(o.ts)) delete o.ts;
     return o;
@@ -1415,6 +1505,11 @@ const Flow = (() => {
       const t = d.firstChild;
       t.addEventListener('blur', () => { if (editingId === id) finishEdit(); });
       t.addEventListener('input', () => liveText(id));
+    } else if (it.type === 'board') {
+      d.innerHTML = '<div class="bd-in"><div class="bd-media"><button class="bd-peek" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></svg><span>Переглянути</span></button></div>'
+        + '<div class="bd-body"><div class="bd-title"></div><a class="web-go bd-open" target="_blank" rel="noopener"><span class="bd-logo" aria-hidden="true">◐</span><span class="bd-kind">Дошка JamBoard</span><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2.5h5.5V8M9.5 2.5L3 9"/></svg></a></div></div>'
+        + '<div class="handle" title="Змінити ширину"></div>' + PORTS;
+      d.querySelector('.bd-peek').addEventListener('click', (e) => { e.stopPropagation(); const cur = items.get(id); if (cur) openPeek(cur.bid, d.querySelector('.bd-media')); });
     } else if (it.type === 'web') {
       const ARR = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2.5h5.5V8M9.5 2.5L3 9"/></svg>';
       d.innerHTML = '<div class="web-in"><div class="web-media"><img class="web-img" alt="" draggable="false" referrerpolicy="no-referrer">'
@@ -1501,6 +1596,10 @@ const Flow = (() => {
       if (editingId !== it.id) setRich(t, it);
       d.dataset.ts = TEXT_TS.includes(it.ts) ? it.ts : 'p';
       t.style.fontWeight = it.b ? '700' : ''; t.style.textAlign = it.al || '';
+      d.style.height = 'auto';
+      const hh = d.offsetHeight; if (hh && Math.abs(hh - (it.h || 0)) > 0.5) it.h = hh;
+    } else if (it.type === 'board') {
+      renderBoardCard(d, it);
       d.style.height = 'auto';
       const hh = d.offsetHeight; if (hh && Math.abs(hh - (it.h || 0)) > 0.5) it.h = hh;
     } else if (it.type === 'web') {
@@ -2010,6 +2109,7 @@ const Flow = (() => {
     const itemEl = e.target.closest('.item');
     if (editingId && itemEl && itemEl.dataset.id === editingId && e.target.closest('.txt, .stitle')) return;
     if (e.button === 0 && e.target.closest('.web-go[href]')) return; // let the browser open the link
+    if (e.button === 0 && e.target.closest('.bd-peek')) return; // the board card's preview button
     if (e.target.closest('.rope-label.editing')) return;
     if (e.button === 2) { if (!editingId && !viewOnly()) showCatcher(e); return; }
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -2026,6 +2126,7 @@ const Flow = (() => {
     const dbl = e.button === 0 && now - lastTap.t < 380 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 10 && id === lastTap.id;
     lastTap = dbl ? { t: 0 } : { t: now, x: e.clientX, y: e.clientY, id };
     if (viewOnly() && e.button === 0 && dbl && hit && hit.type === 'web') { action = null; openWeb(hit); return; }
+    if (viewOnly() && e.button === 0 && dbl && hit && hit.type === 'board') { action = null; openPeek(hit.bid, els.get(id)); return; }
     if (e.button === 1 || spaceDown || tool === 'hand' || (viewOnly() && e.button === 0)) { action = { type: 'pan', sx: e.clientX, sy: e.clientY, vx: 0, vy: 0, t: performance.now() }; vp.classList.add('grabbing'); return; }
     if (e.button !== 0) return;
     if (tool === 'stamp') { startStamp(e); return; }
@@ -2042,6 +2143,7 @@ const Flow = (() => {
     if (dbl && !e.target.closest('.handle')) {
       if (hit && (hit.type === 'sticky' || hit.type === 'text' || isNode(hit))) pendingEdit = id;
       else if (hit && hit.type === 'web') openWeb(hit);
+      else if (hit && hit.type === 'board') openPeek(hit.bid, els.get(id));
       else if (hit && isSec(hit) && e.target.closest('.stitle')) pendingEdit = id;
       else if (!hit || isSec(hit)) pendingEdit = createStickyAt(toWorld(e.clientX, e.clientY)).id;
       action = null; return;
@@ -2115,7 +2217,7 @@ const Flow = (() => {
     } else if (action.type === 'resize') {
       const it = items.get(action.id); action.moved = true;
       if (it.type === 'text') it.w = Math.round(Math.max(60, action.w + dx / view.z));
-      else if (it.type === 'web') it.w = Math.round(clamp(action.w + dx / view.z, 220, 720));
+      else if (it.type === 'web' || it.type === 'board') it.w = Math.round(clamp(action.w + dx / view.z, 220, 720));
       else if (it.type === 'node') {
         it.w = Math.round(Math.max(64, action.w + dx / view.z)); it.h = Math.round(Math.max(44, action.h + dy / view.z));
         if (it.shape === 'circle' && !e.shiftKey) it.h = it.w;
@@ -2863,6 +2965,7 @@ const Flow = (() => {
   document.addEventListener('cut', (e) => { if (editingId || isTyping(e.target) || !selected.size) return; copySel(e); deleteSelected(); });
   document.addEventListener('paste', (e) => {
     const dt = e.clipboardData; if (!dt) return;
+    if (pk.open) return;
     if (viewOnly() && !isTyping(e.target)) { toast('Це дошка лише для перегляду. Свою створіть у меню JamBoard'); return; }
     if (editingId) { e.preventDefault(); document.execCommand('insertText', false, dt.getData('text/plain')); return; }
     const fromMenu = e.target && e.target.closest && e.target.closest('#pasteCatcher');
@@ -2890,6 +2993,8 @@ const Flow = (() => {
   // ---------- link cards: YouTube gets its thumbnail and title, other sites their Open Graph preview ----------
   const YT_RE = /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([\w-]{11})/;
   function pasteUrl(raw, p) {
+    const bid0 = boardLinkId(raw); // a link to a board on this same site
+    if (bid0) { pasteBoardLink(bid0, p); return; }
     const url = safeHttps(raw.replace(/^http:/i, 'https:'));
     if (!url) { pasteText(raw, p); return; }
     const ym = YT_RE.exec(url), w = ym ? 360 : 320;
@@ -2926,6 +3031,201 @@ const Flow = (() => {
     }
     renderAll();
   }
+  // ---------- board cards: a link to another JamBoard board, with its cover and a preview ----------
+  const boardHref = (bid) => ARTIFACT_URL + '#b=' + bid;
+  function boardLinkId(url) { // https://…/jamboard/#b=<id> on this same site
+    try {
+      const u = new URL(url), home = new URL(ARTIFACT_URL), path = (x) => x.replace(/index\.html$/, '').replace(/\/?$/, '/');
+      if (u.host !== home.host || path(u.pathname) !== path(home.pathname)) return null;
+      const m = /(?:^|[#?&])b=([A-Za-z0-9_-]{1,64})(?:&|$)/.exec(u.hash.slice(1)) || /(?:^|[?&])b=([A-Za-z0-9_-]{1,64})(?:&|$)/.exec(u.search.slice(1));
+      return m && boardOk(m[1]) ? m[1] : null;
+    } catch (e) { return null; }
+  }
+  function pasteBoardLink(bid, p) {
+    const w = 300;
+    const it = { id: uid(), type: 'board', bid, x: Math.round(p.x - w / 2), y: Math.round(p.y - 120), w, h: 240, z: topZ(), by: me.name };
+    const known = (boards.get(bid) || {}).title || (isDemo(bid) ? titleOf(bid) : ''); if (known) it.title = known;
+    items.set(it.id, it); commit({}, [it.id]); setSel([it.id]); renderAll();
+    toast('Додано картку дошки');
+    peekBoard(bid, 0).then((m) => { // keep the title it had when added, for anyone who can't read the board's meta
+      const cur = items.get(it.id); if (!cur) return;
+      if (m && m.title && m.title !== cur.title) { cur.title = m.title; write(cur); for (const op of undoStack) if (op.after[it.id]) op.after[it.id].title = m.title; }
+      render(cur);
+    });
+  }
+  function renderBoardCard(d, it) {
+    const bid = it.bid, info = (peeked.get(bid) || {}).meta;
+    if (bid && !peeked.has(bid) && !peeking.has(bid) && mode === 'shared') peekBoard(bid).then(() => { const cur = items.get(it.id); if (cur) render(cur); });
+    const title = (info && info.title) || (bid === boardId ? titleOf(bid) : (boards.get(bid) || {}).title) || it.title || 'Дошка JamBoard';
+    const t = d.querySelector('.bd-title'); if (t.textContent !== title) t.textContent = title;
+    const kind = bid && viewOnly(bid) || (info && info.ro) ? 'Дошка JamBoard · лише перегляд' : 'Дошка JamBoard';
+    const k = d.querySelector('.bd-kind'); if (k.textContent !== kind) k.textContent = kind;
+    const a = d.querySelector('.bd-open'), href = bid ? boardHref(bid) : '';
+    if (href) { if (a.getAttribute('href') !== href) a.href = href; a.title = 'Відкрити в новій вкладці'; } else a.removeAttribute('href');
+    d.querySelector('.bd-peek').setAttribute('aria-label', 'Переглянути дошку «' + title + '»');
+    const media = d.querySelector('.bd-media'), c = bid ? cachedCover(bid) : null, json = c ? JSON.stringify(c) : '';
+    if (d._cj !== json) {
+      d._cj = json; media.querySelectorAll('svg.bd-cover, .bd-empty').forEach((e) => e.remove());
+      if (c && c.n) { const svg = coverSvg(c); svg.classList.add('bd-cover'); media.prepend(svg); }
+      else if (c) { const e = document.createElement('div'); e.className = 'bd-empty'; e.textContent = 'Порожня дошка'; media.prepend(e); }
+    }
+    media.classList.toggle('wait', !c && peeking.has(bid));
+    d.title = '';
+  }
+
+  // the preview: the other board drawn read-only in a centred dialog; drag to look around, wheel or pinch to zoom
+  const pk = { open: false, bid: null, view: { x: 0, y: 0, z: 1 }, fit: null, token: 0, from: null, drag: null };
+  function plainOf(it) {
+    if (typeof it.text === 'string' && it.text) return it.text;
+    if (typeof it.html === 'string' && it.html) { const doc = new DOMParser().parseFromString('<div>' + it.html.replace(/<(br|\/div|\/h[126])\b[^>]*>/gi, '\n$&') + '</div>', 'text/html'); return (doc.body.textContent || '').replace(/\n{3,}/g, '\n\n').trim(); }
+    return '';
+  }
+  function peekBuild(list) {
+    const w = $('#peekWorld'); w.innerHTML = '';
+    const cards = list.filter((i) => !isLink(i) && isFinite(i.x) && isFinite(i.y));
+    if (!cards.length) return null;
+    const W = (i) => (i.type === 'comment' ? 36 : +i.w || 200), H = (i) => (i.type === 'comment' ? 36 : +i.h || 120);
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const i of cards) { x0 = Math.min(x0, i.x); y0 = Math.min(y0, i.y - (i.type === 'section' ? 40 : 0)); x1 = Math.max(x1, i.x + W(i)); y1 = Math.max(y1, i.y + H(i)); }
+    const T = (c, d) => `var(--t-${COLORS.includes(c) ? c : d})`;
+    const box = (i, cls) => { const e = document.createElement('div'); e.className = 'pv ' + cls; e.style.cssText = `left:${i.x}px;top:${i.y}px;width:${W(i)}px;height:${H(i)}px`; return e; };
+    const order = cards.sort((a, b) => rank(a) - rank(b) || (a.z || 0) - (b.z || 0));
+    const secs = order.filter((i) => i.type === 'section'), rest = order.filter((i) => i.type !== 'section');
+    for (const i of secs) {
+      const e = box(i, 'pv-sec'); e.style.setProperty('--c', T(i.color, 'gray'));
+      const t = document.createElement('div'); t.className = 'pv-st'; t.textContent = i.title || ''; e.appendChild(t); w.appendChild(e);
+    }
+    const ends = new Map(cards.map((i) => [i.id, i]));
+    const svg = document.createElementNS(SVGNS, 'svg'); svg.setAttribute('class', 'pv-ropes'); svg.style.cssText = `left:${x0}px;top:${y0}px;width:${x1 - x0}px;height:${y1 - y0}px`; svg.setAttribute('viewBox', `${x0} ${y0} ${x1 - x0} ${y1 - y0}`);
+    for (const l of list) {
+      if (!isLink(l)) continue; const a = ends.get(l.a), b = ends.get(l.b); if (!a || !b) continue;
+      const ln = document.createElementNS(SVGNS, 'line');
+      [['x1', a.x + W(a) / 2], ['y1', a.y + H(a) / 2], ['x2', b.x + W(b) / 2], ['y2', b.y + H(b) / 2]].forEach(([k, v]) => ln.setAttribute(k, v));
+      ln.setAttribute('style', `stroke:${ropeColor(l)};stroke-width:${l.thick ? 4 : 2};${l.dash ? 'stroke-dasharray:8 7;' : ''}`); svg.appendChild(ln);
+    }
+    w.appendChild(svg);
+    for (const i of rest) {
+      let e;
+      if (i.type === 'sticky') { e = box(i, 'pv-sticky'); e.style.setProperty('--c', T(i.color, 'caution')); e.textContent = plainOf(i); if (i.b || i.ts === 'h1') e.style.fontWeight = '700'; if (i.al) e.style.textAlign = i.al; }
+      else if (i.type === 'text') { e = box(i, 'pv-text'); e.dataset.ts = TEXT_TS.includes(i.ts) ? i.ts : 'p'; e.style.height = 'auto'; e.textContent = plainOf(i); if (i.b) e.style.fontWeight = '700'; if (i.al) e.style.textAlign = i.al; }
+      else if (i.type === 'node') { e = box(i, 'pv-node'); e.dataset.shape = i.shape || 'rect'; e.style.setProperty('--c', T(i.color, 'gray')); const s = document.createElement('span'); s.textContent = i.text || ''; e.appendChild(s); }
+      else if (i.type === 'image') { e = box(i, 'pv-img'); const u = i.url || i.src || ''; if (/^https:\/\//.test(u) || /^data:image\//.test(u)) { const im = document.createElement('img'); im.alt = ''; im.draggable = false; im.referrerPolicy = 'no-referrer'; im.src = u; e.appendChild(im); } }
+      else if (i.type === 'web' || i.type === 'board') {
+        e = box(i, 'pv-web'); e.style.height = 'auto';
+        const img = i.type === 'web' ? (i.yt ? `https://i.ytimg.com/vi/${i.yt}/hqdefault.jpg` : safeHttps(i.img)) : null;
+        if (img) { const im = document.createElement('img'); im.alt = ''; im.draggable = false; im.referrerPolicy = 'no-referrer'; im.src = img; im.addEventListener('error', () => im.remove()); e.appendChild(im); }
+        const t = document.createElement('b'); t.textContent = i.title || (i.type === 'board' ? 'Дошка JamBoard' : hostOf(safeHttps(i.url) || '') || 'Посилання'); e.appendChild(t);
+        const s = document.createElement('small'); s.textContent = i.type === 'board' ? '◐ Дошка JamBoard' : i.site || hostOf(safeHttps(i.url) || ''); e.appendChild(s);
+      }
+      else if (i.type === 'stamp') { e = box(i, 'pv-stamp'); e.style.fontSize = Math.round(H(i) * 0.8) + 'px'; e.textContent = typeof i.emoji === 'string' ? i.emoji.slice(0, 16) : '👍'; }
+      else if (i.type === 'comment') { e = box(i, 'pv-pin'); const m0 = (i.msgs || [])[0] || {}; e.style.setProperty('--pc', safeColor(m0.c)); e.textContent = typeof m0.e === 'string' && m0.e.length <= 8 ? m0.e : '💬'; e.title = (m0.n ? m0.n + ': ' : '') + String(m0.t || '').slice(0, 120); }
+      if (e) w.appendChild(e);
+    }
+    return { x0, y0, x1, y1 };
+  }
+  function peekApply(smooth) {
+    const w = $('#peekWorld'), v = pk.view;
+    w.classList.toggle('glide', !!smooth);
+    w.style.transform = `translate(${v.x}px, ${v.y}px) scale(${v.z})`;
+  }
+  function peekFit(smooth) {
+    const st = $('#peekStage'), b = pk.fit; if (!b) return;
+    const sw = st.clientWidth, sh = st.clientHeight, bw = Math.max(b.x1 - b.x0, 1), bh = Math.max(b.y1 - b.y0, 1);
+    const z = clamp(Math.min((sw - 48) / bw, (sh - 48) / bh), 0.04, 1.5);
+    pk.view = { z, x: (sw - bw * z) / 2 - b.x0 * z, y: (sh - bh * z) / 2 - b.y0 * z }; peekApply(smooth);
+  }
+  async function openPeek(bid, fromEl) {
+    if (!bid) return;
+    closeGallery(); closeThread();
+    const pop = $('#peek'), back = $('#peekBack'), token = ++pk.token;
+    pk.open = true; pk.bid = bid; pk.from = fromEl || null;
+    // grow out of the card that was clicked
+    const r = fromEl && fromEl.getBoundingClientRect();
+    pop.hidden = false; back.hidden = false; pop.classList.remove('out'); back.classList.remove('out');
+    const pr = pop.getBoundingClientRect();
+    pop.style.transformOrigin = r ? `${r.left + r.width / 2 - pr.left}px ${r.top + r.height / 2 - pr.top}px` : '50% 50%';
+    pop.classList.remove('in'); void pop.offsetWidth; pop.classList.add('in');
+    const info = (peeked.get(bid) || {}).meta;
+    const title = (info && info.title) || (bid === boardId ? titleOf(bid) : (boards.get(bid) || {}).title) || 'Дошка JamBoard';
+    $('#peekTitle').textContent = title;
+    $('#peekSub').textContent = bid === boardId ? 'Ви зараз на цій дошці' : 'Перегляд. Щоб змінювати, перейдіть у дошку';
+    $('#peekGo').textContent = bid === boardId ? 'Ви вже тут' : 'Перейти в дошку'; $('#peekGo').disabled = bid === boardId;
+    $('#peekNew').href = boardHref(bid);
+    $('#peekWorld').innerHTML = ''; $('#peekMsg').textContent = ''; $('#peekStage').classList.add('wait');
+    requestAnimationFrame(() => $('#peekClose').focus({ preventScroll: true }));
+    let list = null;
+    try { [list] = await Promise.all([peekItems(bid), peekBoard(bid)]); } catch (e) { list = null; }
+    if (token !== pk.token || !pk.open) return;
+    const m = (peeked.get(bid) || {}).meta;
+    if (m) { if (m.title) $('#peekTitle').textContent = m.title; if (m.by && bid !== boardId) $('#peekSub').textContent = 'Автор: ' + m.by + (m.ro ? ' · лише перегляд' : '') + '. Щоб змінювати, перейдіть у дошку'; }
+    $('#peekStage').classList.remove('wait');
+    if (!list) { $('#peekMsg').textContent = 'Не вдалося завантажити дошку. Можливо, її видалили або немає зв’язку'; return; }
+    pk.fit = peekBuild(list);
+    if (!pk.fit) { $('#peekMsg').textContent = 'На цій дошці поки нічого немає'; return; }
+    peekFit(false);
+    const w = $('#peekWorld'); w.classList.remove('show'); void w.offsetWidth; w.classList.add('show');
+  }
+  function closePeek(go) {
+    if (!pk.open) return;
+    pk.open = false; pk.token++;
+    const pop = $('#peek'), back = $('#peekBack'), from = pk.from;
+    pop.classList.remove('in'); pop.classList.add('out'); back.classList.add('out');
+    setTimeout(() => { if (!pk.open) { pop.hidden = true; back.hidden = true; $('#peekWorld').innerHTML = ''; } }, reduceMotion ? 0 : 200);
+    if (go && pk.bid && pk.bid !== boardId) openBoard(pk.bid);
+    else if (from && from.isConnected) { const f = from.closest('.item') ? null : from; if (f && f.focus) f.focus({ preventScroll: true }); }
+  }
+  $('#peekClose').addEventListener('click', () => closePeek(false));
+  $('#peekGo').addEventListener('click', () => closePeek(true));
+  $('#peekBack').addEventListener('pointerdown', () => closePeek(false));
+  $('#peek').addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Escape') { e.preventDefault(); closePeek(false); return; }
+    if (e.key === 'Tab') { // keep focus inside the dialog
+      const f = [...$('#peek').querySelectorAll('button:not([disabled]), a[href]')]; if (!f.length) return;
+      const i = f.indexOf(document.activeElement), n = e.shiftKey ? (i <= 0 ? f.length - 1 : i - 1) : (i + 1) % f.length;
+      e.preventDefault(); f[n].focus();
+    }
+    if (e.key === '0' || (e.shiftKey && e.code === 'Digit1')) { e.preventDefault(); peekFit(true); }
+  });
+  (() => { // pan, wheel zoom and pinch inside the preview
+    const st = $('#peekStage'), pts = new Map();
+    const zoomAt = (cx, cy, f, smooth) => {
+      const v = pk.view, r = st.getBoundingClientRect(), x = cx - r.left, y = cy - r.top, z = clamp(v.z * f, 0.03, 4);
+      pk.view = { z, x: x - (x - v.x) * (z / v.z), y: y - (y - v.y) * (z / v.z) }; peekApply(smooth);
+    };
+    st.addEventListener('wheel', (e) => {
+      e.preventDefault(); if (!pk.fit) return;
+      if (e.ctrlKey || e.metaKey) { // same as on the board: pinch or Ctrl+wheel zooms, plain wheel pans
+        const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+        zoomAt(e.clientX, e.clientY, Math.exp(-clamp(dy, -240, 240) * (Math.abs(dy) < 40 ? 0.01 : 0.0022)), Math.abs(dy) >= 40);
+      } else {
+        let dx = e.deltaX, dy = e.deltaY;
+        if (e.deltaMode === 1) { dx *= 16; dy *= 16; }
+        if (e.shiftKey && !dx) { dx = dy; dy = 0; }
+        pk.view.x -= dx; pk.view.y -= dy; peekApply(false);
+      }
+    }, { passive: false });
+    st.addEventListener('pointerdown', (e) => {
+      if (!pk.fit || e.target.closest('a, button')) return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); try { st.setPointerCapture(e.pointerId); } catch (_) {}
+      st.classList.add('grabbing');
+      if (pts.size === 2) { const [a, b] = [...pts.values()]; pk.drag = { pinch: Math.hypot(a.x - b.x, a.y - b.y) }; }
+      else pk.drag = { x: e.clientX, y: e.clientY };
+    });
+    st.addEventListener('pointermove', (e) => {
+      if (!pts.has(e.pointerId) || !pk.drag) return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pts.size === 2 && pk.drag.pinch) {
+        const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
+        zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, d / pk.drag.pinch, false); pk.drag.pinch = d; return;
+      }
+      pk.view.x += e.clientX - pk.drag.x; pk.view.y += e.clientY - pk.drag.y; pk.drag.x = e.clientX; pk.drag.y = e.clientY; peekApply(false);
+    });
+    const up = (e) => { pts.delete(e.pointerId); if (!pts.size) { pk.drag = null; st.classList.remove('grabbing'); } else if (pts.size === 1) { const [p] = [...pts.values()]; pk.drag = { x: p.x, y: p.y }; } };
+    st.addEventListener('pointerup', up); st.addEventListener('pointercancel', up);
+    st.addEventListener('dblclick', () => peekFit(true));
+    addEventListener('resize', () => { if (pk.open && pk.fit) peekFit(false); });
+  })();
   function openWeb(it) { const u = safeHttps(it.url); if (u) window.open(u, '_blank', 'noopener,noreferrer'); }
   function pasteText(text, p) {
     if (Flow.looksLike(text)) { buildMermaid(text, p, true); return; }
@@ -3243,6 +3543,7 @@ const Flow = (() => {
   // ---------- keyboard ----------
   addEventListener('keydown', (e) => {
     const mod = e.ctrlKey || e.metaKey;
+    if (pk.open) { if (e.key === 'Escape') { e.preventDefault(); closePeek(false); } return; } // the board preview has the keys
     if (e.target === thInput) {
       if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendComment(); }
       else if (e.key === 'Escape') { e.preventDefault(); closeThread(); }
@@ -3273,7 +3574,7 @@ const Flow = (() => {
     if (e.key === 'Escape') { closeThread(); closeBoardUi(); setSel([]); setTool('select'); $('#mePop').hidden = true; openMermaid(false); return; }
     if (e.key === 'Enter' && selected.size === 1) {
       e.preventDefault(); const id = [...selected][0], it = items.get(id);
-      if (it && it.type === 'comment') openThread(id); else if (it && isLink(it)) editRopeLabel(id); else if (it && it.type === 'web') openWeb(it); else startEdit(id);
+      if (it && it.type === 'comment') openThread(id); else if (it && isLink(it)) editRopeLabel(id); else if (it && it.type === 'web') openWeb(it); else if (it && it.type === 'board') openPeek(it.bid, els.get(id)); else startEdit(id);
       return;
     }
     if (e.key.startsWith('Arrow') && selected.size) {
@@ -3383,6 +3684,7 @@ const Flow = (() => {
       else if (t === 'text') s.push(['t', ...p, TEXT_TS.includes(i.ts) ? i.ts : 'p']);
       else if (t === 'node') s.push(['n', ...p, col(i.color, 'gray'), Flow.SHAPES.includes(i.shape) ? i.shape : 'rect']);
       else if (t === 'web') s.push(['w', ...p, pics < 8 && src(i.img) ? (pics++, src(i.img)) : '']);
+      else if (t === 'board') s.push(['w', ...p, '']);
       else if (t === 'image') s.push(['i', ...p, pics < 8 && src(i.url || i.src) ? (pics++, src(i.url || i.src)) : '']);
       else if (t === 'stamp') s.push(['e', ...p, typeof i.emoji === 'string' ? i.emoji.slice(0, 16) : '👍']);
       else if (t === 'comment') s.push(['c', ...p]);
@@ -3571,26 +3873,45 @@ const Flow = (() => {
   let galRaf = 0;
   function renderBoardMenu() { if (gal.open && !galRaf) galRaf = requestAnimationFrame(() => { galRaf = 0; if (gal.open) galBuild(false); }); }
   // fresh title, author and cover for boards other than this one (they may have changed since we last looked)
-  async function galFetch(ids) {
-    if (!(mode === 'shared' && privateLinks && db.peek)) return;
-    const todo = ids.filter((id) => id !== boardId && secretBoard(id) && !(Date.now() - (gal.fetched.get(id + ':t') || 0) < 30000));
-    let k = 0;
-    const one = async (id) => {
-      gal.fetched.set(id + ':t', Date.now());
+  // Title, author and cover of another board, read once (no live updates). Shared by the gallery and board cards.
+  const peeked = new Map(); // id -> { meta, at } of the last read
+  const peeking = new Map(); // id -> promise in flight
+  function peekBoard(id, maxAge = 30000) {
+    const last = peeked.get(id);
+    if (last && Date.now() - last.at < maxAge) return Promise.resolve(last.meta);
+    if (peeking.has(id)) return peeking.get(id);
+    if (!(mode === 'shared' && privateLinks && db.peek && secretBoard(id))) return Promise.resolve(last ? last.meta : null);
+    const job = (async () => {
+      let meta = null;
       try {
-        const [meta, cov] = await Promise.all([db.peek('boards/' + id), db.peek(coverPath(id))]);
-        if (meta && boards.has(id)) {
-          const cur = boards.get(id);
-          boards.set(id, { ...cur, title: typeof meta.title === 'string' ? meta.title.slice(0, 120) : cur.title, at: +meta.at || cur.at || 0, by: typeof meta.by === 'string' ? meta.by.slice(0, 40) : cur.by || '', ro: meta.ro === true });
-        }
+        const [m, cov] = await Promise.all([db.peek('boards/' + id), db.peek(coverPath(id))]);
+        meta = m && typeof m === 'object' ? { title: typeof m.title === 'string' ? m.title.slice(0, 120) : '', at: +m.at || 0, by: typeof m.by === 'string' ? m.by.slice(0, 40) : '', ro: m.ro === true } : null;
+        if (meta && boards.has(id)) { const cur = boards.get(id); boards.set(id, { ...cur, title: meta.title || cur.title, at: meta.at || cur.at || 0, by: meta.by || cur.by || '', ro: meta.ro }); }
         let c = cleanCover(cov);
-        if (!c) { // no cover yet (an older board, or one built by the MCP): make it from the items once
-          const rows = await db.peekList(`boards/${id}/items`);
-          c = makeCover(rows.map((r) => full(r.path.slice(r.path.lastIndexOf('/') + 1), r.data || {})).filter((i) => TYPES_OK.includes(i.type)));
+        if (!c && id !== boardId) { // no cover yet (an older board, or one the MCP changed): make it from the items once
+          c = makeCover(await peekItems(id));
           db.doc(coverPath(id)).set({ ...c, at: Date.now() }).catch(() => {});
         }
-        keepCover(id, c);
+        if (c) keepCover(id, c);
       } catch (e) {}
+      peeked.set(id, { meta, at: Date.now() }); peeking.delete(id);
+      return meta;
+    })();
+    peeking.set(id, job); return job;
+  }
+  async function peekItems(id) {
+    if (id === boardId && !loadingBoard) return [...items.values()].map((i) => ({ ...i }));
+    if (mode === 'shared' && db.peekList && secretBoard(id)) {
+      const rows = await db.peekList(`boards/${id}/items`);
+      return rows.map((r) => full(r.path.slice(r.path.lastIndexOf('/') + 1), r.data || {})).filter((i) => TYPES_OK.includes(i.type));
+    }
+    try { const d = JSON.parse(store.get(LOCAL_KEY + ':' + id) || 'null'); return ((d && d.items) || []).map((i) => full(i.id, i)).filter((i) => TYPES_OK.includes(i.type)); } catch (e) { return []; }
+  }
+  async function galFetch(ids) {
+    const todo = ids.filter((id) => id !== boardId && secretBoard(id));
+    let k = 0;
+    const one = async (id) => {
+      await peekBoard(id);
       gal.fetched.set(id, 'done');
       if (gal.open) { galInfo(id); galCover(id); }
     };

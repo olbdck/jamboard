@@ -357,7 +357,7 @@ const Flow = (() => {
 // </flow>
 
 // ---------- helpers ----------
-const isCard = (i) => ['sticky', 'image', 'text', 'web', 'node'].includes(i.type);
+const isCard = (i) => ['sticky', 'image', 'text', 'web', 'node', 'board'].includes(i.type);
 const centerIn = (i, s) => { const cx = i.x + i.w / 2, cy = i.y + i.h / 2; return cx >= s.x && cx <= s.x + s.w && cy >= s.y && cy <= s.y + s.h; };
 function ownerOf(i, all) {
   if (!isCard(i)) return null;
@@ -374,6 +374,8 @@ function bbox(list) {
 const stickyColor = (c) => { const k = String(c || '').toLowerCase(); return STICKY_COLORS.includes(k) ? k : COLOR_ALIASES[k] || null; };
 const str = (v, n) => (typeof v === 'string' ? v.slice(0, n) : undefined);
 const num = (v) => (typeof v === 'number' && isFinite(v) ? Math.round(v) : undefined);
+// https://…/jamboard/#b=<id> (any host serving JamBoard) → the board id
+const boardOfUrl = (u) => { try { const x = new URL(u); if (!/\/jamboard\/?(index\.html)?$/.test(x.pathname) && !/github\.io$/.test(x.hostname)) return null; const m = /(?:^#|[#&?])b=([A-Za-z0-9_-]{20,64})(?:&|$)/.exec(x.hash + '&' + x.search.replace(/^\?/, '&')); return m ? m[1] : null; } catch { return null; } };
 function safeHttps(u) { try { const x = new URL(String(u).replace(/^http:/i, 'https:')); return x.protocol === 'https:' ? x.href : null; } catch { return null; } }
 
 function summary(i) {
@@ -383,6 +385,7 @@ function summary(i) {
   if (i.type === 'section') { o.title = i.title || ''; o.autofit = i.autofit !== false; }
   if (i.type === 'link') { o.from = i.a; o.to = i.b; if (i.label) o.label = i.label; delete o.x; delete o.y; delete o.w; delete o.h; }
   if (i.type === 'web') { o.url = i.url; if (i.title) o.title = i.title; }
+  if (i.type === 'board') { o.board = i.bid; if (i.title) o.title = i.title; }
   if (i.type === 'stamp') o.emoji = i.emoji;
   if (i.type === 'node') { o.text = i.text || ''; o.shape = i.shape || 'rect'; o.icon = i.icon || 'none'; }
   if (i.type === 'link') { if (i.flow === false) o.arrow = false; if (i.dash) o.dash = true; if (i.thick) o.thick = true; }
@@ -447,7 +450,7 @@ const TOOLS = [
               section: { type: 'string', description: 'Ref or id of the section to place this card in.' },
               from: { type: 'string', description: 'Link start: ref or id.' }, to: { type: 'string', description: 'Link end: ref or id.' },
               label: { type: 'string', description: 'Link name shown on the rope.' },
-              url: { type: 'string', description: 'For web cards: an https link.' },
+              url: { type: 'string', description: 'For web cards: an https link. A JamBoard board link (…/jamboard/#b=<id>) becomes a board card with its cover and a preview.' },
               x: { type: 'number' }, y: { type: 'number' }, w: { type: 'number' }, h: { type: 'number' },
             },
           },
@@ -551,6 +554,15 @@ async function callTool(name, a) {
         if (t === 'text') it = { id: uid(), type: 'text', w: num(spec.w) ?? 360, h: 40, ts: TEXT_STYLES.includes(spec.style) ? spec.style : 'p', text: str(spec.text, 4000) || '' };
         if (t === 'web') {
           const url = safeHttps(spec.url); if (!url) throw new Error('web needs an https url');
+          const linked = boardOfUrl(url);
+          if (linked) { // a link to another JamBoard board becomes a board card (cover and preview in the app)
+            const meta = await getDoc('boards/' + linked);
+            it = { id: uid(), type: 'board', bid: linked, w: num(spec.w) ?? 300, h: 250 };
+            if (meta && typeof meta.title === 'string') it.title = meta.title.slice(0, 120);
+          }
+        }
+        if (t === 'web' && !it) {
+          const url = safeHttps(spec.url);
           const ym = YT_RE.exec(url);
           it = { id: uid(), type: 'web', url, w: num(spec.w) ?? (ym ? 360 : 320), h: ym ? 290 : 260 };
           if (ym) it.yt = ym[1];
