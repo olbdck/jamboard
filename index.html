@@ -279,6 +279,13 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
 .menu-item .who { font-size: 13px; letter-spacing: -2px; white-space: nowrap; }
 .menu-item .tick { width: 16px; color: var(--accent); flex: none; }
 .menu-item[aria-current="true"] { font-weight: 600; }
+.menu-row { display: flex; align-items: center; gap: 2px; }
+.menu-row .menu-item { flex: 1; min-width: 0; }
+.menu-x { flex: none; width: 30px; height: 30px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; opacity: 0; transition: opacity var(--fast) var(--ease), background-color var(--fast) var(--ease); }
+.menu-row:hover .menu-x, .menu-x:focus-visible { opacity: 1; }
+.menu-x:hover { background: var(--chip); color: var(--text); }
+@media (hover: none) { .menu-x { opacity: 1; } }
+.menu-note { margin: 6px 10px 2px; font-size: 12px; line-height: 1.4; color: var(--muted); }
 .menu-item.add { color: var(--accent); border-top: 1px solid var(--line); border-radius: 0 0 10px 10px; margin-top: 4px; padding-top: 11px; }
 .panel.popover.share { right: calc(12px + env(safe-area-inset-right, 0px)); left: auto; width: 360px; max-width: calc(100vw - 24px); box-sizing: border-box; transform-origin: 90% 0; }
 .share .row { flex-wrap: nowrap; }
@@ -525,18 +532,19 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
   <div class="logo"><i>◐</i><span>JamBoard</span></div>
   <div class="sep"></div>
   <input id="title" aria-label="Назва дошки" value="Спринт 48 · планінг">
-  <button class="icon-btn" id="boardsBtn" aria-label="Усі дошки" aria-expanded="false" title="Усі дошки"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10l5 5 5-5"/></svg></button>
+  <button class="icon-btn" id="boardsBtn" aria-label="Мої дошки" aria-expanded="false" title="Мої дошки"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10l5 5 5-5"/></svg></button>
   <button class="txt-btn" id="clearBtn">Очистити</button>
 </div>
 <div class="panel menu" id="boardMenu" role="menu" hidden>
-  <div class="label">Дошки</div>
+  <div class="label">Мої дошки</div>
   <div class="board-list" id="boardList"></div>
+  <p class="menu-note" id="boardNote" hidden>Тут лише дошки, які ви створили або відкривали за посиланням. Інші люди їх не бачать.</p>
   <button class="menu-item add" id="newBoardBtn"><span class="tick">＋</span><span class="nm">Нова дошка</span></button>
 </div>
 <div class="panel popover share" id="sharePop" hidden>
   <div class="label" id="shareLabel">Посилання на цю дошку</div>
   <div class="row"><input class="field" id="shareUrl" readonly aria-label="Посилання"><button class="primary sm" id="copyBtn">Скопіювати</button></div>
-  <p class="hint">Хто відкриє посилання, потрапить одразу на цю дошку. Доступ до самої сторінки задає меню Share.</p>
+  <p class="hint">Дошку бачать лише ті, у кого є це посилання, і вони можуть її редагувати.</p>
 </div>
 
 <div class="top-right">
@@ -1169,6 +1177,17 @@ const Flow = (() => {
   const localKey = () => (boardId === 'main' ? LOCAL_KEY : LOCAL_KEY + ':' + boardId);
   const viewKey = () => (boardId === 'main' ? VIEW_KEY : VIEW_KEY + ':' + boardId);
   const validBoard = (id) => typeof id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(id);
+  // On Supabase a board opens only by its link: ids are long random strings and there is no shared list of boards.
+  let privateLinks = false;
+  const secretBoard = (id) => typeof id === 'string' && /^[A-Za-z0-9_-]{20,64}$/.test(id);
+  const boardOk = (id) => (privateLinks ? secretBoard(id) : validBoard(id));
+  function newBoardId() { // 24 characters from 62: about 142 random bits, impossible to guess
+    const abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', out = [];
+    const a = crypto.getRandomValues(new Uint8Array(48));
+    for (const x of a) { if (x < 248) out.push(abc[x % 62]); if (out.length === 24) break; }
+    while (out.length < 24) out.push(abc[crypto.getRandomValues(new Uint8Array(1))[0] % 62]);
+    return out.join('');
+  }
   function boardFromUrl() {
     const m = /[#?&]b=([A-Za-z0-9_-]{1,64})/.exec((location.hash || '') + '&' + (location.search || ''));
     return m ? m[1] : null;
@@ -3223,6 +3242,7 @@ const Flow = (() => {
       if (mode === 'shared') {
         if (boardId === 'main') db.doc('board/meta').set({ title }).catch(dbError);
         else { const b = boards.get(boardId); db.doc('boards/' + boardId).set({ title, at: b.at || Date.now(), by: b.by || me.name }).catch(dbError); }
+        if (privateLinks) saveLocalBoards();
       } else if (mode === 'local') { saveLocal(); saveLocalBoards(); }
     }, 400);
   });
@@ -3270,10 +3290,11 @@ const Flow = (() => {
   // ---------- boards menu, switching, share link ----------
   function boardIds() {
     const list = [...boards.entries()].sort((a, b) => (a[1].at || 0) - (b[1].at || 0)).map(([id]) => id);
+    if (privateLinks) return list.filter(secretBoard);
     return ['main', ...list.filter((id) => id !== 'main')];
   }
   function renderBoardMenu() {
-    const box = $('#boardList'); box.innerHTML = '';
+    const box = $('#boardList'); box.innerHTML = ''; $('#boardNote').hidden = !privateLinks;
     const ids = boardIds(); if (!ids.includes(boardId)) ids.push(boardId);
     ids.forEach((id) => {
       const b = document.createElement('button'); b.className = 'menu-item'; b.setAttribute('role', 'menuitem');
@@ -3285,7 +3306,16 @@ const Flow = (() => {
       who.textContent = here.slice(0, 4).map(peerEmoji).join(''); who.title = here.map(peerName).join(', ');
       b.append(tick, nm, who);
       b.addEventListener('click', () => { closeBoardUi(); if (id !== boardId) openBoard(id); });
-      box.appendChild(b);
+      if (!privateLinks || id === boardId) { box.appendChild(b); return; }
+      const row = document.createElement('div'); row.className = 'menu-row';
+      const x = document.createElement('button'); x.className = 'menu-x'; x.textContent = '×';
+      x.title = 'Прибрати зі списку'; x.setAttribute('aria-label', 'Прибрати «' + titleOf(id) + '» зі списку');
+      x.addEventListener('click', (e) => {
+        e.stopPropagation(); const name = titleOf(id);
+        boards.delete(id); saveLocalBoards(); renderBoardMenu();
+        toast('«' + name + '» прибрано зі списку. Дошка лишилася за посиланням');
+      });
+      row.append(b, x); box.appendChild(row);
     });
   }
   function closeBoardUi() { $('#boardMenu').hidden = true; $('#sharePop').hidden = true; $('#boardsBtn').setAttribute('aria-expanded', 'false'); }
@@ -3315,17 +3345,26 @@ const Flow = (() => {
   });
   $('#newBoardBtn').addEventListener('click', () => {
     closeBoardUi();
-    const id = 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const id = privateLinks ? newBoardId() : 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     const meta = { title: 'Нова дошка', at: Date.now(), by: me.name };
     boards.set(id, meta);
-    if (mode === 'shared') db.doc('boards/' + id).set(meta).catch(dbError); else saveLocalBoards();
+    if (mode === 'shared') db.doc('boards/' + id).set(meta).catch(dbError);
+    if (mode !== 'shared' || privateLinks) saveLocalBoards();
     openBoard(id);
     setTimeout(() => { $('#title').focus(); $('#title').select(); }, 260);
     toast('Нову дошку створено');
   });
   addEventListener('pointerdown', (e) => { if (!e.target.closest('#boardMenu, #sharePop, #boardsBtn, #shareBtn')) closeBoardUi(); }, true);
-  addEventListener('hashchange', () => { const b = boardFromUrl(); if (b && b !== boardId) openBoard(b); });
-  function saveLocalBoards() { store.set('jamboard:boards', JSON.stringify([...boards.entries()].map(([id, b]) => ({ id, ...b })))); }
+  addEventListener('hashchange', () => {
+    const b = boardFromUrl(); if (!b || b === boardId) return;
+    if (boardOk(b)) openBoard(b); else toast(STALE_LINK);
+  });
+  const STALE_LINK = 'Це старе посилання. Попросіть нове: тепер кожна дошка відкривається лише за власним посиланням';
+  const boardsKey = () => (privateLinks ? 'jamboard:myboards' : 'jamboard:boards');
+  function saveLocalBoards() { store.set(boardsKey(), JSON.stringify([...boards.entries()].map(([id, b]) => ({ id, ...b })))); }
+  function loadLocalBoards() {
+    try { (JSON.parse(store.get(boardsKey()) || '[]') || []).forEach((b) => { if (b && boardOk(b.id)) boards.set(b.id, { title: String(b.title || 'Нова дошка').slice(0, 120), at: +b.at || 0, by: typeof b.by === 'string' ? b.by : '' }); }); } catch (e) {}
+  }
 
   // ---------- shared timer: one per board, everyone sees the same countdown ----------
   // state: { dur, run: true, end } running · { dur, run: false, left } paused · { dur } ready. Times are epoch ms.
@@ -3441,6 +3480,7 @@ const Flow = (() => {
   let switchToken = 0;
   function openBoard(id) {
     if (!validBoard(id)) id = 'main';
+    if (!boardOk(id)) return;
     finishEdit(); closeThread();
     if (mode === 'local' && localTimer) saveLocal(true); // keep the old board's last change before leaving it
     const first = !els.size && !items.size, token = ++switchToken;
@@ -3451,6 +3491,7 @@ const Flow = (() => {
   function doOpen(id) {
     if (unsubItems) { try { unsubItems(); } catch (e) {} unsubItems = null; }
     boardId = id; store.set(BOARD_KEY, id);
+    if (privateLinks && !boards.has(id)) { boards.set(id, { at: Date.now() }); saveLocalBoards(); } // opened by link: now it is one of "my boards"
     try { if (location.hash && boardFromUrl() !== id) history.replaceState(null, '', '#b=' + id); } catch (e) {}
     items.clear(); revs.clear(); selected.clear(); remotePos.clear(); remoteSize.clear(); ghost.clear(); dragBase = new Map();
     undoStack.length = 0; redoStack.length = 0; updateHistoryButtons();
@@ -3487,17 +3528,27 @@ const Flow = (() => {
   function startLocal() {
     mode = 'local';
     setStatus('', 'Лише на цьому пристрої');
-    try { (JSON.parse(store.get('jamboard:boards') || '[]') || []).forEach((b) => { if (b && validBoard(b.id)) boards.set(b.id, { title: String(b.title || 'Нова дошка').slice(0, 120), at: +b.at || 0 }); }); } catch (e) {}
+    loadLocalBoards();
     openBoard(startBoard());
   }
   function startBoard() {
-    const fromUrl = boardFromUrl(), saved = store.get(BOARD_KEY);
-    const cfg = window.JAMBOARD_CONFIG, dflt = cfg && validBoard(cfg.defaultBoard) ? cfg.defaultBoard : 'main';
-    return fromUrl || (validBoard(saved) ? saved : dflt);
+    const fromUrl = boardFromUrl(), saved = store.get(BOARD_KEY), cfg = window.JAMBOARD_CONFIG;
+    if (boardOk(fromUrl)) return fromUrl;
+    if (fromUrl) setTimeout(() => toast(STALE_LINK), 600);
+    if (boardOk(saved)) return saved;
+    if (cfg && boardOk(cfg.defaultBoard)) return cfg.defaultBoard;
+    if (!privateLinks) return 'main';
+    return boardIds()[0] || newBoardId();
   }
   function subscribeItems() {
-    const myBoard = boardId; let first = true;
-    unsubItems = db.collection(itemsPath()).onSnapshot((snap) => {
+    const myBoard = boardId; let first = true, unsubMeta = null;
+    if (privateLinks) unsubMeta = db.doc('boards/' + myBoard).onSnapshot((s) => {
+      const d = s.exists && s.data(); if (myBoard !== boardId || !d) return;
+      const cur = boards.get(myBoard) || {};
+      boards.set(myBoard, { ...cur, title: typeof d.title === 'string' ? d.title.slice(0, 120) : cur.title, at: +d.at || cur.at || Date.now(), by: typeof d.by === 'string' ? d.by : cur.by || '' });
+      saveLocalBoards(); showTitle(); if (!$('#boardMenu').hidden) renderBoardMenu();
+    }, () => {});
+    const unsubList = db.collection(itemsPath()).onSnapshot((snap) => {
       if (myBoard !== boardId) return;
       for (const ch of snap.docChanges()) {
         const id = ch.doc.id;
@@ -3521,13 +3572,16 @@ const Flow = (() => {
       const m = (e && e.message) || '';
       if (m) {
         console.error('JamBoard:', e);
-        const why = /docs/.test(m) && /(does not exist|schema cache)/i.test(m) ? 'у Supabase немає таблиці docs. Виконайте supabase/schema.sql' : m.slice(0, 140);
+        const why = /jb_list|jb_get/.test(m) || (e && e.code === 'PGRST202') ? 'у Supabase немає функцій дошок. Виконайте supabase/private-boards.sql'
+          : /docs/.test(m) && /(does not exist|schema cache)/i.test(m) ? 'у Supabase немає таблиці docs. Виконайте supabase/schema.sql' : m.slice(0, 140);
         $('#status').title = 'Немає зв’язку: ' + why; toast('Немає зв’язку: ' + why);
       }
     });
+    unsubItems = () => { unsubList(); if (unsubMeta) unsubMeta(); };
   }
   async function startShared() {
     mode = 'shared';
+    if (privateLinks) { loadLocalBoards(); openBoard(startBoard()); return; } // no shared list: only boards this browser created or opened
     db.collection('boards').onSnapshot((snap) => {
       for (const ch of snap.docChanges()) {
         if (ch.type === 'removed') { boards.delete(ch.doc.id); continue; }
@@ -3552,10 +3606,37 @@ const Flow = (() => {
   async function startSupabase(cfg) {
     if (!window.supabase) await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.js');
     const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth: { persistSession: false }, realtime: { params: { eventsPerSecond: 20 } } });
-    const T = 'docs', parent = (p) => p.slice(0, p.lastIndexOf('/'));
+    const parent = (p) => p.slice(0, p.lastIndexOf('/'));
+    const boardOf = (p) => { const m = /^boards\/([A-Za-z0-9_-]+)/.exec(p); return m ? m[1] : null; };
     const rnd = () => Math.random().toString(36).slice(2, 10);
     const fail = (e) => { const x = new Error((e && e.message) || 'db error'); x.code = (e && e.code) || 'unknown'; return x; };
     const docSnap = (row) => ({ id: row.path.slice(row.path.lastIndexOf('/') + 1), data: () => row.data });
+    // Private boards: the table is reachable only through functions that take a path inside one board
+    // (supabase/private-boards.sql), so a board opens only for someone who has its id.
+    const getRow = (path) => sb.rpc('jb_get', { p_path: path });
+    const listRows = (coll) => sb.rpc('jb_list', { p_coll: coll });
+    const myPeer = 'p' + rnd() + rnd();
+    // one realtime channel per board ("jb:<id>"): row changes broadcast by the database, plus presence
+    const lines = new Map();
+    function openLine(bid) {
+      let L = lines.get(bid);
+      if (!L) {
+        L = { refs: 0, rows: new Set(), stats: new Set(), pres: null, st: '' };
+        L.ch = sb.channel('jb:' + bid, { config: { broadcast: { self: false }, presence: { key: myPeer } } })
+          .on('broadcast', { event: 'row' }, (m) => {
+            const p = m && m.payload, msg = p && typeof p.path === 'string' ? p : p && p.payload;
+            if (msg && typeof msg.path === 'string' && boardOf(msg.path) === bid) L.rows.forEach((f) => f(msg));
+          })
+          .on('broadcast', { event: 'p' }, (m) => L.pres && L.pres.onP(m && m.payload))
+          .on('presence', { event: 'join' }, () => L.pres && L.pres.onJoin())
+          .on('presence', { event: 'leave' }, (m) => L.pres && L.pres.onLeave(m && m.key));
+        L.ch.subscribe((st, err) => { L.st = st; [...L.stats].forEach((f) => f(st, err)); });
+        lines.set(bid, L);
+      }
+      L.refs++;
+      let done = false;
+      return { L, release() { if (done) return; done = true; if (--L.refs <= 0) { lines.delete(bid); sb.removeChannel(L.ch); } } };
+    }
     let liveOk = null;
     function liveState(ok, why) { // realtime is a bonus: without it the board still syncs by polling
       if (liveOk === ok) return; liveOk = ok;
@@ -3566,10 +3647,17 @@ const Flow = (() => {
       let alive = true, loaded = false, live = false, pollT = 0;
       const queue = [], known = new Map(); // path -> JSON of what we last delivered
       const remember = (rows) => rows.forEach((r) => known.set(r.path, JSON.stringify(r.data)));
-      const fetchRows = () => sb.from(T).select('path,data').eq(filterCol, value);
-      const take = (fn) => (pl) => { if (loaded) fn(pl); else queue.push(() => fn(pl)); };
-      const up = take((pl) => { if (pl.new && pl.new.path) { remember([pl.new]); onRow([pl.new]); } });
-      const gone = take((pl) => { const p = pl.old && pl.old.path; if (p && (filterCol === 'path' ? p === value : parent(p) === value)) { known.delete(p); onGone(p); } });
+      const fetchRows = () => (filterCol === 'path' ? getRow(value) : listRows(value));
+      const mine = (p) => (filterCol === 'path' ? p === value : parent(p) === value);
+      const take = (fn) => (x) => { if (loaded) fn(x); else queue.push(() => fn(x)); };
+      const up = take((row) => { if (!alive) return; remember([row]); onRow([row]); });
+      const gone = take((p) => { if (!alive) return; if (known.delete(p) || filterCol === 'path') onGone(p); });
+      const onMsg = (msg) => {
+        if (!mine(msg.path)) return;
+        if (msg.gone) gone(msg.path);
+        else if (msg.big || msg.data === undefined) getRow(msg.path).then(({ data }) => { const r = data && data[0]; if (r) up(r); }, () => {}); // too big to broadcast
+        else up({ path: msg.path, data: msg.data });
+      };
       async function poll() {
         pollT = 0; if (!alive) return;
         const { data, error } = await fetchRows();
@@ -3589,28 +3677,29 @@ const Flow = (() => {
         remember(data || []); ready(data || []); loaded = true; queue.splice(0).forEach((f) => f());
         if (!live && !pollT) pollT = setTimeout(poll, 2000);
       }, (e) => onError && onError(fail(e)));
-      const ch = sb.channel('db:' + value + ':' + rnd())
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: T, filter: `${filterCol}=eq.${value}` }, up)
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: T, filter: `${filterCol}=eq.${value}` }, up)
-        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: T }, gone)
-        .subscribe((st, err) => {
-          if (!alive) return;
-          if (st === 'SUBSCRIBED') {
-            const was = live; live = true; liveState(true);
-            if (pollT) { clearTimeout(pollT); pollT = 0; }
-            if (loaded && !was) poll(); // catch up on what changed while live was down
-          } else if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT' || st === 'CLOSED') {
-            live = false; liveState(false, (err && err.message) || st);
-            if (loaded && !pollT) pollT = setTimeout(poll, 2000);
-          }
-        });
-      return () => { alive = false; if (pollT) clearTimeout(pollT); sb.removeChannel(ch); };
+      const bid = boardOf(value), line = bid ? openLine(bid) : null;
+      const onStatus = (st, err) => {
+        if (!alive) return;
+        if (st === 'SUBSCRIBED') {
+          const was = live; live = true; liveState(true);
+          if (pollT) { clearTimeout(pollT); pollT = 0; }
+          if (loaded && !was) poll(); // catch up on what changed while live was down
+        } else if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT' || st === 'CLOSED') {
+          live = false; liveState(false, (err && err.message) || st);
+          if (loaded && !pollT) pollT = setTimeout(poll, 2000);
+        }
+      };
+      if (line) { line.L.rows.add(onMsg); line.L.stats.add(onStatus); if (line.L.st) onStatus(line.L.st); }
+      return () => {
+        alive = false; if (pollT) clearTimeout(pollT);
+        if (line) { line.L.rows.delete(onMsg); line.L.stats.delete(onStatus); line.release(); }
+      };
     }
     const sdb = {
       doc(path) {
         return {
-          set: (data) => sb.from(T).upsert({ path, coll: parent(path), data }).then(({ error }) => { if (error) throw fail(error); }),
-          delete: () => sb.from(T).delete().eq('path', path).then(({ error }) => { if (error) throw fail(error); }),
+          set: (data) => sb.rpc('jb_put', { p_path: path, p_data: data }).then(({ error }) => { if (error) throw fail(error); }),
+          delete: () => sb.rpc('jb_del', { p_path: path }).then(({ error }) => { if (error) throw fail(error); }),
           onSnapshot(next, onError) {
             const snap = (row) => ({ exists: !!row, data: () => (row ? row.data : undefined) });
             return watch('path', path, (rows) => next(snap(rows[0])), () => next(snap(null)), onError, (rows) => next(snap(rows[0] || null)));
@@ -3630,33 +3719,53 @@ const Flow = (() => {
         };
       },
     };
-    // room: who is here right now. Presence tells joins and leaves; a broadcast carries each person's full state.
-    const myPeer = 'p' + rnd() + rnd(), state = {}, others = new Map();
-    let peersCb = null, connCb = null, sendTimer = 0, lastSend = 0, online = false;
-    const ch = sb.channel('room', { config: { broadcast: { self: false }, presence: { key: myPeer } } });
+    // room: who is on this board right now, on the board's own channel (so nobody learns which other boards exist).
+    // Presence tells joins and leaves; a broadcast carries each person's full state.
+    const state = {}, others = new Map();
+    let peersCb = null, connCb = null, sendTimer = 0, lastSend = 0, online = false, roomLine = null, roomBid = null, roomStatus = null;
     const emitPeers = () => peersCb && peersCb({ peers: [{ peer: myPeer, sameTab: true, presence: { ...state } }, ...[...others].map(([peer, v]) => ({ peer, presence: v.presence }))] });
-    const sendNow = () => { sendTimer = 0; lastSend = Date.now(); if (online) ch.send({ type: 'broadcast', event: 'p', payload: { peer: myPeer, s: state } }).catch(() => {}); };
+    const sendNow = () => { sendTimer = 0; lastSend = Date.now(); if (online && roomLine) roomLine.L.ch.send({ type: 'broadcast', event: 'p', payload: { peer: myPeer, s: state } }).catch(() => {}); };
     const sendSoon = () => { if (sendTimer) return; const wait = Math.max(0, 70 - (Date.now() - lastSend)); sendTimer = setTimeout(sendNow, wait); };
-    ch.on('broadcast', { event: 'p' }, ({ payload }) => {
-      if (!payload || typeof payload.peer !== 'string' || payload.peer === myPeer || !payload.s || typeof payload.s !== 'object') return;
-      others.set(payload.peer, { presence: payload.s, at: Date.now() }); emitPeers();
-    });
-    ch.on('presence', { event: 'join' }, () => sendSoon());
-    ch.on('presence', { event: 'leave' }, ({ key }) => { if (others.delete(key)) emitPeers(); });
-    ch.subscribe((st) => {
-      online = st === 'SUBSCRIBED';
-      if (online) { ch.track({ at: Date.now() }).catch(() => {}); sendSoon(); }
-      connCb && connCb(online);
-    });
+    function joinRoom(bid) {
+      if (bid === roomBid) return;
+      if (roomLine) {
+        const L = roomLine.L; try { L.ch.untrack(); } catch (e) {}
+        L.pres = null; L.stats.delete(roomStatus); roomLine.release(); roomLine = null;
+      }
+      roomBid = bid; others.clear(); online = false;
+      if (bid) {
+        const line = openLine(bid), L = line.L; roomLine = line;
+        L.pres = {
+          onP(payload) {
+            if (!payload || typeof payload.peer !== 'string' || payload.peer === myPeer || !payload.s || typeof payload.s !== 'object') return;
+            others.set(payload.peer, { presence: payload.s, at: Date.now() }); emitPeers();
+          },
+          onJoin: () => sendSoon(),
+          onLeave(key) { if (others.delete(key)) emitPeers(); },
+        };
+        roomStatus = (st) => {
+          if (roomLine !== line) return;
+          const was = online; online = st === 'SUBSCRIBED';
+          if (online) { L.ch.track({ at: Date.now() }).catch(() => {}); sendSoon(); }
+          if (was !== online) connCb && connCb(online);
+        };
+        L.stats.add(roomStatus); if (L.st) roomStatus(L.st);
+      }
+      emitPeers();
+    }
     setInterval(() => { // heartbeat, and forget anyone silent for a while
       if (online && Date.now() - lastSend > 4000) sendNow();
       let changed = false; const cut = Date.now() - 15000;
       for (const [k, v] of others) if (v.at < cut) { others.delete(k); changed = true; }
       if (changed) emitPeers();
     }, 2000);
-    addEventListener('pagehide', () => { try { ch.untrack(); } catch (e) {} });
+    addEventListener('pagehide', () => { try { roomLine && roomLine.L.ch.untrack(); } catch (e) {} });
     const sroom = {
-      presence(patch) { Object.assign(state, patch); for (const k in state) if (state[k] === null) delete state[k]; sendSoon(); emitPeers(); return Promise.resolve(); },
+      presence(patch) {
+        Object.assign(state, patch); for (const k in state) if (state[k] === null) delete state[k];
+        if ('board' in patch) joinRoom(secretBoard(patch.board) ? patch.board : null);
+        sendSoon(); emitPeers(); return Promise.resolve();
+      },
       onPeers(fn) { peersCb = fn; emitPeers(); return () => { peersCb = null; }; },
       onConnection(fn) { connCb = fn; fn(online); return () => { connCb = null; }; },
     };
@@ -3680,7 +3789,7 @@ const Flow = (() => {
     if (cfg && cfg.supabaseUrl && cfg.supabaseAnonKey) {
       const caps = await startSupabase(cfg).catch((e) => { console.error(e); return null; });
       if (!caps) { toast('Не вдалося під’єднатися до спільної дошки'); startLocal(); return; }
-      db = caps.db; room = caps.room; assetsCap = caps.assets;
+      db = caps.db; room = caps.room; assetsCap = caps.assets; privateLinks = true;
     } else if (!use) { startLocal(); return; }
     else {
       const [d, r, a] = await Promise.all([claude.use('db'), claude.use('room'), claude.use('assets')].map((p) => p.catch(() => null)));

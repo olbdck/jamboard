@@ -4,5 +4,5 @@ window.JAMBOARD_CONFIG = {
   supabaseUrl: 'https://ddauyiiqnhrzrobymdoa.supabase.co',
   supabaseAnonKey: 'sb_publishable_EoP7P30tlzvO_jeGF9HL7A_6fjamVKz',
   bucket: 'jamboard',
-  defaultBoard: 'budslw073hv', // new visitors land on the demo board «Знайомство з JamBoard»
+  defaultBoard: '7JnHshrp8cN4tGnQKPoY2Ifp', // public demo board «Знайомство з JamBoard» where new visitors land (moved here by supabase/private-boards.sql)
 };
