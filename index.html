@@ -270,23 +270,60 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
 /* board switcher and share */
 .board-pill .icon-btn { width: 32px; height: 32px; }
 .board-pill .icon-btn svg { width: 18px; height: 18px; }
-.panel.menu { position: fixed; top: calc(64px + env(safe-area-inset-top, 0px)); left: calc(12px + env(safe-area-inset-left, 0px)); width: 300px; max-width: calc(100vw - 24px); box-sizing: border-box; padding: 8px; z-index: 6; background: var(--surface); display: grid; gap: 2px; transform-origin: 10% 0; animation: popIn var(--base) var(--ease-em) both; }
-.menu .label { padding: 6px 10px 4px; }
-.board-list { display: grid; gap: 2px; max-height: 50vh; overflow: auto; overscroll-behavior: contain; }
-.menu-item { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: transparent; padding: 9px 10px; border-radius: 10px; text-align: left; cursor: pointer; font-size: 14px; color: var(--text); transition: background-color var(--fast) var(--ease); }
-.menu-item:hover { background: var(--chip); }
-.menu-item .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.menu-item .who { font-size: 13px; letter-spacing: -2px; white-space: nowrap; }
-.menu-item .tick { width: 16px; color: var(--accent); flex: none; }
-.menu-item[aria-current="true"] { font-weight: 600; }
-.menu-row { display: flex; align-items: center; gap: 2px; }
-.menu-row .menu-item { flex: 1; min-width: 0; }
-.menu-x { flex: none; width: 30px; height: 30px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; opacity: 0; transition: opacity var(--fast) var(--ease), background-color var(--fast) var(--ease); }
-.menu-row:hover .menu-x, .menu-x:focus-visible { opacity: 1; }
-.menu-x:hover { background: var(--chip); color: var(--text); }
-@media (hover: none) { .menu-x { opacity: 1; } }
-.menu-note { margin: 6px 10px 2px; font-size: 12px; line-height: 1.4; color: var(--muted); }
-.menu-item.add { color: var(--accent); border-top: 1px solid var(--line); border-radius: 0 0 10px 10px; margin-top: 4px; padding-top: 11px; }
+/* «Мої дошки»: a gallery of board cards on the same frosted glass as the toolbar */
+.panel.gallery { position: fixed; top: calc(64px + env(safe-area-inset-top, 0px)); left: calc(12px + env(safe-area-inset-left, 0px)); width: 664px; max-width: calc(100vw - 24px); max-height: calc(100vh - 150px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); box-sizing: border-box; z-index: 6; display: flex; flex-direction: column; border-radius: var(--r-xl); box-shadow: var(--shadow-lg); transform-origin: 18px 0; animation: galIn var(--base) var(--ease-em) both; }
+.panel.gallery.out { animation: galOut var(--fast) var(--ease) both; pointer-events: none; }
+@keyframes galIn { from { opacity: 0; transform: translateY(-8px) scale(0.96); } }
+@keyframes galOut { to { opacity: 0; transform: translateY(-6px) scale(0.97); } }
+.gal-head { display: flex; align-items: flex-start; gap: var(--s4); padding: 18px 18px 12px 20px; }
+.gal-hd { flex: 1; min-width: 0; }
+.gal-title { margin: 0; font: 600 19px/1.25 var(--f-display); letter-spacing: -0.02em; }
+.gal-title span { font-weight: 400; color: var(--muted); }
+.gal-note { margin: 3px 0 0; font-size: 13px; line-height: 1.4; color: var(--muted); }
+.gal-head .primary { flex: none; display: flex; align-items: center; gap: 6px; transition: background-color var(--fast) var(--ease), scale var(--fast) var(--ease-spring); }
+.gal-head .primary:active { scale: .96; }
+.gal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(188px, calc(50% - 7px)), 1fr)); gap: 14px; padding: 4px 18px 18px; overflow: auto; overscroll-behavior: contain; min-height: 0; scrollbar-width: thin; }
+.bcard { position: relative; border-radius: var(--r-lg); background: var(--surface); border: 1px solid color-mix(in srgb, var(--line) 70%, transparent); box-shadow: var(--note-shadow); animation: cardIn var(--base) var(--ease-em) both; animation-delay: calc(var(--i, 0) * 28ms);
+  transition: translate var(--base) var(--ease-em), scale var(--slow) var(--ease-spring), box-shadow var(--base) var(--ease-em), border-color var(--fast) var(--ease); }
+@keyframes cardIn { from { opacity: 0; translate: 0 10px; scale: .96; } }
+.bcard.gone { animation: cardGone var(--fast) var(--ease) both; pointer-events: none; }
+@keyframes cardGone { to { opacity: 0; scale: .9; } }
+.bcard:hover { translate: 0 -3px; box-shadow: var(--shadow-lg); }
+.bcard:has(.bc-main:active) { scale: .975; transition-duration: var(--fast); }
+.bcard.cur { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--note-shadow); }
+.bcard.cur:hover { box-shadow: 0 0 0 1px var(--accent), var(--shadow-lg); }
+.bc-main { display: block; width: 100%; border: 0; padding: 0; background: transparent; text-align: left; cursor: pointer; border-radius: inherit; color: var(--text); }
+.bc-main:focus-visible { outline: none; box-shadow: var(--focus); }
+.bc-thumb { position: relative; aspect-ratio: 16 / 10; margin: 6px 6px 0; border-radius: 12px; overflow: hidden; background-color: var(--bg); background-image: radial-gradient(circle, var(--dot) 0.9px, transparent 1.1px); background-size: 12px 12px; }
+.bc-thumb svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; transition: scale var(--slow) var(--ease-em), opacity var(--base) var(--ease); }
+.bcard:hover .bc-thumb svg { scale: 1.045; }
+.bc-thumb svg.fresh { animation: thumbIn var(--base) var(--ease) both; }
+@keyframes thumbIn { from { opacity: 0; } }
+.bc-thumb .bc-empty { position: absolute; inset: 0; display: grid; place-items: center; font-size: 12px; color: var(--muted); }
+.bc-thumb.wait::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--surface) 55%, transparent) 50%, transparent 70%) -100% 0 / 200% 100% no-repeat; animation: shimmer 1.3s var(--ease) infinite; }
+@keyframes shimmer { to { background-position: 200% 0; } }
+.bc-meta { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; padding: 10px 12px 12px; min-width: 0; }
+.bc-name { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bc-name .bc-pin { color: var(--accent); margin-right: 4px; }
+.bc-sub { display: flex; align-items: center; gap: 8px; min-height: 24px; }
+.bc-by { flex: 1; min-width: 0; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bc-people { display: flex; align-items: center; flex: none; }
+.bc-people .av { width: 24px; height: 24px; font-size: 13px; margin-left: -7px; border-width: 2px; animation: avIn var(--slow) var(--ease-spring) both; }
+.bc-people .av:first-child { margin-left: 0; }
+.bc-people .av.me { cursor: default; box-shadow: 0 0 0 1.5px var(--pc); }
+.bc-people .av.more { font-size: 10px; }
+@keyframes avIn { from { opacity: 0; scale: .4; } }
+.bc-live { position: absolute; left: 14px; top: 14px; display: flex; align-items: center; gap: 5px; padding: 3px 8px 3px 7px; border-radius: var(--r-pill); font-size: 11px; font-weight: 600; color: var(--text); background: var(--glass); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); pointer-events: none; animation: avIn var(--slow) var(--ease-spring) both; }
+.bc-live i { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
+.bc-live.here { color: var(--accent-fg); background: var(--accent); }
+.bc-live.here i { display: none; }
+.bc-x { position: absolute; right: 12px; top: 12px; width: 28px; height: 28px; border: 0; border-radius: 50%; display: grid; place-items: center; font-size: 17px; line-height: 1; color: var(--text); background: var(--glass); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); box-shadow: 0 1px 3px rgba(0, 0, 0, .14); cursor: pointer; opacity: 0; scale: .8; transition: opacity var(--fast) var(--ease), scale var(--fast) var(--ease-spring), background-color var(--fast) var(--ease); }
+.bcard:hover .bc-x, .bc-x:focus-visible { opacity: 1; scale: 1; }
+.bc-x:hover { background: var(--surface); }
+.bc-x:focus-visible { outline: none; box-shadow: var(--focus); }
+@media (hover: none) { .bc-x { opacity: 1; scale: 1; } .bcard:hover { translate: none; } .bcard:hover .bc-thumb svg { scale: none; } }
+#boardsBtn svg { transition: rotate var(--base) var(--ease-em); }
+#boardsBtn[aria-expanded="true"] svg { rotate: 180deg; }
 .panel.popover.share { right: calc(12px + env(safe-area-inset-right, 0px)); left: auto; width: 360px; max-width: calc(100vw - 24px); box-sizing: border-box; transform-origin: 90% 0; }
 .share .row { flex-wrap: nowrap; }
 .share .field { font-size: 14px; height: 40px; min-width: 0; flex: 1; color: var(--muted); }
@@ -539,11 +576,12 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
   <button class="icon-btn" id="boardsBtn" aria-label="Мої дошки" aria-expanded="false" title="Мої дошки"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10l5 5 5-5"/></svg></button>
   <button class="txt-btn" id="clearBtn">Очистити</button>
 </div>
-<div class="panel menu" id="boardMenu" role="menu" hidden>
-  <div class="label">Мої дошки</div>
-  <div class="board-list" id="boardList"></div>
-  <p class="menu-note" id="boardNote" hidden>Тут лише дошки, які ви створили або відкривали за посиланням. Інші люди їх не бачать.</p>
-  <button class="menu-item add" id="newBoardBtn"><span class="tick">＋</span><span class="nm">Нова дошка</span></button>
+<div class="panel gallery" id="boardMenu" role="dialog" aria-label="Мої дошки" hidden>
+  <div class="gal-head">
+    <div class="gal-hd"><h2 class="gal-title">Мої дошки <span id="boardCount"></span></h2><p class="gal-note" id="boardNote" hidden>Тут лише дошки, які ви створили або відкривали за посиланням. Інші люди цього списку не бачать.</p></div>
+    <button class="primary sm" id="newBoardBtn"><span aria-hidden="true">＋</span> Нова дошка</button>
+  </div>
+  <div class="gal-grid" id="boardList" role="list"></div>
 </div>
 <div class="panel popover share" id="sharePop" hidden>
   <div class="label" id="shareLabel">Посилання на цю дошку</div>
@@ -1217,7 +1255,7 @@ const Flow = (() => {
     const after = snapIds(Object.keys(before));
     undoStack.push({ before, after }); if (undoStack.length > 120) undoStack.shift();
     redoStack.length = 0; updateHistoryButtons();
-    persist(after);
+    persist(after); coverSoon(true);
   }
   function persist(map) { for (const id in map) map[id] ? write(items.get(id)) : remove(id); }
   function putItem(id, next) {
@@ -1229,7 +1267,7 @@ const Flow = (() => {
   function applyMap(map) {
     for (const id in map) map[id] ? putItem(id, { ...map[id] }) : items.delete(id);
     selected = new Set([...selected].filter((id) => items.has(id)));
-    persist(map); renderAll();
+    persist(map); renderAll(); coverSoon(true);
   }
   function undo() { finishEdit(); const op = undoStack.pop(); if (!op) return; applyMap(op.before); redoStack.push(op); updateHistoryButtons(); }
   function redo() { finishEdit(); const op = redoStack.pop(); if (!op) return; applyMap(op.after); undoStack.push(op); updateHistoryButtons(); }
@@ -3304,40 +3342,295 @@ const Flow = (() => {
 
   // ---------- boards menu, switching, share link ----------
   function boardIds() {
-    const list = [...boards.entries()].sort((a, b) => (a[1].at || 0) - (b[1].at || 0)).map(([id]) => id);
+    const when = (id) => { const b = boards.get(id) || {}; return Math.max(+b.seen || 0, +b.at || 0); };
+    const list = [...boards.keys()].sort((a, b) => when(b) - when(a));
     if (privateLinks) { const d = demoId(); return d ? [d, ...list.filter((id) => secretBoard(id) && id !== d)] : list.filter(secretBoard); }
     return ['main', ...list.filter((id) => id !== 'main')];
   }
-  function renderBoardMenu() {
-    const box = $('#boardList'); box.innerHTML = ''; $('#boardNote').hidden = !privateLinks;
-    const ids = boardIds(); if (!ids.includes(boardId)) ids.push(boardId);
-    ids.forEach((id) => {
-      const b = document.createElement('button'); b.className = 'menu-item'; b.setAttribute('role', 'menuitem');
-      if (id === boardId) b.setAttribute('aria-current', 'true');
-      const tick = document.createElement('span'); tick.className = 'tick'; tick.textContent = id === boardId ? '✓' : '';
-      const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = titleOf(id);
-      const who = document.createElement('span'); who.className = 'who';
-      const here = peers.filter((p) => !p.sameTab && peerBoard(p) === id);
-      who.textContent = here.slice(0, 4).map(peerEmoji).join(''); who.title = here.map(peerName).join(', ');
-      b.append(tick, nm, who);
-      b.addEventListener('click', () => { closeBoardUi(); if (id !== boardId) openBoard(id); });
-      if (isDemo(id)) { nm.textContent = '✦ ' + titleOf(id); b.title = 'Демо-дошка: її бачать усі'; box.appendChild(b); if (ids.length > 1) { const sep = document.createElement('div'); sep.className = 'menu-sep'; box.appendChild(sep); } return; }
-      if (!privateLinks || id === boardId) { box.appendChild(b); return; }
-      const row = document.createElement('div'); row.className = 'menu-row';
-      const x = document.createElement('button'); x.className = 'menu-x'; x.textContent = '×';
-      x.title = 'Прибрати зі списку'; x.setAttribute('aria-label', 'Прибрати «' + titleOf(id) + '» зі списку');
-      x.addEventListener('click', (e) => {
-        e.stopPropagation(); const name = titleOf(id);
-        boards.delete(id); saveLocalBoards(); renderBoardMenu();
-        toast('«' + name + '» прибрано зі списку. Дошка лишилася за посиланням');
-      });
-      row.append(b, x); box.appendChild(row);
-    });
+
+  // ---------- board covers: a small vector summary of a board, drawn as the card's thumbnail ----------
+  // Stored at boards/<id>/cover/v1 (any visitor of the board may refresh it) and cached in this browser.
+  // Shapes: [kind, x, y, w, h, ...] in a 0..1000 box; kinds S section, s sticky, t text, n node, w web, i image, e stamp, c comment, l rope.
+  const coverPath = (id) => `boards/${id}/cover/v1`;
+  const coverKey = (id) => 'jamboard:cover:' + id;
+  const covers = new Map(); // id -> { json, cover }
+  function makeCover(list) {
+    const cards = list.filter((i) => i && !isLink(i) && TYPES_OK.includes(i.type) && isFinite(i.x) && isFinite(i.y));
+    if (!cards.length) return { v: 1, w: 0, h: 0, n: 0, s: [] };
+    const W = (i) => (i.type === 'comment' ? 36 : clamp(+i.w || 200, 4, 20000)), H = (i) => (i.type === 'comment' ? 36 : clamp(+i.h || 120, 4, 20000));
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const i of cards) { x0 = Math.min(x0, i.x); y0 = Math.min(y0, i.y); x1 = Math.max(x1, i.x + W(i)); y1 = Math.max(y1, i.y + H(i)); }
+    const k = 1000 / Math.max(x1 - x0, y1 - y0, 1), r = (v) => Math.round(v * k);
+    const pos = (i) => [r(i.x - x0), r(i.y - y0), Math.max(1, r(W(i))), Math.max(1, r(H(i)))];
+    const col = (c, d) => (COLORS.includes(c) ? c : d);
+    const src = (u) => (typeof u === 'string' && /^https:\/\//.test(u) && u.length < 600 ? u : '');
+    const order = cards.sort((a, b) => rank(a) - rank(b) || (a.z || 0) - (b.z || 0));
+    const keep = order.length > 260 ? new Set(order.filter((i) => i.type === 'section').concat(order.filter((i) => i.type !== 'section').sort((a, b) => W(b) * H(b) - W(a) * H(a)).slice(0, 240))) : null;
+    const s = []; let pics = 0;
+    for (const i of order) {
+      if (keep && !keep.has(i)) continue;
+      const p = pos(i), t = i.type;
+      if (t === 'section') s.push(['S', ...p, col(i.color, 'gray')]);
+      else if (t === 'sticky') s.push(['s', ...p, col(i.color, 'caution'), (i.text || i.html) ? 1 : 0]);
+      else if (t === 'text') s.push(['t', ...p, TEXT_TS.includes(i.ts) ? i.ts : 'p']);
+      else if (t === 'node') s.push(['n', ...p, col(i.color, 'gray'), Flow.SHAPES.includes(i.shape) ? i.shape : 'rect']);
+      else if (t === 'web') s.push(['w', ...p, pics < 8 && src(i.img) ? (pics++, src(i.img)) : '']);
+      else if (t === 'image') s.push(['i', ...p, pics < 8 && src(i.url || i.src) ? (pics++, src(i.url || i.src)) : '']);
+      else if (t === 'stamp') s.push(['e', ...p, typeof i.emoji === 'string' ? i.emoji.slice(0, 16) : '👍']);
+      else if (t === 'comment') s.push(['c', ...p]);
+    }
+    const ends = new Map(cards.map((i) => [i.id, i]));
+    let ropes = 0;
+    for (const l of list) {
+      if (!l || !isLink(l) || ropes >= 120) continue;
+      const a = ends.get(l.a), b = ends.get(l.b); if (!a || !b) continue;
+      const pa = pos(a), pb = pos(b); ropes++;
+      s.unshift(['l', pa[0] + pa[2] / 2, pa[1] + pa[3] / 2, pb[0] + pb[2] / 2, pb[1] + pb[3] / 2, ROPE_COLORS.includes(l.color) ? l.color : 'gray']);
+    }
+    s.sort((a, b) => (a[0] === 'S' ? 0 : a[0] === 'l' ? 1 : 2) - (b[0] === 'S' ? 0 : b[0] === 'l' ? 1 : 2)); // stable: sections, ropes, then cards in paint order
+    return { v: 1, w: r(x1 - x0), h: r(y1 - y0), n: cards.length, s };
   }
-  function closeBoardUi() { $('#boardMenu').hidden = true; $('#sharePop').hidden = true; $('#boardsBtn').setAttribute('aria-expanded', 'false'); }
+  function cleanCover(d) {
+    if (!d || typeof d !== 'object' || d.v !== 1 || !Array.isArray(d.s)) return null;
+    return { v: 1, w: clamp(+d.w || 0, 0, 1000), h: clamp(+d.h || 0, 0, 1000), n: Math.max(0, +d.n || 0), s: d.s.filter((x) => Array.isArray(x) && typeof x[0] === 'string').slice(0, 400) };
+  }
+  function cachedCover(id) {
+    if (covers.has(id)) return covers.get(id).cover;
+    try { const c = cleanCover(JSON.parse(store.get(coverKey(id)) || 'null')); if (c) { covers.set(id, { json: JSON.stringify(c), cover: c }); return c; } } catch (e) {}
+    return null;
+  }
+  function keepCover(id, cover) { const json = JSON.stringify(cover), old = covers.get(id); covers.set(id, { json, cover }); store.set(coverKey(id), json); return !old || old.json !== json; }
+  function dropCover(id) { covers.delete(id); try { localStorage.removeItem(coverKey(id)); } catch (e) {} }
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  function coverSvg(c) {
+    const svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('aria-hidden', 'true');
+    const pad = Math.max(c.w, c.h) * 0.08 + 6, vw = Math.max(c.w, 1) + pad * 2, vh = Math.max(c.h, 1) + pad * 2;
+    // fill the 16:10 frame: centre the board in a box of that shape
+    let bw = vw, bh = vh; if (bw / bh > 1.6) bh = bw / 1.6; else bw = bh * 1.6;
+    svg.setAttribute('viewBox', `${-pad - (bw - vw) / 2} ${-pad - (bh - vh) / 2} ${bw} ${bh}`);
+    const u = bw / 200; // one thumbnail pixel, roughly
+    const el = (tag, at, style) => { const e = document.createElementNS(SVGNS, tag); for (const k in at) e.setAttribute(k, at[k]); if (style) e.setAttribute('style', style); svg.appendChild(e); return e; };
+    const T = (c, d) => `var(--t-${COLORS.includes(c) ? c : d})`;
+    const num = (v) => (isFinite(v) ? +v : 0);
+    for (const sh of c.s) {
+      const [kd] = sh, x = num(sh[1]), y = num(sh[2]), w = Math.max(num(sh[3]), 0.5), h = Math.max(num(sh[4]), 0.5);
+      if (kd === 'l') { el('line', { x1: x, y1: y, x2: num(sh[3]), y2: num(sh[4]), 'stroke-linecap': 'round' }, `stroke:${ROPE_VAR[sh[5]] || ROPE_VAR.gray};stroke-width:${1.3 * u};opacity:.75`); continue; }
+      const rx = Math.min(w, h) * 0.08;
+      if (kd === 'S') el('rect', { x, y, width: w, height: h, rx: Math.max(rx, 2 * u) }, `fill:color-mix(in srgb, ${T(sh[5], 'gray')} 26%, var(--surface));stroke:color-mix(in srgb, ${T(sh[5], 'gray')} 70%, var(--line));stroke-width:${u}`);
+      else if (kd === 's') {
+        el('rect', { x, y, width: w, height: h, rx: Math.max(rx, 1.2 * u) }, `fill:${T(sh[5], 'caution')}`);
+        if (sh[6] && w > 14 * u) [0.3, 0.5].forEach((f, j) => el('rect', { x: x + w * 0.16, y: y + h * f, width: w * (j ? 0.44 : 0.66), height: Math.max(h * 0.07, 0.8 * u), rx: h * 0.035 }, 'fill:var(--ink);opacity:.22'));
+      } else if (kd === 't') {
+        const lh = sh[5] === 'h1' ? 0.55 : sh[5] === 'h2' ? 0.45 : 0.32, n = Math.max(1, Math.min(4, Math.round(h / (w * 0.12 + 1))));
+        for (let j = 0; j < n; j++) el('rect', { x, y: y + (h / n) * j + (h / n) * (1 - lh) / 2, width: w * (j === n - 1 && n > 1 ? 0.6 : 1), height: (h / n) * lh, rx: (h / n) * lh / 2 }, `fill:var(--text);opacity:${sh[5] === 'h1' || sh[5] === 'h2' ? .62 : .32}`);
+      } else if (kd === 'n') {
+        const st = `fill:color-mix(in srgb, ${T(sh[5], 'gray')} 55%, var(--surface));stroke:color-mix(in srgb, ${T(sh[5], 'gray')} 60%, var(--text));stroke-width:${0.9 * u}`, shp = sh[6];
+        if (shp === 'circle') el('ellipse', { cx: x + w / 2, cy: y + h / 2, rx: w / 2, ry: h / 2 }, st);
+        else if (shp === 'diamond') el('polygon', { points: `${x + w / 2},${y} ${x + w},${y + h / 2} ${x + w / 2},${y + h} ${x},${y + h / 2}` }, st);
+        else el('rect', { x, y, width: w, height: h, rx: shp === 'pill' ? h / 2 : shp === 'rect' ? Math.min(w, h) * 0.1 : Math.min(w, h) * 0.22 }, st);
+      } else if (kd === 'w' || kd === 'i') {
+        const clip = 'c' + Math.random().toString(36).slice(2, 8);
+        const cp = el('clipPath', { id: clip }); const cr = document.createElementNS(SVGNS, 'rect'); [['x', x], ['y', y], ['width', w], ['height', h], ['rx', Math.max(rx, u)]].forEach(([a, v]) => cr.setAttribute(a, v)); cp.appendChild(cr);
+        el('rect', { x, y, width: w, height: h, rx: Math.max(rx, u) }, kd === 'w' ? `fill:var(--surface);stroke:var(--line);stroke-width:${0.8 * u}` : 'fill:color-mix(in srgb, var(--muted) 22%, var(--surface))');
+        const mh = kd === 'w' ? Math.min(h * 0.62, w / 1.91) : h;
+        if (kd === 'w' && !sh[5]) el('rect', { x, y, width: w, height: mh }, 'fill:color-mix(in srgb, var(--muted) 16%, var(--surface))').setAttribute('clip-path', `url(#${clip})`);
+        if (sh[5]) { const im = el('image', { x, y, width: w, height: mh, preserveAspectRatio: 'xMidYMid slice', 'clip-path': `url(#${clip})` }); im.addEventListener('error', () => im.remove(), { once: true }); im.setAttribute('href', sh[5]); }
+        if (kd === 'w') el('rect', { x: x + w * 0.08, y: y + mh + (h - mh) * 0.3, width: w * 0.6, height: Math.max((h - mh) * 0.18, 0.8 * u), rx: u }, 'fill:var(--text);opacity:.3');
+      } else if (kd === 'e') { const t = el('text', { x: x + w / 2, y: y + h * 0.82, 'text-anchor': 'middle', 'font-size': h * 0.8 }); t.textContent = String(sh[5] || '👍'); }
+      else if (kd === 'c') el('circle', { cx: x + w / 2, cy: y + h / 2, r: Math.max(w / 2, 2.5 * u) }, 'fill:var(--accent);stroke:var(--surface);stroke-width:' + u);
+    }
+    return svg;
+  }
+  // Writing the cover: whoever changed the board refreshes it; for changes from elsewhere (other people, the MCP) only the
+  // person with the smallest peer id on the board does, so a full room doesn't write the same cover ten times.
+  let coverT = 0;
+  function coverSoon(mine) {
+    if (loadingBoard) return;
+    const meId = (peers.find((p) => p.sameTab) || {}).peer;
+    if (!mine && meId && others().some((p) => p.peer < meId)) return;
+    clearTimeout(coverT); const b = boardId;
+    coverT = setTimeout(() => saveCover(b), mine ? 2000 : 5000);
+  }
+  function saveCover(b) {
+    if (b !== boardId || loadingBoard) return;
+    cachedCover(b);
+    const c = makeCover([...items.values()]);
+    if (!keepCover(b, c)) return;
+    if (mode === 'shared' && privateLinks && secretBoard(b)) db.doc(coverPath(b)).set({ ...c, at: Date.now() }).catch(() => {});
+    galCover(b);
+  }
+
+  // ---------- «Мої дошки»: cards with the cover, name, author and who is on each board right now ----------
+  const gal = { open: false, cards: new Map(), watch: new Map(), people: new Map(), fetched: new Map(), closeT: 0, stopT: 0 };
+  const galEl = () => $('#boardMenu');
+  const dateUk = (at) => { if (!at) return ''; const d = new Date(+at), y = d.getFullYear() !== new Date().getFullYear(); return d.toLocaleDateString('uk-UA', y ? { day: 'numeric', month: 'short', year: 'numeric' } : { day: 'numeric', month: 'short' }); };
+  function galInfo(id) {
+    const b = boards.get(id) || {}, c = gal.cards.get(id); if (!c) return;
+    const name = id === boardId ? $('#title').value || titleOf(id) : titleOf(id);
+    if (c.nm.textContent !== name) c.nm.textContent = name;
+    c.pin.hidden = !isDemo(id);
+    const by = isDemo(id) ? 'Демо для всіх' : [b.by ? 'Автор: ' + b.by : '', dateUk(b.at)].filter(Boolean).join(' · ');
+    if (c.by.textContent !== by) c.by.textContent = by;
+    c.by.title = by;
+    c.main.setAttribute('aria-label', name + (by ? '. ' + by : '') + (id === boardId ? '. Ви тут' : ''));
+    if (id === boardId) c.main.setAttribute('aria-current', 'true'); else c.main.removeAttribute('aria-current');
+    c.el.classList.toggle('cur', id === boardId);
+  }
+  function galCover(id) {
+    const c = gal.cards.get(id); if (!c) return;
+    const cover = id === boardId && !loadingBoard ? makeCover([...items.values()]) : cachedCover(id);
+    const json = cover ? JSON.stringify(cover) : '';
+    c.thumb.classList.toggle('wait', !cover && gal.fetched.get(id) !== 'done');
+    if (json === c.coverJson) return; c.coverJson = json;
+    c.thumb.querySelectorAll('svg, .bc-empty').forEach((e) => e.remove());
+    if (!cover) return;
+    if (!cover.n) { const e = document.createElement('div'); e.className = 'bc-empty'; e.textContent = 'Порожня дошка'; c.thumb.appendChild(e); return; }
+    const svg = coverSvg(cover); if (c.shown) svg.classList.add('fresh'); c.thumb.appendChild(svg);
+  }
+  function galPeopleOf(id) {
+    if (id === boardId) return [{ me: true, color: me.color, name: me.name, emoji: me.emoji }].concat(others().map((p) => ({ key: p.peer, color: peerColor(p), name: peerName(p), emoji: peerEmoji(p) })));
+    const list = privateLinks ? gal.people.get(id) || [] : peers.filter((p) => !p.sameTab && peerBoard(p) === id);
+    return list.map((p) => ({ key: p.peer, color: peerColor(p), name: peerName(p), emoji: peerEmoji(p) }));
+  }
+  function galPeople(id) {
+    const c = gal.cards.get(id); if (!c) return;
+    const list = galPeopleOf(id), sig = JSON.stringify(list);
+    if (sig === c.peopleSig) return; c.peopleSig = sig;
+    const had = new Set([...c.people.children].map((e) => e.dataset.k));
+    c.people.innerHTML = '';
+    list.slice(0, 4).forEach((u) => {
+      const a = document.createElement('span'); a.className = 'av' + (u.me ? ' me' : ''); a.dataset.k = u.me ? 'me' : u.key + u.emoji;
+      if (had.has(a.dataset.k)) a.style.animation = 'none';
+      a.style.setProperty('--pc', u.color); a.textContent = u.emoji; a.title = u.me ? u.name + ' (ви)' : u.name;
+      c.people.appendChild(a);
+    });
+    if (list.length > 4) { const m = document.createElement('span'); m.className = 'av more'; m.dataset.k = 'more'; if (had.has('more')) m.style.animation = 'none'; m.textContent = '+' + (list.length - 4); c.people.appendChild(m); }
+    c.people.title = list.length ? 'Зараз тут: ' + list.map((u) => (u.me ? u.name + ' (ви)' : u.name)).join(', ') : '';
+    const n = list.filter((u) => !u.me).length, here = id === boardId;
+    const label = here ? 'Ви тут' : n ? (n === 1 ? '1 зараз тут' : n + ' зараз тут') : '';
+    if (c.live.dataset.l !== label) {
+      c.live.dataset.l = label; c.live.hidden = !label; c.live.className = 'bc-live' + (here ? ' here' : '');
+      c.live.lastChild.textContent = label; c.live.style.animation = 'none'; void c.live.offsetWidth; c.live.style.animation = '';
+    }
+  }
+  function galCard(id, i) {
+    const el = document.createElement('div'); el.className = 'bcard'; el.setAttribute('role', 'listitem'); el.style.setProperty('--i', Math.min(i, 12));
+    const main = document.createElement('button'); main.className = 'bc-main';
+    const thumb = document.createElement('div'); thumb.className = 'bc-thumb';
+    const meta = document.createElement('div'); meta.className = 'bc-meta';
+    const name = document.createElement('div'); name.className = 'bc-name';
+    const pin = document.createElement('span'); pin.className = 'bc-pin'; pin.textContent = '✦'; pin.setAttribute('aria-hidden', 'true');
+    const nm = document.createElement('span'); name.append(pin, nm);
+    const sub = document.createElement('div'); sub.className = 'bc-sub';
+    const by = document.createElement('span'); by.className = 'bc-by';
+    const people = document.createElement('span'); people.className = 'bc-people';
+    sub.append(by, people); meta.append(name, sub); main.append(thumb, meta);
+    const live = document.createElement('span'); live.className = 'bc-live'; live.hidden = true; live.append(document.createElement('i'), document.createElement('span'));
+    el.append(main, live);
+    main.addEventListener('click', () => { closeGallery(); if (id !== boardId) openBoard(id); });
+    if (privateLinks && !isDemo(id)) {
+      const x = document.createElement('button'); x.className = 'bc-x'; x.textContent = '×'; x.title = 'Прибрати зі списку';
+      x.addEventListener('click', (e) => {
+        e.stopPropagation(); const nameNow = titleOf(id);
+        if (id === boardId) { toast('Це дошка, на якій ви зараз. Відкрийте іншу, щоб прибрати цю'); return; }
+        boards.delete(id); saveLocalBoards(); dropCover(id); stopWatch(id);
+        const c = gal.cards.get(id); gal.cards.delete(id);
+        if (c) { const next = c.el.nextElementSibling || c.el.previousElementSibling; c.el.classList.add('gone'); setTimeout(() => c.el.remove(), 170); const f = next && next.querySelector('.bc-main'); if (f) f.focus({ preventScroll: true }); }
+        galCount(); toast('«' + nameNow + '» прибрано зі списку. Дошка лишилася за посиланням');
+      });
+      el.appendChild(x);
+    }
+    const c = { el, main, thumb, nm, pin, by, people, live, x: el.querySelector('.bc-x'), coverJson: null, peopleSig: null, shown: false };
+    gal.cards.set(id, c);
+    return c;
+  }
+  function galCount() { const n = gal.cards.size; $('#boardCount').textContent = n > 1 ? '· ' + n : ''; }
+  function galBuild(withCover) {
+    const box = $('#boardList'), ids = boardIds(); if (!ids.includes(boardId)) ids.push(boardId);
+    const want = new Set(ids);
+    for (const [id, c] of gal.cards) if (!want.has(id)) { c.el.remove(); gal.cards.delete(id); }
+    ids.forEach((id, i) => {
+      let c = gal.cards.get(id); if (!c) c = galCard(id, i);
+      if (box.children[i] !== c.el) box.insertBefore(c.el, box.children[i] || null);
+      galInfo(id); if (withCover || c.coverJson === null) galCover(id); galPeople(id);
+      if (c.x) { c.x.setAttribute('aria-label', 'Прибрати «' + titleOf(id) + '» зі списку'); c.x.hidden = id === boardId; }
+    });
+    gal.cards.forEach((c) => { c.shown = true; });
+    galCount(); $('#boardNote').hidden = !privateLinks;
+  }
+  // called whenever titles, people or the board change; cheap when nothing did
+  let galRaf = 0;
+  function renderBoardMenu() { if (gal.open && !galRaf) galRaf = requestAnimationFrame(() => { galRaf = 0; if (gal.open) galBuild(false); }); }
+  // fresh title, author and cover for boards other than this one (they may have changed since we last looked)
+  async function galFetch(ids) {
+    if (!(mode === 'shared' && privateLinks && db.peek)) return;
+    const todo = ids.filter((id) => id !== boardId && secretBoard(id) && !(Date.now() - (gal.fetched.get(id + ':t') || 0) < 30000));
+    let k = 0;
+    const one = async (id) => {
+      gal.fetched.set(id + ':t', Date.now());
+      try {
+        const [meta, cov] = await Promise.all([db.peek('boards/' + id), db.peek(coverPath(id))]);
+        if (meta && boards.has(id)) {
+          const cur = boards.get(id);
+          boards.set(id, { ...cur, title: typeof meta.title === 'string' ? meta.title.slice(0, 120) : cur.title, at: +meta.at || cur.at || 0, by: typeof meta.by === 'string' ? meta.by.slice(0, 40) : cur.by || '' });
+        }
+        let c = cleanCover(cov);
+        if (!c) { // no cover yet (an older board, or one built by the MCP): make it from the items once
+          const rows = await db.peekList(`boards/${id}/items`);
+          c = makeCover(rows.map((r) => full(r.path.slice(r.path.lastIndexOf('/') + 1), r.data || {})).filter((i) => TYPES_OK.includes(i.type)));
+          db.doc(coverPath(id)).set({ ...c, at: Date.now() }).catch(() => {});
+        }
+        keepCover(id, c);
+      } catch (e) {}
+      gal.fetched.set(id, 'done');
+      if (gal.open) { galInfo(id); galCover(id); }
+    };
+    const workers = Array.from({ length: Math.min(4, todo.length) }, async () => { while (k < todo.length) await one(todo[k++]); });
+    await Promise.all(workers); if (todo.length) saveLocalBoards();
+  }
+  // who is on the other boards: listen on each board's own channel without joining it (we don't show up there)
+  function startWatch(ids) {
+    clearTimeout(gal.stopT);
+    if (!(room && room.watchBoard)) return;
+    ids.forEach((id) => {
+      if (id === boardId || gal.watch.has(id) || !secretBoard(id)) return;
+      gal.watch.set(id, room.watchBoard(id, (list) => { gal.people.set(id, list); if (gal.open) galPeople(id); }));
+    });
+    for (const id of [...gal.watch.keys()]) if (id === boardId || !ids.includes(id)) stopWatch(id);
+  }
+  function stopWatch(id) { const f = gal.watch.get(id); if (f) { f(); gal.watch.delete(id); gal.people.delete(id); } }
+  function openGallery() {
+    const el = galEl(); clearTimeout(gal.closeT);
+    gal.open = true; el.classList.remove('out'); el.hidden = false; $('#boardsBtn').setAttribute('aria-expanded', 'true');
+    gal.cards.forEach((c) => c.el.remove()); gal.cards.clear(); // fresh cards each time, so they deal in
+    galBuild(true);
+    const ids = [...gal.cards.keys()]; startWatch(ids); galFetch(ids);
+    const cur = gal.cards.get(boardId) || gal.cards.values().next().value;
+    if (cur) requestAnimationFrame(() => { cur.main.focus({ preventScroll: true }); cur.el.scrollIntoView({ block: 'nearest' }); });
+  }
+  function closeGallery(refocus) {
+    if (!gal.open) return;
+    gal.open = false; $('#boardsBtn').setAttribute('aria-expanded', 'false');
+    const el = galEl(); el.classList.add('out');
+    gal.closeT = setTimeout(() => { if (!gal.open) { el.hidden = true; el.classList.remove('out'); } }, reduceMotion ? 0 : 170);
+    clearTimeout(gal.stopT); gal.stopT = setTimeout(() => { if (!gal.open) [...gal.watch.keys()].forEach(stopWatch); }, 20000); // reopening soon stays instant
+    if (refocus) $('#boardsBtn').focus({ preventScroll: true });
+  }
+  // arrows move between cards like in a grid, Escape closes
+  galEl().addEventListener('keydown', (e) => {
+    e.stopPropagation(); // keys here belong to the gallery, not to the board behind it
+    if (e.key === 'Escape') { e.preventDefault(); closeGallery(true); return; }
+    if (!e.key.startsWith('Arrow')) return;
+    const list = [...gal.cards.values()].map((c) => c.main), at = list.indexOf(document.activeElement); if (at < 0) return;
+    const cols = Math.max(1, getComputedStyle($('#boardList')).gridTemplateColumns.split(' ').length);
+    const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -cols, ArrowDown: cols }[e.key], to = list[at + step];
+    e.preventDefault(); if (to) { to.focus({ preventScroll: true }); to.closest('.bcard').scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' }); }
+  });
+  function closeBoardUi() { closeGallery(); $('#sharePop').hidden = true; }
   $('#boardsBtn').addEventListener('click', () => {
-    const open = $('#boardMenu').hidden; closeBoardUi();
-    if (open) { renderBoardMenu(); $('#boardMenu').hidden = false; $('#boardsBtn').setAttribute('aria-expanded', 'true'); }
+    const open = !gal.open; closeBoardUi();
+    if (open) openGallery();
   });
   $('#shareBtn').addEventListener('click', async () => {
     closeBoardUi(); openTimer(false);
@@ -3380,7 +3673,7 @@ const Flow = (() => {
   const boardsKey = () => (privateLinks ? 'jamboard:myboards' : 'jamboard:boards');
   function saveLocalBoards() { store.set(boardsKey(), JSON.stringify([...boards.entries()].map(([id, b]) => ({ id, ...b })))); }
   function loadLocalBoards() {
-    try { (JSON.parse(store.get(boardsKey()) || '[]') || []).forEach((b) => { if (b && boardOk(b.id)) boards.set(b.id, { title: String(b.title || 'Нова дошка').slice(0, 120), at: +b.at || 0, by: typeof b.by === 'string' ? b.by : '' }); }); } catch (e) {}
+    try { (JSON.parse(store.get(boardsKey()) || '[]') || []).forEach((b) => { if (b && boardOk(b.id)) boards.set(b.id, { title: String(b.title || 'Нова дошка').slice(0, 120), at: +b.at || 0, by: typeof b.by === 'string' ? b.by : '', seen: +b.seen || 0 }); }); } catch (e) {}
   }
 
   // ---------- shared timer: one per board, everyone sees the same countdown ----------
@@ -3508,7 +3801,8 @@ const Flow = (() => {
   function doOpen(id) {
     if (unsubItems) { try { unsubItems(); } catch (e) {} unsubItems = null; }
     boardId = id; store.set(BOARD_KEY, id);
-    if (privateLinks && !boards.has(id)) { boards.set(id, { at: Date.now() }); saveLocalBoards(); } // opened by link: now it is one of "my boards"
+    if (privateLinks && !boards.has(id)) boards.set(id, { at: Date.now() }); // opened by link: now it is one of "my boards"
+    if (boards.has(id)) { boards.set(id, { ...boards.get(id), seen: Date.now() }); if (privateLinks || mode === 'local') saveLocalBoards(); } // most recent first in «Мої дошки"
     try { if (location.hash && boardFromUrl() !== id) history.replaceState(null, '', '#b=' + id); } catch (e) {}
     items.clear(); revs.clear(); selected.clear(); remotePos.clear(); remoteSize.clear(); ghost.clear(); dragBase = new Map();
     undoStack.length = 0; redoStack.length = 0; updateHistoryButtons();
@@ -3523,7 +3817,7 @@ const Flow = (() => {
   function boardReady() {
     loadingBoard = false;
     if (!restoreView()) fitAll(true);
-    renderAll(); world.classList.remove('switching');
+    renderAll(); world.classList.remove('switching'); coverSoon(false);
     const b = boardId; setTimeout(() => { if (b === boardId) booted = true; }, 300);
   }
   function loadLocalBoard() {
@@ -3583,7 +3877,7 @@ const Flow = (() => {
         putItem(id, full(id, data));
       }
       selected = new Set([...selected].filter((id) => items.has(id)));
-      if (first) { first = false; boardReady(); } else renderAll();
+      if (first) { first = false; boardReady(); } else { renderAll(); coverSoon(false); }
     }, (e) => {
       dbDown = true; dbError(e); setStatus('bad', 'Немає зв’язку');
       const m = (e && e.message) || '';
@@ -3638,13 +3932,14 @@ const Flow = (() => {
     function openLine(bid) {
       let L = lines.get(bid);
       if (!L) {
-        L = { refs: 0, rows: new Set(), stats: new Set(), pres: null, st: '' };
+        L = { refs: 0, rows: new Set(), stats: new Set(), syncs: new Set(), peeks: new Set(), pres: null, st: '' };
         L.ch = sb.channel('jb:' + bid, { config: { broadcast: { self: false }, presence: { key: myPeer } } })
           .on('broadcast', { event: 'row' }, (m) => {
             const p = m && m.payload, msg = p && typeof p.path === 'string' ? p : p && p.payload;
             if (msg && typeof msg.path === 'string' && boardOf(msg.path) === bid) L.rows.forEach((f) => f(msg));
           })
-          .on('broadcast', { event: 'p' }, (m) => L.pres && L.pres.onP(m && m.payload))
+          .on('broadcast', { event: 'p' }, (m) => { if (L.pres) L.pres.onP(m && m.payload); L.peeks.forEach((f) => f(m && m.payload)); })
+          .on('presence', { event: 'sync' }, () => L.syncs.forEach((f) => f()))
           .on('presence', { event: 'join' }, () => L.pres && L.pres.onJoin())
           .on('presence', { event: 'leave' }, (m) => L.pres && L.pres.onLeave(m && m.key));
         L.ch.subscribe((st, err) => { L.st = st; [...L.stats].forEach((f) => f(st, err)); });
@@ -3713,8 +4008,12 @@ const Flow = (() => {
       };
     }
     const sdb = {
+      // one-off reads for the boards gallery (no live updates)
+      peek: (path) => sdb.doc(path).peek(),
+      peekList: (coll) => listRows(coll).then(({ data, error }) => { if (error) throw fail(error); return data || []; }),
       doc(path) {
         return {
+          peek: () => getRow(path).then(({ data, error }) => { if (error) throw fail(error); return data && data[0] ? data[0].data : null; }),
           set: (data) => sb.rpc('jb_put', { p_path: path, p_data: data }).then(({ error }) => { if (error) throw fail(error); }),
           delete: () => sb.rpc('jb_del', { p_path: path }).then(({ error }) => { if (error) throw fail(error); }),
           onSnapshot(next, onError) {
@@ -3743,6 +4042,8 @@ const Flow = (() => {
     const emitPeers = () => peersCb && peersCb({ peers: [{ peer: myPeer, sameTab: true, presence: { ...state } }, ...[...others].map(([peer, v]) => ({ peer, presence: v.presence }))] });
     const sendNow = () => { sendTimer = 0; lastSend = Date.now(); if (online && roomLine) roomLine.L.ch.send({ type: 'broadcast', event: 'p', payload: { peer: myPeer, s: state } }).catch(() => {}); };
     const sendSoon = () => { if (sendTimer) return; const wait = Math.max(0, 70 - (Date.now() - lastSend)); sendTimer = setTimeout(sendNow, wait); };
+    // the tracked presence carries name, animal and colour, so the boards gallery can show who is here without waiting for a broadcast
+    const track = () => { if (online && roomLine) roomLine.L.ch.track({ at: Date.now(), n: state.name, e: state.emoji, c: state.color }).catch(() => {}); };
     function joinRoom(bid) {
       if (bid === roomBid) return;
       if (roomLine) {
@@ -3763,7 +4064,7 @@ const Flow = (() => {
         roomStatus = (st) => {
           if (roomLine !== line) return;
           const was = online; online = st === 'SUBSCRIBED';
-          if (online) { L.ch.track({ at: Date.now() }).catch(() => {}); sendSoon(); }
+          if (online) { track(); sendSoon(); }
           if (was !== online) connCb && connCb(online);
         };
         L.stats.add(roomStatus); if (L.st) roomStatus(L.st);
@@ -3781,7 +4082,28 @@ const Flow = (() => {
       presence(patch) {
         Object.assign(state, patch); for (const k in state) if (state[k] === null) delete state[k];
         if ('board' in patch) joinRoom(secretBoard(patch.board) ? patch.board : null);
+        else if ('name' in patch || 'emoji' in patch || 'color' in patch) track();
         sendSoon(); emitPeers(); return Promise.resolve();
+      },
+      // Who is on another of my boards: subscribe to its channel without tracking, so we stay invisible there.
+      // Only boards whose id this browser already has (its own list) are watched; nothing new is learned or revealed.
+      watchBoard(bid, cb) {
+        if (!secretBoard(bid)) return () => {};
+        const line = openLine(bid), L = line.L, info = new Map(); let alive = true;
+        const emit = () => {
+          if (!alive) return;
+          let st = {}; try { st = L.ch.presenceState() || {}; } catch (e) {}
+          const out = [];
+          for (const key in st) {
+            if (key === myPeer) continue;
+            const m = (Array.isArray(st[key]) && st[key][0]) || {}, p = info.get(key) || {};
+            out.push({ peer: key, presence: { name: typeof m.n === 'string' ? m.n : p.name, emoji: typeof m.e === 'string' ? m.e : p.emoji, color: typeof m.c === 'string' ? m.c : p.color } });
+          }
+          cb(out);
+        };
+        const onP = (payload) => { if (payload && typeof payload.peer === 'string' && payload.s && typeof payload.s === 'object') { info.set(payload.peer, payload.s); emit(); } };
+        L.syncs.add(emit); L.peeks.add(onP); if (L.st === 'SUBSCRIBED') emit();
+        return () => { alive = false; L.syncs.delete(emit); L.peeks.delete(onP); line.release(); };
       },
       onPeers(fn) { peersCb = fn; emitPeers(); return () => { peersCb = null; }; },
       onConnection(fn) { connCb = fn; fn(online); return () => { connCb = null; }; },
