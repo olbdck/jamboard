@@ -74,6 +74,8 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
 }
 /* dot grid on its own layer: panning only moves it (no repaint); 100px overhang covers the largest cell (96px) */
 #grid { position: absolute; inset: -100px; pointer-events: none; background-image: radial-gradient(circle, var(--dot) 1.2px, transparent 1.4px); will-change: transform; }
+/* paste ripple: a small canvas over just the patch of dots around a pasted object, shown only while it plays */
+#ripple { position: absolute; left: 0; top: 0; pointer-events: none; will-change: transform; display: none; }
 #viewport.grab, #viewport.tool-hand { cursor: grab; }
 #viewport.grabbing { cursor: grabbing; }
 #viewport.tool-sticky, #viewport.tool-section, #viewport.tool-comment { cursor: crosshair; }
@@ -650,7 +652,7 @@ body.view-only .ro-note { display: flex; animation: palIn var(--base) var(--ease
 }
 </style>
 
-<div id="viewport" aria-label="Дошка"><div id="grid"></div><div id="world"></div></div>
+<div id="viewport" aria-label="Дошка"><div id="grid"></div><canvas id="ripple" aria-hidden="true"></canvas><div id="world"></div></div>
 <div id="cursors"></div>
 <div id="marquee" hidden></div>
 <div id="dropzone" hidden>Відпустіть, щоб додати зображення на дошку</div>
@@ -1361,6 +1363,11 @@ const Flow = (() => {
     undoStack.push({ before, after }); if (undoStack.length > 120) undoStack.shift();
     redoStack.length = 0; updateHistoryButtons();
     persist(after); coverSoon(true);
+    if (ripArmed && newIds.length) { // the first thing created after a paste gets the ripple
+      const fresh = performance.now() - ripArmed < 10000; ripArmed = 0;
+      const made = newIds.map((id) => items.get(id)).filter((i) => i && !isLink(i));
+      if (fresh && made.length) rippleAt(bbox(made));
+    }
   }
   function persist(map) { for (const id in map) map[id] ? write(items.get(id)) : remove(id); }
   function putItem(id, next) {
@@ -1405,9 +1412,87 @@ const Flow = (() => {
     }
     const g = gridCell, mx = (((view.x + 100) % g) + g) % g, my = (((view.y + 100) % g) + g) % g;
     gridEl.style.transform = `translate3d(${mx}px, ${my}px, 0)`;
+    if (rip) ripPlace();
     clearTimeout(paintView.t); const vk = viewKey(); paintView.t = setTimeout(() => store.set(vk, JSON.stringify(view)), 400);
   }
   function applyView() { schedule('view'); }
+
+  // ---------- paste ripple: the dots around a pasted object light up in a soft wave, as from a drop ----------
+  // Only a small canvas over that patch of the grid is drawn (never the whole board), for about a second, then hidden.
+  // Dot positions are fixed in canvas space while the zoom holds, so panning just moves the canvas (no redraw cost).
+  const ripCv = $('#ripple'), ripCx = ripCv.getContext('2d');
+  let rip = null, ripArmed = 0;
+  const RIP_BUCKETS = 8, ripPaths = new Array(RIP_BUCKETS);
+  function rippleAt(b) { // b: the pasted objects' bounding box in board units
+    if (!b || document.hidden) return;
+    const z = view.z, step = gridCell / z, hw = (b.x2 - b.x1) / 2 * z, hh = (b.y2 - b.y1) / 2 * z;
+    const cx = (b.x1 + b.x2) / 2, cy = (b.y1 + b.y2) / 2;
+    const R = Math.min(Math.hypot(hw, hh) + 170, 720); // how far the wave travels, in screen px
+    // the canvas covers the wave's circle, clipped to the visible screen (with a margin for a little panning)
+    const sx = view.x + cx * z, sy = view.y + cy * z, m = 120;
+    const l = Math.max(sx - R, -m), t = Math.max(sy - R, -m), r = Math.min(sx + R, innerWidth + m), btm = Math.min(sy + R, innerHeight + m);
+    if (r - l < 8 || btm - t < 8) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2), W = Math.ceil(r - l), H = Math.ceil(btm - t);
+    // the grid's dots inside the canvas, in canvas px: x, y, distance from the drop, direction away from it
+    const ox = (l - view.x) / z, oy = (t - view.y) / z, dots = [];
+    const k0 = Math.ceil((ox - step / 2) / step), j0 = Math.ceil((oy - step / 2) / step);
+    for (let j = j0; ; j++) {
+      const py = (step / 2 + j * step - oy) * z; if (py > H) break;
+      for (let k = k0; ; k++) {
+        const px = (step / 2 + k * step - ox) * z; if (px > W) break;
+        const dx = px - (sx - l), dy = py - (sy - t), d = Math.hypot(dx, dy);
+        if (d <= R + 40) dots.push(px, py, d, d ? dx / d : 0, d ? dy / d : 0);
+      }
+    }
+    if (!dots.length) return;
+    const cw = Math.round(W * dpr), ch = Math.round(H * dpr);
+    if (ripCv.width !== cw || ripCv.height !== ch) { ripCv.width = cw; ripCv.height = ch; }
+    ripCv.style.width = W + 'px'; ripCv.style.height = H + 'px';
+    const col = getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#c2185b';
+    const r0 = Math.min(hw, hh) * 0.55; // the front starts near the object's edge: its middle is hidden under the object
+    const bg = (getComputedStyle(vp).backgroundColor.match(/\d+/g) || [255, 255, 255]).slice(0, 3).reduce((a, v) => a + +v, 0) / 765;
+    const raf = rip ? rip.raf : 0;
+    rip = { ox, oy, z, dots, dpr, W, H, R, r0, edge: Math.min(Math.hypot(hw, hh), R - 60), col, gain: bg < 0.4 ? 1.35 : 1, gw: Math.max(14, gridCell * 1.1), t0: performance.now(), dur: reduceMotion ? 650 : 1150, raf };
+    ripPlace(); ripCv.style.display = 'block';
+    if (!raf) rip.raf = requestAnimationFrame(ripStep);
+  }
+  function ripPlace() { ripCv.style.transform = `translate3d(${view.x + rip.ox * rip.z}px, ${view.y + rip.oy * rip.z}px, 0)`; }
+  function ripStop() { if (rip && rip.raf) cancelAnimationFrame(rip.raf); rip = null; ripCv.style.display = 'none'; }
+  function ripStep(now) {
+    const s = rip; if (!s) return;
+    s.raf = 0;
+    const p = (now - s.t0) / s.dur;
+    if (p >= 1 || view.z !== s.z) { ripStop(); return; }
+    const c = ripCx; c.setTransform(s.dpr, 0, 0, s.dpr, 0, 0); c.clearRect(0, 0, s.W, s.H); c.fillStyle = s.col;
+    ripPaths.fill(null);
+    const D = s.dots, add = (x, y, rad, a) => {
+      const bk = Math.min(RIP_BUCKETS - 1, (a * RIP_BUCKETS) | 0), path = ripPaths[bk] || (ripPaths[bk] = new Path2D());
+      path.moveTo(x + rad, y); path.arc(x, y, rad, 0, 6.2832);
+    };
+    if (reduceMotion) { // no travelling wave: the nearby dots just fade to the accent and back
+      const f = Math.sin(Math.PI * p) * 0.75 * s.gain;
+      for (let i = 0; i < D.length; i += 5) {
+        const fall = 1 - Math.max(0, D[i + 2] - s.edge) / (s.R - s.edge); if (fall <= 0) continue; // strongest right at the object's edge
+        const a = f * fall * fall; if (a >= 0.03) add(D[i], D[i + 1], 1.6, a);
+      }
+    } else {
+      const gw = s.gw, e = 1 - Math.pow(1 - p, 3); // the front slows down as it spreads, like a ring on water
+      const front = s.r0 + (s.R - s.r0) * e, echo = s.r0 + (s.R - s.r0) * Math.max(0, e - 0.22);
+      const amp = s.gain * Math.pow(1 - p, 1.1) * Math.min(1, p * 8), amp2 = e > 0.22 ? amp * 0.45 : 0;
+      const lo = (amp2 ? echo : front) - gw * 2.6, hi = front + gw * 2.6;
+      for (let i = 0; i < D.length; i += 5) {
+        const d = D[i + 2]; if (d < lo || d > hi) continue;
+        const u = (d - front) / gw, v = (d - echo) / gw;
+        const a = (amp * Math.exp(-u * u) + amp2 * Math.exp(-v * v)) * (1 - Math.min(1, d / (s.R + 40)) * 0.45); // fainter far out
+        if (a < 0.03) continue;
+        const rad = 1.3 + 1.9 * Math.min(1, a), push = 0.9 * (rad - 1.2); // a swelling dot drifts a hair outward, still covering the grey dot below
+        add(D[i] + D[i + 3] * push, D[i + 1] + D[i + 4] * push, rad, a);
+      }
+    }
+    for (let i = 0; i < RIP_BUCKETS; i++) if (ripPaths[i]) { c.globalAlpha = Math.min(1, (i + 0.6) / RIP_BUCKETS); c.fill(ripPaths[i]); }
+    c.globalAlpha = 1;
+    s.raf = requestAnimationFrame(ripStep);
+  }
   function zoomAt(sx, sy, factor) {
     const nz = clamp(view.z * factor, 0.1, 4);
     const wx = (sx - view.x) / view.z, wy = (sy - view.y) / view.z;
@@ -2972,6 +3057,7 @@ const Flow = (() => {
     if (isTyping(e.target) && !fromMenu) return;
     const at = fromMenu && catcherPoint ? () => catcherPoint : pastePoint;
     if (fromMenu) { e.preventDefault(); hideCatcher(); }
+    ripArmed = performance.now();
     const html0 = dt.getData('text/html');
     if (FigJam.has(html0)) { e.preventDefault(); pasteFigJam(html0, dt.getData('text/plain'), at()); return; }
     const files = [...dt.items].filter((i) => i.kind === 'file' && i.type.startsWith('image/')).map((i) => i.getAsFile()).filter(Boolean);
@@ -2988,7 +3074,7 @@ const Flow = (() => {
     const one = text.trim();
     if (/^https?:\/\/\S+$/i.test(one) && one.length <= 2048) { pasteUrl(one, at()); return; }
     if (one) { pasteText(text, at()); return; }
-    toast('У буфері немає зображення чи тексту');
+    ripArmed = 0; toast('У буфері немає зображення чи тексту');
   });
   // ---------- link cards: YouTube gets its thumbnail and title, other sites their Open Graph preview ----------
   const YT_RE = /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([\w-]{11})/;
