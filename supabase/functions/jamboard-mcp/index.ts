@@ -48,8 +48,304 @@ async function loadItems(board) {
 const strip = (it) => { const o = { ...it }; delete o.id; return o; };
 const save = (board, list) => putDocs(list.map((it) => ({ path: itemsColl(board) + '/' + it.id, data: { ...strip(it), rev: rev() } })));
 
+// <flow> shared by index.html and the MCP server: keep both copies identical
+const Flow = (() => {
+  const SHAPES = ['rect', 'round', 'pill', 'circle', 'diamond', 'cyl', 'hex'];
+  const ICONS = ['service', 'db', 'cache', 'queue', 'api', 'user', 'web', 'mobile', 'cloud', 'storage', 'fn', 'lock', 'mail', 'none'];
+  // default tint per icon, from the sticky palette
+  const ICON_COLOR = { service: 'ok', db: 'info', cache: 'warn', queue: 'purple', api: 'teal', user: 'pink', web: 'info', mobile: 'pink', cloud: 'gray', storage: 'ok', fn: 'caution', lock: 'warn', mail: 'pink', none: 'gray' };
+  const GUESS = [
+    ['db', /\b(db|database|postgres\w*|mysql|maria\w*|sqlite|mongo\w*|dynamo\w*|clickhouse|firestore|supabase|warehouse)\b|баз[аиіу] даних|\bбд\b/i],
+    ['cache', /\b(redis|cache|memcached?|valkey)\b|кеш/i],
+    ['queue', /\b(queue|kafka|rabbit\w*|sqs|sns|nats|pub\/?sub|event ?bus|broker)\b|черг/i],
+    ['lock', /\b(auth\w*|login|oauth|sso|jwt|keycloak|identity)\b|авториз|вхід/i],
+    ['user', /\b(users?|clients?|customers?|actors?|admins?|people)\b|користувач|клієнт|адмін|людин/i],
+    ['api', /\b(api|gateway|graphql|grpc|proxy|nginx|load ?balancer|ingress|router)\b|шлюз/i],
+    ['web', /\b(web|frontend|front-end|browser|spa|website|site|react|next\.?js|vue)\b|сайт|фронт|браузер|веб/i],
+    ['mobile', /\b(mobile|ios|android)\b|мобіл|застосун/i],
+    ['storage', /\b(s3|buckets?|storage|files?|cdn|blob|uploads?)\b|сховищ|файл/i],
+    ['fn', /\b(lambda|functions?|workers?|cron|jobs?|scheduler|edge)\b|функці|воркер|задач/i],
+    ['mail', /\b(e-?mail|smtp|notifications?|sms|push)\b|пошт|сповіщ|лист/i],
+    ['cloud', /\b(cloud|aws|gcp|azure|vercel|heroku|kubernetes|k8s)\b|хмар/i],
+    ['service', /\b(service|server|backend|back-end|microservice|app|svc)\b|сервіс|сервер|бекенд/i],
+  ];
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  function guessIcon(text, shape) {
+    if (shape === 'cyl') return /\b(redis|cache|memcached?|valkey)\b|кеш/i.test(text || '') ? 'cache' : 'db';
+    if (shape === 'diamond') return 'none';
+    for (const [icon, re] of GUESS) if (re.test(text || '')) return icon;
+    return 'none';
+  }
+  const SHAPE_ALIAS = { rect: 'rect', rectangle: 'rect', process: 'rect', proc: 'rect', square: 'rect', rounded: 'round', round: 'round', event: 'round',
+    stadium: 'pill', pill: 'pill', terminal: 'pill', circle: 'circle', circ: 'circle', 'sm-circ': 'circle', 'dbl-circ': 'circle', diamond: 'diamond', diam: 'diamond', decision: 'diamond', question: 'diamond',
+    cyl: 'cyl', cylinder: 'cyl', db: 'cyl', database: 'cyl', 'h-cyl': 'cyl', 'lin-cyl': 'cyl', hex: 'hex', hexagon: 'hex', prepare: 'hex' };
+  function cleanText(t) {
+    return String(t || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, '').replace(/#quot;/g, '"').replace(/#amp;/g, '&').replace(/#lt;/g, '<').replace(/#gt;/g, '>')
+      .replace(/\*\*|__|`/g, '').replace(/\\n/g, '\n').split('\n').map((l) => l.trim()).join('\n').trim().slice(0, 200);
+  }
+  // split a line on `;` that are outside brackets and quotes
+  function splitStatements(line) {
+    const out = []; let depth = 0, q = false, cur = '';
+    for (const ch of line) {
+      if (ch === '"') q = !q;
+      else if (!q && '[({'.includes(ch)) depth++;
+      else if (!q && '])}'.includes(ch)) depth = Math.max(0, depth - 1);
+      if (ch === ';' && !q && !depth) { out.push(cur); cur = ''; } else cur += ch;
+    }
+    out.push(cur); return out;
+  }
+  const OPENERS = [['(((', ')))', 'circle'], ['([', '])', 'pill'], ['[(', ')]', 'cyl'], ['((', '))', 'circle'], ['[[', ']]', 'rect'], ['{{', '}}', 'hex'], ['[/', ['/]', '\\]'], 'rect'], ['[\\', ['\\]', '/]'], 'rect'], ['>', ']', 'rect'], ['[', ']', 'rect'], ['(', ')', 'round'], ['{', '}', 'diamond']];
+  const ID_RE = /^[A-Za-z0-9_À-ɏЀ-ӿ]+/;
+  const INLINE_EDGE = /^(<)?(--|==|-\.)(?![-=.>])\s*(.*?)\s*(-{2,}|={2,}|\.-+)(>|o|x)?(?=[\s\w"Ѐ-ӿ]|$)/;
+  const EDGE = /^(<)?(-{2,}|={2,}|-\.+-|~{3,})(>|o(?![\wЀ-ӿ])|x(?![\wЀ-ӿ]))?/;
+
+  function parse(src) {
+    src = String(src || '').replace(/\r/g, '').trim();
+    src = src.replace(/^```\s*mermaid[^\n]*\n?/i, '').replace(/^```[^\n]*\n?/, '').replace(/\n?```\s*$/, '');
+    src = src.replace(/^\s*---\n[\s\S]*?\n---\s*\n/, '');
+    const lines = [];
+    for (const raw of src.split('\n')) for (const s of splitStatements(raw.replace(/%%.*$/, ''))) { const t = s.trim(); if (t) lines.push(t); }
+    if (!lines.length) throw new Error('Порожній текст');
+    const head = /^(graph|flowchart)\b\s*(TB|TD|BT|LR|RL)?\s*(.*)$/i.exec(lines[0]);
+    if (!head) throw new Error('Підтримуються лише схеми flowchart / graph');
+    const dir = (head[2] || 'TD').toUpperCase().replace('TB', 'TD');
+    if (head[3]) lines[0] = head[3]; else lines.shift();
+    const nodes = new Map(), edges = [], subs = [], stack = [];
+    const touch = (id) => {
+      let n = nodes.get(id);
+      if (!n) { n = { id, text: id, shape: 'rect', icon: null, sub: null, order: nodes.size }; nodes.set(id, n); }
+      if (stack.length && n.sub == null) { n.sub = stack[stack.length - 1].id; }
+      return n;
+    };
+    for (const line of lines) {
+      let m;
+      if ((m = /^subgraph\s+(.+)$/i.exec(line))) {
+        let rest = m[1].trim(), id, title;
+        const mm = /^([A-Za-z0-9_Ѐ-ӿ-]+)\s*\[\s*"?(.*?)"?\s*\]$/.exec(rest);
+        if (mm) { id = mm[1]; title = mm[2]; } else if (/^".*"$/.test(rest)) { title = rest.slice(1, -1); id = 'sub' + subs.length; } else if (/\s/.test(rest)) { title = rest; id = 'sub' + subs.length; } else { id = rest; title = rest; }
+        const sg = { id: 'sg:' + id, key: id, title: cleanText(title).replace(/\n/g, ' ') || id, parent: stack.length ? stack[stack.length - 1].id : null };
+        subs.push(sg); stack.push(sg); continue;
+      }
+      if (/^end$/i.test(line)) { stack.pop(); continue; }
+      if (/^(classDef|class|style|linkStyle|click|direction|accTitle|accDescr|title)\b/i.test(line)) continue;
+      parseChain(line);
+    }
+    function parseChain(s) {
+      let i = 0;
+      const ws = () => { while (i < s.length && /\s/.test(s[i])) i++; };
+      const nodeRef = () => {
+        ws();
+        const m = ID_RE.exec(s.slice(i)); if (!m) return null;
+        const id = m[0]; i += id.length;
+        const sg = subs.find((g) => g.key === id);
+        let text = null, shape = null, icon = null;
+        for (const [open, close, sh] of OPENERS) {
+          if (!s.startsWith(open, i)) continue;
+          if (open === '[' && s.startsWith('[(', i)) continue;
+          let j = i + open.length, body;
+          const closes = Array.isArray(close) ? close : [close];
+          if (s[j] === '"') { const k = s.indexOf('"', j + 1); if (k < 0) break; body = s.slice(j + 1, k); j = k + 1; let e = -1, cl = ''; for (const c of closes) { const p = s.indexOf(c, j); if (p >= 0 && (e < 0 || p < e)) { e = p; cl = c; } } if (e < 0) break; j = e + cl.length; }
+          else { let e = -1, cl = ''; for (const c of closes) { const p = s.indexOf(c, j); if (p >= 0 && (e < 0 || p < e)) { e = p; cl = c; } } if (e < 0) break; body = s.slice(j, e); j = e + cl.length; }
+          text = body; shape = sh; i = j; break;
+        }
+        if (s.startsWith('@{', i)) { // newer syntax: A@{ shape: cyl, label: "Orders", icon: db }
+          const e = s.indexOf('}', i); const body = e < 0 ? '' : s.slice(i + 2, e); i = e < 0 ? s.length : e + 1;
+          for (const part of body.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)) {
+            const kv = /^\s*(\w+)\s*:\s*"?(.*?)"?\s*$/.exec(part); if (!kv) continue;
+            const k = kv[1].toLowerCase(), v = kv[2];
+            if (k === 'shape' && SHAPE_ALIAS[v.toLowerCase()]) shape = SHAPE_ALIAS[v.toLowerCase()];
+            else if (k === 'label') text = v;
+            else if (k === 'icon') { const ic = v.toLowerCase().replace(/^.*:/, ''); icon = ICONS.includes(ic) ? ic : guessIcon(ic) !== 'none' ? guessIcon(ic) : null; }
+          }
+        }
+        if (s.startsWith(':::', i)) { const m2 = /^:::[\w-]+/.exec(s.slice(i)); if (m2) i += m2[0].length; }
+        if (sg && text == null) return { group: sg };
+        const n = touch(id);
+        if (text != null) n.text = cleanText(text) || id;
+        if (shape) n.shape = shape;
+        if (icon) n.icon = icon;
+        return n;
+      };
+      const group = () => { const g = []; for (;;) { const n = nodeRef(); if (!n) return g.length ? g : null; g.push(n); ws(); if (s[i] === '&') { i++; continue; } return g; } };
+      const edge = () => {
+        ws(); const rest = s.slice(i);
+        let m = INLINE_EDGE.exec(rest), e = null;
+        if (m && m[3] && !/^[-=.]/.test(m[3])) { e = { label: m[3], op: m[2] + m[4], head: m[5], back: m[1] }; i += m[0].length; }
+        else if ((m = EDGE.exec(rest))) { e = { label: '', op: m[2], head: m[3], back: m[1] }; i += m[0].length; }
+        if (!e) return null;
+        ws(); const lm = /^\|([^|]*)\|/.exec(s.slice(i)); if (lm) { e.label = lm[1]; i += lm[0].length; }
+        e.label = cleanText(e.label).replace(/\n/g, ' ').slice(0, 60);
+        return e;
+      };
+      let left = group(); if (!left) return;
+      for (;;) {
+        const e = edge(); if (!e) return;
+        const right = group(); if (!right) return;
+        if (!/^~/.test(e.op)) {
+          const flat = (g) => g.flatMap((n) => (n.group ? [...nodes.values()].filter((x) => x.sub === n.group.id).slice(0, 1) : [n]));
+          for (const a of flat(left)) for (const b of flat(right)) if (a !== b) edges.push({ a: a.id, b: b.id, label: e.label, arrow: !!e.head && !e.back, dash: e.op.includes('.'), thick: e.op[0] === '=' });
+        }
+        left = right;
+      }
+    }
+    for (const n of nodes.values()) { if (!n.icon) n.icon = guessIcon(n.text, n.shape); }
+    // a nested subgraph only keeps the nodes declared directly in it; empty ones are dropped
+    const used = new Set([...nodes.values()].map((n) => n.sub).filter(Boolean));
+    return { dir, nodes: [...nodes.values()], edges, subs: subs.filter((g) => used.has(g.id)) };
+  }
+
+  function sizeOf(n) {
+    const icon = n.icon && n.icon !== 'none', lines = n.text.split('\n');
+    const L = Math.max(1, ...lines.map((l) => l.length));
+    const wrapLines = (w, pad) => lines.reduce((s, l) => s + Math.max(1, Math.ceil((l.length * 8.4) / Math.max(40, w - pad))), 0);
+    if (n.shape === 'circle') { const d = clamp(L * 8 + 56, 104, 180); return [d, d]; }
+    if (n.shape === 'diamond') { const w = clamp(L * 9.5 + 96, 170, 320); return [w, clamp(wrapLines(w, w * 0.5) * 20 + 84, 110, 190)]; }
+    if (n.shape === 'cyl') { const w = clamp(L * 8.4 + (icon ? 64 : 44), 140, 280); return [w, clamp(wrapLines(w, icon ? 64 : 44) * 20 + 86, 112, 200)]; }
+    const inner = L * 8.8 + (icon ? 44 : 0), pad = n.shape === 'pill' ? 60 : n.shape === 'round' ? 40 : 34;
+    let w = n.shape === 'hex' ? (inner + 14) / 0.64 : inner + pad;
+    w = clamp(w, 140, 320);
+    const room = n.shape === 'hex' ? w * 0.64 - 14 : w - pad;
+    return [Math.round(w), clamp(Math.ceil((L * 8.8) / Math.max(40, room - (icon ? 44 : 0))) * 20 + 52 + (lines.length - 1) * 20, 72, 200)];
+  }
+
+  // Layered layout of boxes: rank by longest path (cycles broken), order each layer by barycentre,
+  // then pull boxes towards their neighbours. Returns centres.
+  function layered(units, edges, dir) {
+    const H = dir === 'LR' || dir === 'RL';
+    const U = new Map(units.map((u) => [u.key, u]));
+    // neighbour lists hold { k, o }: o is where on that neighbour the edge attaches, across the layer (subgraph boxes)
+    const out = new Map(), inn = new Map(), nb = new Map(); U.forEach((_, k) => { out.set(k, []); inn.set(k, []); nb.set(k, []); });
+    const state = new Map(), dag = new Set();
+    const visit = (k) => { state.set(k, 1); for (const e of edges) if (e.a === k && e.a !== e.b) { const s = state.get(e.b); if (s === 1) continue; dag.add(e.a + '\n' + e.b); if (!s) visit(e.b); } state.set(k, 2); };
+    for (const k of U.keys()) if (!state.get(k)) visit(k);
+    const ks = (l) => [...new Set(l.map((x) => x.k))];
+    for (const e of edges) if (dag.has(e.a + '\n' + e.b)) { out.get(e.a).push({ k: e.b, o: e.bo || 0, s: e.ao || 0 }); inn.get(e.b).push({ k: e.a, o: e.ao || 0, s: e.bo || 0 }); }
+    const order = [...U.keys()], rank = new Map();
+    const indeg = new Map(order.map((k) => [k, ks(inn.get(k)).length])), q = order.filter((k) => !indeg.get(k));
+    q.forEach((k) => rank.set(k, 0));
+    while (q.length) { const k = q.shift(); for (const b of ks(out.get(k))) { rank.set(b, Math.max(rank.get(b) || 0, rank.get(k) + 1)); indeg.set(b, indeg.get(b) - 1); if (!indeg.get(b)) q.push(b); } }
+    for (const k of order) if (!inn.get(k).length && out.get(k).length) rank.set(k, Math.max(0, Math.min(...out.get(k).map((b) => rank.get(b.k))) - 1));
+    const R = Math.max(0, ...rank.values()) + 1;
+    const layers = Array.from({ length: R }, () => []);
+    order.forEach((k) => layers[rank.get(k)].push(k));
+    const pos = new Map(); layers.forEach((L) => L.forEach((k, i) => pos.set(k, i)));
+    const sortLayer = (L, nb) => {
+      const bary = new Map(L.map((k) => { const ns = nb(k); return [k, ns.length ? ns.reduce((s, x) => s + pos.get(x.k), 0) / ns.length : pos.get(k)]; }));
+      L.sort((a, b) => bary.get(a) - bary.get(b)); L.forEach((k, i) => pos.set(k, i));
+    };
+    for (let it = 0; it < 6; it++) {
+      if (it % 2 === 0) for (let r = 1; r < R; r++) sortLayer(layers[r], (k) => inn.get(k));
+      else for (let r = R - 2; r >= 0; r--) sortLayer(layers[r], (k) => out.get(k));
+    }
+    const cs = (k) => (H ? U.get(k).h : U.get(k).w), ms = (k) => (H ? U.get(k).w : U.get(k).h);
+    const GAP = H ? 48 : 64, LGAP = H ? 130 : 120;
+    const cross = new Map();
+    layers.forEach((L) => { let x = 0; L.forEach((k, i) => { if (i) x += cs(L[i - 1]) / 2 + GAP + cs(k) / 2; cross.set(k, x); }); L.forEach((k) => cross.set(k, cross.get(k) - x / 2)); });
+    const place = (L, want) => { // keep order and gaps, get as close as possible to the wanted centres
+      const x = L.map((k) => want(k));
+      for (let i = 1; i < L.length; i++) x[i] = Math.max(x[i], x[i - 1] + cs(L[i - 1]) / 2 + GAP + cs(L[i]) / 2);
+      for (let i = L.length - 2; i >= 0; i--) x[i] = Math.min(x[i], x[i + 1] - cs(L[i + 1]) / 2 - GAP - cs(L[i]) / 2);
+      const shift = L.reduce((s, k, i) => s + (want(k) - x[i]), 0) / Math.max(1, L.length);
+      L.forEach((k, i) => cross.set(k, x[i] + shift));
+    };
+    // wanted centre: line up with where the edges attach on the neighbours (minus where they attach on this box)
+    const avg = (l, d) => (l.length ? l.reduce((s, x) => s + cross.get(x.k) + x.o - x.s, 0) / l.length : d);
+    const both = (k) => avg(inn.get(k).concat(out.get(k)), cross.get(k));
+    for (let it = 0; it < 12; it++) {
+      if (it >= 6 && it % 2 === 0) for (let r = 0; r < R; r++) { // re-order by real positions, which sees which box inside a subgraph an edge leaves from
+        const L = layers[r], key = new Map(L.map((k) => [k, both(k)])); L.sort((a, b) => key.get(a) - key.get(b)); L.forEach((k, i) => pos.set(k, i));
+      }
+      if (it % 2 === 0) for (let r = 1; r < R; r++) place(layers[r], (k) => avg(inn.get(k), cross.get(k)));
+      else for (let r = R - 2; r >= 0; r--) place(layers[r], (k) => avg(out.get(k), cross.get(k)));
+    }
+    const main = []; let m = 0;
+    for (let r = 0; r < R; r++) { const t = Math.max(...layers[r].map(ms)); main.push(m + t / 2); m += t + LGAP; }
+    const flip = dir === 'BT' || dir === 'RL', total = m - LGAP;
+    const res = new Map();
+    U.forEach((u, k) => { let mm = main[rank.get(k)]; if (flip) mm = total - mm; res.set(k, H ? { x: mm, y: cross.get(k) } : { x: cross.get(k), y: mm }); });
+    return res;
+  }
+  // Subgraphs are laid out on their own first, then placed as one big box, so their sections never overlap.
+  // Nested subgraphs fold into their outermost one.
+  function layout(g, hint) {
+    const PAD = 40, TITLE = 40;
+    const top = new Map(g.subs.map((s) => [s.id, s])), root = (id) => { let s = top.get(id); while (s && s.parent && top.get(s.parent)) s = top.get(s.parent); return s ? s.id : null; };
+    const N = g.nodes.map((n) => { const [w, h] = sizeOf(n); return { ...n, sub: n.sub ? root(n.sub) : null, w, h }; });
+    const byId = new Map(N.map((n) => [n.id, n]));
+    const unitOf = (n) => n.sub || n.id;
+    const boxes = [], inner = new Map();
+    const subIds = [...new Set(N.map((n) => n.sub).filter(Boolean))];
+    for (const sid of subIds) {
+      const ms = N.filter((n) => n.sub === sid), keys = new Set(ms.map((n) => n.id));
+      if (hint) ms.sort((p, q) => hint.get(p.id) - hint.get(q.id));
+      const c = layered(ms.map((n) => ({ key: n.id, w: n.w, h: n.h })), g.edges.filter((e) => keys.has(e.a) && keys.has(e.b)), g.dir);
+      const x1 = Math.min(...ms.map((n) => c.get(n.id).x - n.w / 2)), y1 = Math.min(...ms.map((n) => c.get(n.id).y - n.h / 2));
+      const x2 = Math.max(...ms.map((n) => c.get(n.id).x + n.w / 2)), y2 = Math.max(...ms.map((n) => c.get(n.id).y + n.h / 2));
+      inner.set(sid, { c, x1, y1 });
+      boxes.push({ key: sid, w: x2 - x1 + PAD * 2, h: y2 - y1 + PAD * 2 + TITLE });
+    }
+    N.filter((n) => !n.sub).forEach((n) => boxes.push({ key: n.id, w: n.w, h: n.h }));
+    const B = new Map(boxes.map((b) => [b.key, b])), H = g.dir === 'LR' || g.dir === 'RL';
+    const off = (n) => { // where a node sits across the layer, relative to its subgraph box centre
+      if (!n.sub) return 0;
+      const inn = inner.get(n.sub), q = inn.c.get(n.id), b = B.get(n.sub);
+      return H ? TITLE + PAD + q.y - inn.y1 - b.h / 2 : PAD + q.x - inn.x1 - b.w / 2;
+    };
+    const E = [];
+    for (const e of g.edges) { const na = byId.get(e.a), nb = byId.get(e.b), a = unitOf(na), b = unitOf(nb); if (a !== b) E.push({ a, b, ao: off(na), bo: off(nb) }); }
+    const C = layered(boxes, E, g.dir);
+    for (const n of N) {
+      if (!n.sub) { const p = C.get(n.id); n.x = p.x - n.w / 2; n.y = p.y - n.h / 2; continue; }
+      const p = C.get(n.sub), b = B.get(n.sub), inn = inner.get(n.sub), q = inn.c.get(n.id);
+      n.x = p.x - b.w / 2 + PAD + (q.x - n.w / 2 - inn.x1); n.y = p.y - b.h / 2 + TITLE + PAD + (q.y - n.h / 2 - inn.y1);
+    }
+    if (!hint && subIds.length) { // second pass: order each subgraph's boxes by where their outside neighbours ended up
+      const at = new Map(N.map((n) => [n.id, H ? n.y + n.h / 2 : n.x + n.w / 2])), h2 = new Map();
+      for (const n of N) {
+        const ext = g.edges.filter((e) => (e.a === n.id || e.b === n.id) && byId.get(e.a).sub !== byId.get(e.b).sub).map((e) => at.get(e.a === n.id ? e.b : e.a));
+        h2.set(n.id, ext.length ? ext.reduce((a, b) => a + b, 0) / ext.length : at.get(n.id));
+      }
+      return layout(g, h2);
+    }
+    const x0 = Math.min(...N.map((n) => n.x)), y0 = Math.min(...N.map((n) => n.y - (n.sub ? PAD + TITLE : 0)));
+    N.forEach((n) => { n.x = Math.round(n.x - x0); n.y = Math.round(n.y - y0); });
+    return { nodes: N, edges: g.edges, subs: g.subs.filter((s) => subIds.includes(s.id)) };
+  }
+
+  // nodes, sections and ropes ready for the board, top-left at (ox, oy); makeId() gives fresh ids
+  function toItems(src, ox, oy, makeId, by) {
+    const g = layout(parse(src)), ids = new Map(), list = [];
+    const secs = new Map();
+    for (const s of g.subs) {
+      const ks = g.nodes.filter((n) => n.sub === s.id); if (!ks.length) continue;
+      const it = { id: makeId(), type: 'section', title: s.title.slice(0, 80), color: 'gray', autofit: true, by };
+      const x1 = Math.min(...ks.map((n) => n.x)), y1 = Math.min(...ks.map((n) => n.y)), x2 = Math.max(...ks.map((n) => n.x + n.w)), y2 = Math.max(...ks.map((n) => n.y + n.h));
+      Object.assign(it, { x: Math.round(ox + x1 - 40), y: Math.round(oy + y1 - 40), w: Math.round(Math.max(200, x2 - x1 + 80)), h: Math.round(Math.max(140, y2 - y1 + 80)), n: ks.length });
+      secs.set(s.id, it); list.push(it);
+    }
+    for (const n of g.nodes) {
+      const it = { id: makeId(), type: 'node', x: ox + n.x, y: oy + n.y, w: Math.round(n.w), h: Math.round(n.h), text: n.text, shape: n.shape, icon: n.icon || 'none', color: ICON_COLOR[n.icon] || 'gray', sec: n.sub && secs.get(n.sub) ? secs.get(n.sub).id : null, by };
+      ids.set(n.id, it.id); list.push(it);
+    }
+    const seen = new Set();
+    for (const e of g.edges) {
+      const k = e.a + '>' + e.b + '|' + e.label; if (seen.has(k)) continue; seen.add(k);
+      const it = { id: makeId(), type: 'link', a: ids.get(e.a), b: ids.get(e.b), by };
+      if (e.label) it.label = e.label;
+      if (!e.arrow) it.flow = false;
+      if (e.dash) it.dash = true;
+      if (e.thick) it.thick = true;
+      list.push(it);
+    }
+    return { items: list, nodes: g.nodes.length, links: list.filter((i) => i.type === 'link').length, sections: secs.size };
+  }
+  const looksLike = (t) => /^\s*(```\s*mermaid\s*\n\s*)?(%%[^\n]*\n\s*)*(graph|flowchart)\s+(TB|TD|BT|LR|RL)\b/i.test(t || '') || /^\s*(graph|flowchart)\s*\n[\s\S]*(-->|---|==>|-\.->)/i.test(t || '');
+  return { SHAPES, ICONS, ICON_COLOR, guessIcon, parse, layout, toItems, looksLike, sizeOf };
+})();
+// </flow>
+
 // ---------- helpers ----------
-const isCard = (i) => ['sticky', 'image', 'text', 'web'].includes(i.type);
+const isCard = (i) => ['sticky', 'image', 'text', 'web', 'node'].includes(i.type);
 const centerIn = (i, s) => { const cx = i.x + i.w / 2, cy = i.y + i.h / 2; return cx >= s.x && cx <= s.x + s.w && cy >= s.y && cy <= s.y + s.h; };
 function ownerOf(i, all) {
   if (!isCard(i)) return null;
@@ -76,6 +372,8 @@ function summary(i) {
   if (i.type === 'link') { o.from = i.a; o.to = i.b; if (i.label) o.label = i.label; delete o.x; delete o.y; delete o.w; delete o.h; }
   if (i.type === 'web') { o.url = i.url; if (i.title) o.title = i.title; }
   if (i.type === 'stamp') o.emoji = i.emoji;
+  if (i.type === 'node') { o.text = i.text || ''; o.shape = i.shape || 'rect'; o.icon = i.icon || 'none'; }
+  if (i.type === 'link') { if (i.flow === false) o.arrow = false; if (i.dash) o.dash = true; if (i.thick) o.thick = true; }
   if (i.type === 'comment') o.messages = (i.msgs || []).map((m) => `${m.n || '?'}: ${m.t || ''}`);
   if (i.color) o.color = i.color;
   if (i.sec) o.section = i.sec;
@@ -108,10 +406,10 @@ function refit(sec, all) {
 const boardArg = { type: 'string', description: 'Board id from list_boards. Default "main".' };
 const TOOLS = [
   { name: 'list_boards', description: 'List the JamBoard boards (id and title).', inputSchema: { type: 'object', properties: {} } },
-  { name: 'get_board', description: 'Read everything on a board: stickies, text, sections, ropes (links), link cards, stamps, comments. Coordinates are board pixels; a sticky is 200×200. A card\'s "section" is the id of the section it belongs to.', inputSchema: { type: 'object', properties: { board: boardArg } } },
+  { name: 'get_board', description: 'Read everything on a board: stickies, text, sections, diagram nodes, ropes (links), link cards, stamps, comments. Coordinates are board pixels; a sticky is 200×200. A card\'s "section" is the id of the section it belongs to.', inputSchema: { type: 'object', properties: { board: boardArg } } },
   {
     name: 'add_items',
-    description: 'Add items to a board in one go. Types: stamp (emoji, on: a card to stamp, size), comment (text: a comment pin, on: a card), sticky (text, color), text (text, style h1|h2|p|s), section (title, color; give other items "section": its ref to put them inside — the section grows to fit), link (a rope from "from" to "to", optional label and color), web (url: a link card with preview; YouTube shows the video thumbnail). Leave x/y out to let the board lay items out in a tidy grid (inside their section if given). Use "ref" to name a new item so links and "section" can point at it in the same call; existing ids work too.',
+    description: 'Add items to a board in one go. Types: node (a diagram block for flows and architecture: text, shape rect|round|pill|circle|diamond|cyl|hex, icon service|db|cache|queue|api|user|web|mobile|cloud|storage|fn|lock|mail|none; ropes between two nodes are drawn straight with an arrow), stamp (emoji, on: a card to stamp, size), comment (text: a comment pin, on: a card), sticky (text, color), text (text, style h1|h2|p|s), section (title, color; give other items "section": its ref to put them inside — the section grows to fit), link (a rope from "from" to "to", optional label and color), web (url: a link card with preview; YouTube shows the video thumbnail). Leave x/y out to let the board lay items out in a tidy grid (inside their section if given). Use "ref" to name a new item so links and "section" can point at it in the same call; existing ids work too.',
     inputSchema: {
       type: 'object', required: ['items'],
       properties: {
@@ -121,14 +419,19 @@ const TOOLS = [
           items: {
             type: 'object', required: ['type'],
             properties: {
-              type: { type: 'string', enum: ['sticky', 'text', 'section', 'link', 'web', 'stamp', 'comment'] },
+              type: { type: 'string', enum: ['sticky', 'text', 'section', 'link', 'web', 'stamp', 'comment', 'node'] },
+              shape: { type: 'string', enum: Flow.SHAPES, description: 'Node shape. cyl is a database, diamond a decision.' },
+              icon: { type: 'string', enum: Flow.ICONS, description: 'Node icon (guessed from the text when left out).' },
+              arrow: { type: 'boolean', description: 'Link: false hides the arrow and the moving dot (no direction).' },
+              dash: { type: 'boolean', description: 'Link: dashed line (async, optional, events).' },
+              thick: { type: 'boolean', description: 'Link: thick line (main path).' },
               emoji: { type: 'string', description: 'Stamp emoji, e.g. 👍 ❤️ 🔥 ⭐ ✅ 💡 🎉 🚀.' },
               on: { type: 'string', description: 'Stamp or comment: ref or id of the card to put it on (it then moves with the card).' },
               size: { type: 'number', description: 'Stamp size 64–128 (default 64).' },
               ref: { type: 'string', description: 'Your temporary name for this item, used by other items in this call.' },
               text: { type: 'string' }, title: { type: 'string', description: 'Section title.' },
               style: { type: 'string', enum: TEXT_STYLES, description: 'Text style: h1 heading, h2 subheading, p body, s small.' },
-              color: { type: 'string', description: `Sticky/section: ${STICKY_COLORS.join(', ')} (or yellow, orange, blue, green). Rope: ${ROPE_COLORS.join(', ')}.` },
+              color: { type: 'string', description: `Sticky/section/node: ${STICKY_COLORS.join(', ')} (or yellow, orange, blue, green). Rope: ${ROPE_COLORS.join(', ')}.` },
               section: { type: 'string', description: 'Ref or id of the section to place this card in.' },
               from: { type: 'string', description: 'Link start: ref or id.' }, to: { type: 'string', description: 'Link end: ref or id.' },
               label: { type: 'string', description: 'Link name shown on the rope.' },
@@ -142,8 +445,13 @@ const TOOLS = [
   },
   {
     name: 'update_items',
-    description: 'Change existing items: text, title, color, style, label, position (x, y), size (w, h), section (id, or "" to take a card out of its section). Only the fields you pass change.',
-    inputSchema: { type: 'object', required: ['changes'], properties: { board: boardArg, changes: { type: 'array', minItems: 1, maxItems: 200, items: { type: 'object', required: ['id'], properties: { id: { type: 'string' }, text: { type: 'string' }, title: { type: 'string' }, color: { type: 'string' }, style: { type: 'string', enum: TEXT_STYLES }, label: { type: 'string' }, section: { type: 'string' }, x: { type: 'number' }, y: { type: 'number' }, w: { type: 'number' }, h: { type: 'number' } } } } } },
+    description: 'Change existing items: text, title, color, style, label, node shape and icon, link arrow/dash/thick, position (x, y), size (w, h), section (id, or "" to take a card out of its section). Only the fields you pass change.',
+    inputSchema: { type: 'object', required: ['changes'], properties: { board: boardArg, changes: { type: 'array', minItems: 1, maxItems: 200, items: { type: 'object', required: ['id'], properties: { id: { type: 'string' }, text: { type: 'string' }, shape: { type: 'string', enum: Flow.SHAPES }, icon: { type: 'string', enum: Flow.ICONS }, arrow: { type: 'boolean' }, dash: { type: 'boolean' }, thick: { type: 'boolean' }, title: { type: 'string' }, color: { type: 'string' }, style: { type: 'string', enum: TEXT_STYLES }, label: { type: 'string' }, section: { type: 'string' }, x: { type: 'number' }, y: { type: 'number' }, w: { type: 'number' }, h: { type: 'number' } } } } } },
+  },
+  {
+    name: 'add_mermaid',
+    description: 'Draw a Mermaid flowchart (flowchart/graph TD|LR|BT|RL) on the board as real, editable diagram nodes, sections (from subgraphs) and arrows, laid out automatically. Supports [rect], (round), ([pill]), ((circle)), {diamond}, [(database)], {{hex}}, A@{ shape: cyl, label: "x", icon: queue }, -->, ---, -.->, ==>, |labels| and -- labels -->, A & B --> C. Icons are guessed from node text (Postgres → db, Redis → cache, Kafka → queue, API → api, User → user…). Placed to the right of existing content unless x/y are given.',
+    inputSchema: { type: 'object', required: ['code'], properties: { board: boardArg, code: { type: 'string', description: 'Mermaid flowchart text.' }, x: { type: 'number', description: 'Top-left x (optional).' }, y: { type: 'number', description: 'Top-left y (optional).' } } },
   },
   { name: 'delete_items', description: 'Delete items by id. Ropes attached to deleted cards go too. Deleting a section keeps its cards.', inputSchema: { type: 'object', required: ['ids'], properties: { board: boardArg, ids: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 500 } } } },
   { name: 'create_board', description: 'Create a new empty board and return its id.', inputSchema: { type: 'object', required: ['title'], properties: { title: { type: 'string' } } } },
@@ -218,7 +526,16 @@ async function callTool(name, a) {
         it = { id: uid(), type: 'link', a: A.id, b: B.id, z: ++z, by: BY };
         const lab = str(spec.label, 60); if (lab && lab.trim()) it.label = lab.trim();
         if (ROPE_COLORS.includes(spec.color) && spec.color !== 'gray') it.color = spec.color;
-      } else if (t === 'sticky' || t === 'text' || t === 'web') {
+        if (spec.arrow === false) it.flow = false;
+        if (spec.dash === true) it.dash = true;
+        if (spec.thick === true) it.thick = true;
+      } else if (t === 'sticky' || t === 'text' || t === 'web' || t === 'node') {
+        if (t === 'node') {
+          const shape = Flow.SHAPES.includes(spec.shape) ? spec.shape : 'rect', text = str(spec.text, 400) || '';
+          const icon = Flow.ICONS.includes(spec.icon) ? spec.icon : Flow.guessIcon(text, shape);
+          const [w, h] = Flow.sizeOf({ text: text || 'Назва', shape, icon });
+          it = { id: uid(), type: 'node', shape, icon, text, w: num(spec.w) ?? Math.round(w), h: num(spec.h) ?? Math.round(h), color: stickyColor(spec.color) || Flow.ICON_COLOR[icon] || 'gray' };
+        }
         if (t === 'sticky') it = { id: uid(), type: 'sticky', w: num(spec.w) ?? 200, h: num(spec.h) ?? 200, color: stickyColor(spec.color) || 'caution', text: str(spec.text, 4000) || '' };
         if (t === 'text') it = { id: uid(), type: 'text', w: num(spec.w) ?? 360, h: 40, ts: TEXT_STYLES.includes(spec.style) ? spec.style : 'p', text: str(spec.text, 4000) || '' };
         if (t === 'web') {
@@ -268,6 +585,14 @@ async function callTool(name, a) {
       const it = byId.get(String(c.id)); if (!it) throw new Error('No item ' + c.id);
       const was = ownerOf(it, all), ox = it.x, oy = it.y;
       if (c.text != null && (it.type === 'sticky' || it.type === 'text')) { it.text = String(c.text).slice(0, 4000); delete it.html; }
+      if (c.text != null && it.type === 'node') it.text = String(c.text).slice(0, 400);
+      if (it.type === 'node' && Flow.SHAPES.includes(c.shape)) it.shape = c.shape;
+      if (it.type === 'node' && Flow.ICONS.includes(c.icon)) it.icon = c.icon;
+      if (it.type === 'link') {
+        if (c.arrow === false) it.flow = false; else if (c.arrow === true) delete it.flow;
+        if (c.dash != null) { if (c.dash) it.dash = true; else delete it.dash; }
+        if (c.thick != null) { if (c.thick) it.thick = true; else delete it.thick; }
+      }
       if (c.title != null && it.type === 'section') it.title = String(c.title).slice(0, 120);
       if (c.label != null && it.type === 'link') { const l = String(c.label).trim().slice(0, 60); if (l) it.label = l; else delete it.label; }
       if (c.style != null && it.type === 'text' && TEXT_STYLES.includes(c.style)) it.ts = c.style;
@@ -292,6 +617,17 @@ async function callTool(name, a) {
     for (const s of touched) if (refit(s, all)) changed.add(s);
     await save(board, [...changed]);
     return { updated: [...changed].map((i) => i.id) };
+  }
+
+  if (name === 'add_mermaid') {
+    const code = String(a.code || '');
+    const probe = Flow.toItems(code, 0, 0, uid, BY);
+    const nb = bbox(probe.items.filter((i) => i.type !== 'link'));
+    const b0 = bbox(all.filter((i) => i.type !== 'link' && i.type !== 'comment'));
+    const ox = num(a.x) ?? (b0 ? b0.x2 + 200 : 0), oy = num(a.y) ?? (b0 ? b0.y1 : 0);
+    probe.items.forEach((it) => { if (it.type !== 'link') { it.x += ox - nb.x1; it.y += oy - nb.y1; } it.z = ++z; });
+    await save(board, probe.items);
+    return { nodes: probe.nodes, links: probe.links, sections: probe.sections, ids: probe.items.map((i) => ({ id: i.id, type: i.type, text: i.text || i.title || i.label || undefined })) };
   }
 
   if (name === 'delete_items') {
