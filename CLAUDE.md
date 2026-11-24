@@ -7,3 +7,7 @@
 - `startSupabase()` in index.html shims the claude.ai `db`/`room`/`assets` API on Supabase: REST load first, realtime `postgres_changes` for live updates, 2 s polling if realtime fails; presence via a broadcast channel `room`. Without config it runs local-only.
 - Item types: sticky, image, section, stamp, comment, text, link (rope: a, b, label, color, flow), web (link card: url, yt, title, desc, site, img, icon). Values from others are set via textContent; only https:// links.
 - The cloud container can't reach supabase.co or cdn.jsdelivr.net: test with Playwright and a mocked `window.supabase`, and say real-backend checks need Oleh's browser.
+- Sections: cards remember their section in `sec` (set on drop, wrap, section draw/resize); overlapping sections never take each other's cards. Stamps/pins and legacy cards fall back to geometry (smallest containing section).
+- Shared timer per board: doc `board/timer` or `boards/<bid>/timer/state` = { dur, run, end } | { dur, left } | { dur } (epoch ms).
+- MCP server: `supabase/functions/jamboard-mcp/index.ts` (Supabase Edge Function, no deps, stateless JSON-RPC; also runs under Node for tests). Auth: `?key=` = secret `JAMBOARD_MCP_KEY`; DB key from `JAMBOARD_DB_KEY` or the default service-role env. Keep its item shapes in sync with index.html when adding item types.
+

@@ -1,0 +1,3 @@
+# Only used by the Supabase CLI (`supabase functions deploy jamboard-mcp`).
+[functions.jamboard-mcp]
+verify_jwt = false

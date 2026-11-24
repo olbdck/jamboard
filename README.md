@@ -17,6 +17,19 @@
 
 Без `config.js` (або з `null`) дошка працює лише локально в браузері.
 
+## Керування дошкою з Claude (MCP)
+
+`supabase/functions/jamboard-mcp/index.ts` — MCP-сервер: Claude читає дошки, додає стікери, секції, текст, мотузки й картки-посилання, змінює й видаляє їх, керує таймером.
+
+1. Supabase → Edge Functions → **Deploy a new function → Via Editor**. Назва `jamboard-mcp`, вставте вміст `index.ts`, Deploy.
+2. У налаштуваннях функції вимкніть **Verify JWT** (Enforce JWT verification).
+3. Edge Functions → **Secrets** → додайте `JAMBOARD_MCP_KEY` = довгий випадковий рядок (це пароль до MCP).
+4. Claude → Settings → Connectors → **Add custom connector**, URL:
+   `https://<project>.supabase.co/functions/v1/jamboard-mcp?key=<JAMBOARD_MCP_KEY>`
+
+Інструменти: `list_boards`, `get_board`, `add_items`, `update_items`, `delete_items`, `create_board`, `timer`.
+Зміни з’являються на відкритих дошках одразу.
+
 ## Безпека прототипу
 
 Дошка відкрита: будь-хто з посиланням може читати й змінювати всі дошки в цьому проєкті Supabase. Для внутрішнього тесту цього досить. Перед ширшим запуском потрібна авторизація або секретні посилання на дошки.
