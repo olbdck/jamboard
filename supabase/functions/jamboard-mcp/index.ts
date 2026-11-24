@@ -35,6 +35,12 @@ const putDocs = (rows) => rows.length ? rest('docs?on_conflict=path', { method: 
 const delDocs = (paths) => paths.length ? rest(`docs?path=in.(${paths.map((p) => '"' + p.replace(/"/g, '') + '"').join(',')})`, { method: 'DELETE' }) : null;
 
 const validBoard = (b) => typeof b === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(b);
+// Boards open only by their link, so a board id is a long random secret (same format as index.html).
+const secretId = () => {
+  const abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', out = [];
+  while (out.length < 24) for (const x of crypto.getRandomValues(new Uint8Array(32))) { if (x < 248 && out.length < 24) out.push(abc[x % 62]); }
+  return out.join('');
+};
 const itemsColl = (b) => (b === 'main' ? 'items' : `boards/${b}/items`);
 const timerPath = (b) => (b === 'main' ? 'board/timer' : `boards/${b}/timer/state`);
 const uid = () => Date.now().toString(36).slice(-6) + Math.random().toString(36).slice(2, 10);
@@ -406,7 +412,7 @@ function refit(sec, all) {
 }
 
 // ---------- tools ----------
-const boardArg = { type: 'string', description: 'Board id from list_boards. Default "main".' };
+const boardArg = { type: 'string', description: 'Board id from list_boards (the part after #b= in a board link).' };
 const TOOLS = [
   { name: 'list_boards', description: 'List the JamBoard boards (id and title).', inputSchema: { type: 'object', properties: {} } },
   { name: 'get_board', description: 'Read everything on a board: stickies, text, sections, diagram nodes, ropes (links), link cards, stamps, comments. Coordinates are board pixels; a sticky is 200×200. A card\'s "section" is the id of the section it belongs to.', inputSchema: { type: 'object', properties: { board: boardArg } } },
@@ -462,18 +468,17 @@ const TOOLS = [
 ];
 
 async function callTool(name, a) {
-  const board = a.board == null ? 'main' : a.board;
-  if (!validBoard(board)) throw new Error('Unknown board id');
   if (name === 'list_boards') {
-    const meta = await getDoc('board/meta');
     const rows = (await listColl('boards')) || [];
-    return [{ id: 'main', title: (meta && meta.title) || 'Головна дошка' }, ...rows.map((r) => ({ id: r.path.slice(7), title: r.data && r.data.title || 'Без назви' }))];
+    return rows.map((r) => ({ id: r.path.slice(7), title: r.data && r.data.title || 'Без назви', link: '#b=' + r.path.slice(7) }));
   }
   if (name === 'create_board') {
-    const id = 'b' + uid().slice(0, 10);
+    const id = secretId();
     await putDocs([{ path: 'boards/' + id, data: { title: String(a.title || 'Нова дошка').slice(0, 120), at: Date.now(), by: BY } }]);
-    return { id, note: 'Open it from the board menu, or add #b=' + id + ' to the board link.' };
+    return { id, note: 'Boards are private: open it by adding #b=' + id + ' to the JamBoard address and share that link. It is not listed anywhere else.' };
   }
+  const board = a.board;
+  if (!validBoard(board)) throw new Error('Pass board: an id from list_boards');
   if (name === 'get_board') {
     const all = await loadItems(board);
     return { board, count: all.length, items: all.sort((p, q) => (p.type === 'section' ? -1 : 0) - (q.type === 'section' ? -1 : 0) || p.y - q.y || p.x - q.x).map(summary) };
