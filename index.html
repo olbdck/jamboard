@@ -186,6 +186,15 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
 #links { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
 #links g { transition: opacity 200ms var(--ease); }
 #links g.gone { opacity: 0; }
+/* a hovered or selected card: its links stay, the others step back */
+/* (by colour, not opacity: a faded SVG group is drawn off-screen on its own, which costs frames while dragging) */
+#links.focus g:not(.hi):not(.sel):not(.temp) .rope { stroke: color-mix(in srgb, var(--rc) 16%, var(--bg)); }
+#links.focus g:not(.hi):not(.sel):not(.temp) .head { fill: color-mix(in srgb, var(--rc) 16%, var(--bg)); stroke: color-mix(in srgb, var(--rc) 16%, var(--bg)); }
+#links.focus g:not(.hi):not(.sel):not(.temp) .pulse { visibility: hidden; }
+#links .head { transition: fill var(--fast) var(--ease), stroke var(--fast) var(--ease); }
+#ropeLabels.focus .rope-label:not(.hi):not(.sel):not(.editing):not(.gone) { opacity: .18; }
+#links g.fresh .rope, #links g.fresh .head { animation: wireIn 320ms var(--ease) both; } /* per path: cheaper than fading the group */
+@keyframes wireIn { from { opacity: 0; } }
 #links g { --rc: var(--rope); }
 #links .halo { fill: none; stroke: var(--rc); stroke-width: 14px; vector-effect: non-scaling-stroke; stroke-linecap: round; opacity: 0; transition: opacity var(--fast) var(--ease); }
 #links g:hover .halo { opacity: .14; } #links g.sel .halo { opacity: .26; }
@@ -1005,7 +1014,7 @@ const Flow = (() => {
         else if ((m = EDGE.exec(rest))) { e = { label: '', op: m[2], head: m[3], back: m[1] }; i += m[0].length; }
         if (!e) return null;
         ws(); const lm = /^\|([^|]*)\|/.exec(s.slice(i)); if (lm) { e.label = lm[1]; i += lm[0].length; }
-        e.label = cleanText(e.label).replace(/\n/g, ' ').slice(0, 60);
+        e.label = cleanText(e.label.replace(/^\s*"([\s\S]*)"\s*$/, '$1')).replace(/\n/g, ' ').slice(0, 60); // |"quoted"| labels lose their quotes
         return e;
       };
       let left = group(); if (!left) return;
@@ -1177,6 +1186,227 @@ const Flow = (() => {
   return { SHAPES, ICONS, ICON_COLOR, guessIcon, parse, layout, toItems, looksLike, sizeOf };
 })();
 // </flow>
+// <route> elbow wiring for diagram links: right-angle paths that go around blocks, recomputed only where something moved
+const Route = (() => {
+  const M = 20, BEND = 44, EDGE_W = 1.12, LANE = 11; // clearance, cost of a bend (px), cost factor along a block's edge, gap between parallel wires
+  const DX = [0, 1, 0, -1], DY = [-1, 0, 1, 0]; // sides / directions: 0 top (up), 1 right, 2 bottom (down), 3 left
+  const key = (b) => b.x + ',' + b.y + ',' + b.w + ',' + b.h + ',' + (b.shape || '');
+  // the point where a wire leaving side s at offset o (px from the side's middle) meets the block's outline
+  function outline(b, s, o) {
+    const cx = b.x + b.w / 2, cy = b.y + b.h / 2, a = b.w / 2, h = b.h / 2, vert = s === 0 || s === 2;
+    let d = vert ? h : a; // distance from the centre to the outline, along the wire
+    const u = Math.min(Math.abs(o), (vert ? a : h) * 0.98);
+    if (b.shape === 'circle') d = (vert ? h : a) * Math.sqrt(Math.max(0, 1 - (u / (vert ? a : h)) ** 2));
+    else if (b.shape === 'diamond') d = (vert ? h : a) * (1 - u / (vert ? a : h));
+    else if (b.shape === 'hex' && !vert) { const k = Math.min(h, b.w * 0.18); d = a - k * (u / h); }
+    return vert ? { x: cx + o, y: cy + DY[s] * d } : { x: cx + DX[s] * d, y: cy + o };
+  }
+  const sidePt = (b, s, o) => (s === 0 ? { x: b.x + b.w / 2 + o, y: b.y } : s === 2 ? { x: b.x + b.w / 2 + o, y: b.y + b.h } : s === 1 ? { x: b.x + b.w, y: b.y + b.h / 2 + o } : { x: b.x, y: b.y + b.h / 2 + o });
+  // a stub sticks out of the block, then the search starts at its tip
+  const stub = (b, s, o) => { const p = sidePt(b, s, o); return { s, o, x: Math.round(p.x + DX[s] * M), y: Math.round(p.y + DY[s] * M) }; };
+  const hits = (r, x1, y1, x2, y2) => r.x - M < Math.max(x1, x2) && r.x + r.w + M > Math.min(x1, x2) && r.y - M < Math.max(y1, y2) && r.y + r.h + M > Math.min(y1, y2);
+
+  // shortest right-angle path from one of A's ports to one of B's ports, with few bends, on a sparse grid made of
+  // the lines around blocks, the lines between them and the ports' own lines
+  function search(PA, PB, obs, R) {
+    const xs0 = [R.x1, R.x2], ys0 = [R.y1, R.y2], edgeX = new Set(), edgeY = new Set();
+    const list = obs.filter((o) => o.x - M < R.x2 && o.x + o.w + M > R.x1 && o.y - M < R.y2 && o.y + o.h + M > R.y1);
+    for (const o of list) { const a = o.x - M, b = o.x + o.w + M, c = o.y - M, d = o.y + o.h + M; xs0.push(a, b); ys0.push(c, d); edgeX.add(a); edgeX.add(b); edgeY.add(c); edgeY.add(d); }
+    for (const p of PA.concat(PB)) { xs0.push(p.x); ys0.push(p.y); }
+    const uniq = (v) => { v.sort((p, q) => p - q); const o = []; for (const x of v) if (!o.length || x - o[o.length - 1] > 0.01) o.push(x); return o; };
+    const mids = (v) => { const o = v.slice(); for (let i = 1; i < v.length; i++) if (v[i] - v[i - 1] > 40) o.push((v[i] + v[i - 1]) / 2); return uniq(o); };
+    const xs = mids(uniq(xs0)), ys = mids(uniq(ys0)), nx = xs.length, ny = ys.length, N = nx * ny;
+    if (N > 160000) return null;
+    const bv = new Uint8Array(N), bh = new Uint8Array(N), bvv = new Uint8Array(N); // blocked vertex, edge (i,j)-(i+1,j), edge (i,j)-(i,j+1)
+    const lo = (v, x) => { let a = 0, b = v.length; while (a < b) { const m = (a + b) >> 1; if (v[m] < x) a = m + 1; else b = m; } return a; };
+    for (const o of list) {
+      const x1 = o.x - M, x2 = o.x + o.w + M, y1 = o.y - M, y2 = o.y + o.h + M;
+      const i1 = lo(xs, x1 - 0.25), i2 = lo(xs, x2 + 0.25), j1 = lo(ys, y1 - 0.25), j2 = lo(ys, y2 + 0.25);
+      for (let j = j1; j < j2 && j < ny; j++) for (let i = i1; i < i2 && i < nx; i++) {
+        const insX = xs[i] > x1 + 0.25 && xs[i] < x2 - 0.25, insY = ys[j] > y1 + 0.25 && ys[j] < y2 - 0.25, k = j * nx + i;
+        if (insX && insY) bv[k] = 1;
+        if (insY && i + 1 < nx && xs[i] >= x1 - 0.25 && xs[i + 1] <= x2 + 0.25) bh[k] = 1;
+        if (insX && j + 1 < ny && ys[j] >= y1 - 0.25 && ys[j + 1] <= y2 + 0.25) bvv[k] = 1;
+      }
+    }
+    const at = (p) => { const i = lo(xs, p.x - 0.01), j = lo(ys, p.y - 0.01); return i < nx && j < ny && Math.abs(xs[i] - p.x) < 0.02 && Math.abs(ys[j] - p.y) < 0.02 ? j * nx + i : -1; };
+    const wX = new Float32Array(ny), wY = new Float32Array(nx); // running along a block's edge costs a little more than down the middle of a gap
+    for (let j = 0; j < ny; j++) wX[j] = edgeY.has(ys[j]) ? EDGE_W : 1;
+    for (let i = 0; i < nx; i++) wY[i] = edgeX.has(xs[i]) ? EDGE_W : 1;
+    const goal = new Int8Array(N).fill(-1), gl = [];
+    for (const p of PB) { const v = at(p); if (v >= 0 && !bv[v]) { goal[v] = (p.s + 2) % 4; gl.push(p); } }
+    if (!gl.length) return null;
+    const S = N * 4, g = new Float64Array(S).fill(Infinity), prev = new Int32Array(S).fill(-1);
+    // estimate: distance, plus one bend when not lined up; a hair of h breaks ties towards the goal, so flat stretches are not flooded
+    const hx = (v) => { const x = xs[v % nx], y = ys[(v / nx) | 0]; let m = Infinity; for (const p of gl) { const dx = Math.abs(p.x - x), dy = Math.abs(p.y - y); m = Math.min(m, dx + dy + (dx > 0.01 && dy > 0.01 ? BEND : 0)); } return m * 1.0001; };
+    // binary heap of states by f
+    let hs = new Int32Array(1024), hf = new Float64Array(1024), hn = 0;
+    const push = (s, f) => {
+      if (hn === hs.length) { const a = new Int32Array(hn * 2), b = new Float64Array(hn * 2); a.set(hs); b.set(hf); hs = a; hf = b; }
+      let i = hn++; while (i) { const p = (i - 1) >> 1; if (hf[p] <= f) break; hs[i] = hs[p]; hf[i] = hf[p]; i = p; } hs[i] = s; hf[i] = f;
+    };
+    const pop = () => {
+      const top = hs[0], s = hs[--hn], f = hf[hn]; let i = 0;
+      for (;;) { let c = 2 * i + 1; if (c >= hn) break; if (c + 1 < hn && hf[c + 1] < hf[c]) c++; if (hf[c] >= f) break; hs[i] = hs[c]; hf[i] = hf[c]; i = c; }
+      hs[i] = s; hf[i] = f; return top;
+    };
+    for (const p of PA) { const v = at(p); if (v < 0 || bv[v]) continue; const s = v * 4 + p.s; if (p.pen < g[s]) { g[s] = p.pen || 0; push(s, g[s] + hx(v)); } }
+    let end = -1, guard = 0;
+    while (hn && guard++ < 400000) {
+      const s = pop(), v = s >> 2, d = s & 3, gs = g[s];
+      if (goal[v] === d) { end = s; break; }
+      const i = v % nx, j = (v / nx) | 0;
+      // go on in the same direction
+      let ni = i + DX[d], nj = j + DY[d];
+      if (ni >= 0 && nj >= 0 && ni < nx && nj < ny) {
+        const nv = nj * nx + ni, blocked = bv[nv] || (d === 1 ? bh[v] : d === 3 ? bh[nv] : d === 2 ? bvv[v] : bvv[nv]);
+        if (!blocked) {
+          const c = gs + (d & 1 ? (xs[ni] - xs[i]) * DX[d] * wX[j] : (ys[nj] - ys[j]) * DY[d] * wY[i]), ns = nv * 4 + d;
+          if (c < g[ns]) { g[ns] = c; prev[ns] = s; push(ns, c + hx(nv)); }
+        }
+      }
+      for (const t of [(d + 1) & 3, (d + 3) & 3]) { const ns = v * 4 + t, c = gs + BEND; if (c < g[ns]) { g[ns] = c; prev[ns] = s; push(ns, c + hx(v)); } }
+    }
+    if (end < 0) return null;
+    const pts = []; let s = end, first = end;
+    while (s >= 0) { const v = s >> 2; pts.push({ x: xs[v % nx], y: ys[(v / nx) | 0] }); first = s; s = prev[s]; }
+    pts.reverse();
+    return { pts: simplify(pts), sa: first & 3, sb: ((end & 3) + 2) & 3 }; // a start state faces out of its side; the goal faces into its side
+  }
+  function simplify(p) {
+    const o = [];
+    for (const q of p) {
+      if (o.length && Math.abs(o[o.length - 1].x - q.x) < 0.01 && Math.abs(o[o.length - 1].y - q.y) < 0.01) continue;
+      if (o.length >= 2) { const a = o[o.length - 2], b = o[o.length - 1]; if ((Math.abs(a.x - b.x) < 0.01 && Math.abs(b.x - q.x) < 0.01) || (Math.abs(a.y - b.y) < 0.01 && Math.abs(b.y - q.y) < 0.01)) o.pop(); }
+      o.push({ x: q.x, y: q.y });
+    }
+    return o;
+  }
+  // one wire: A and B are boxes; sides[a|b] fix a side, off[a|b] its offset; null when there is no way through
+  function one(A, B, obs, fix) {
+    const ports = (b, s, o, pen) => { const p = stub(b, s, o); p.pen = pen; return p; };
+    const cA = { x: A.x + A.w / 2, y: A.y + A.h / 2 }, cB = { x: B.x + B.w / 2, y: B.y + B.h / 2 };
+    // leaving from a side that faces away from the other block costs a bit, so wires prefer the obvious side
+    const away = (c, s, o) => ((o.x - c.x) * DX[s] + (o.y - c.y) * DY[s] < 0 ? 60 : 0);
+    const PA = fix ? [ports(A, fix.sa, fix.oa, 0)] : [0, 1, 2, 3].map((s) => ports(A, s, 0, away(cA, s, cB)));
+    const PB = fix ? [ports(B, fix.sb, fix.ob, 0)] : [0, 1, 2, 3].map((s) => ports(B, s, 0, 0));
+    const x1 = Math.min(A.x, B.x), y1 = Math.min(A.y, B.y), x2 = Math.max(A.x + A.w, B.x + B.w), y2 = Math.max(A.y + A.h, B.y + B.h);
+    for (const pad of [180, 600]) {
+      const r = search(PA, PB, obs, { x1: x1 - pad, y1: y1 - pad, x2: x2 + pad, y2: y2 + pad });
+      if (r) return r;
+    }
+    return null;
+  }
+  // full polyline from outline to outline
+  function finish(A, B, r, oa, ob) {
+    const p0 = outline(A, r.sa, oa), p1 = outline(B, r.sb, ob), q0 = r.pts[0], q1 = r.pts[r.pts.length - 1];
+    if (r.sa % 2) p0.y = q0.y; else p0.x = q0.x; // exactly in line with the stub, so the end runs straight
+    if (r.sb % 2) p1.y = q1.y; else p1.x = q1.x;
+    return simplify([p0, ...r.pts, p1]);
+  }
+
+  // Parallel wires on the same line are spread into lanes, like a metro map. End segments stay on their ports.
+  function nudge(all) {
+    const segs = [];
+    all.forEach((pts, id) => { for (let i = 1; i + 2 < pts.length; i++) { const a = pts[i], b = pts[i + 1], v = Math.abs(a.x - b.x) < 0.01; segs.push({ id, i, v, c: v ? a.x : a.y, lo: v ? Math.min(a.y, b.y) : Math.min(a.x, b.x), hi: v ? Math.max(a.y, b.y) : Math.max(a.x, b.x) }); } });
+    const by = new Map();
+    for (const s of segs) { const k = (s.v ? 'v' : 'h') + Math.round(s.c * 2); if (!by.has(k)) by.set(k, []); by.get(k).push(s); }
+    const shift = [];
+    for (const g of by.values()) {
+      if (g.length < 2) continue;
+      g.sort((p, q) => p.lo - q.lo);
+      // clusters of segments that overlap along the line
+      let cl = [], hi = -Infinity;
+      const flush = () => {
+        if (cl.length > 1) {
+          // order lanes so wires turning the same way sit on that side: fewer crossings
+          const turn = (s) => { const p = all.get(s.id), a = p[s.i - 1], b = p[s.i + 2]; return s.v ? Math.sign(a.x - s.c) + Math.sign(b.x - s.c) : Math.sign(a.y - s.c) + Math.sign(b.y - s.c); };
+          cl.forEach((s) => (s.t = turn(s)));
+          cl.sort((p, q) => p.t - q.t || (p.id < q.id ? -1 : 1));
+          const n = cl.length, step = Math.min(LANE, 44 / (n - 1));
+          cl.forEach((s, k) => shift.push([s, (k - (n - 1) / 2) * step]));
+        }
+        cl = []; hi = -Infinity;
+      };
+      for (const s of g) { if (s.lo >= hi - 1) flush(); cl.push(s); hi = Math.max(hi, s.hi); }
+      flush();
+    }
+    const out = new Map(); all.forEach((p, id) => out.set(id, p.map((q) => ({ x: q.x, y: q.y }))));
+    for (const [s, d] of shift) { const p = out.get(s.id); if (s.v) { p[s.i].x += d; p[s.i + 1].x += d; } else { p[s.i].y += d; p[s.i + 1].y += d; } }
+    return out;
+  }
+
+  // A router keeps what it worked out last time, and on update() redoes only wires near something that changed.
+  function create() {
+    let prevBox = new Map();
+    const cache = new Map(); // link id -> { a, b, sa, sb, oa, ob, raw, pts }
+    function update(boxes, links) {
+      const changed = [];
+      boxes.forEach((b, id) => { const p = prevBox.get(id); if (!p || key(p) !== key(b)) changed.push({ id, o: p, n: b }); });
+      prevBox.forEach((p, id) => { if (!boxes.has(id)) changed.push({ id, o: p, n: null }); });
+      const moved = new Set(changed.map((c) => c.id));
+      prevBox = new Map([...boxes].map(([k, b]) => [k, { ...b }]));
+      const obs = [...boxes.values()];
+      const live = new Set();
+      const crosses = (c, r) => { if (!r) return false; for (let i = 1; i < c.pts.length; i++) { const a = c.pts[i - 1], b = c.pts[i]; if (hits(r, a.x, a.y, b.x, b.y)) return true; } return false; };
+      const dirty = [];
+      for (const l of links) {
+        const A = boxes.get(l.a), B = boxes.get(l.b); if (!A || !B || l.a === l.b) continue;
+        live.add(l.id);
+        const c = cache.get(l.id);
+        if (!c || c.a !== l.a || c.b !== l.b || !c.raw || moved.has(l.a) || moved.has(l.b) || changed.some((x) => crosses(c, x.n) || crosses(c, x.o))) dirty.push(l);
+      }
+      for (const id of [...cache.keys()]) if (!live.has(id)) cache.delete(id);
+      if (!dirty.length && !changed.length) return last;
+      // 1) dirty wires pick their sides freely
+      for (const l of dirty) {
+        const A = boxes.get(l.a), B = boxes.get(l.b), r = one(A, B, obs, null);
+        cache.set(l.id, r ? { a: l.a, b: l.b, sa: r.sa, sb: r.sb, oa: 0, ob: 0, raw: r.pts, pts: finish(A, B, r, 0, 0) } : { a: l.a, b: l.b, raw: null, pts: null });
+      }
+      // 2) wires sharing a side of a block get their own ports, ordered by where they go, so they do not cross at the block
+      const groups = new Map();
+      for (const l of links) {
+        const c = cache.get(l.id); if (!c || !c.raw) continue;
+        for (const end of ['a', 'b']) {
+          const id = c[end], s = end === 'a' ? c.sa : c.sb, k = id + '|' + s, o = boxes.get(end === 'a' ? c.b : c.a);
+          if (!groups.has(k)) groups.set(k, []);
+          // where the wire heads after its stub: the first point off the block, else the other block
+          const q = end === 'a' ? c.raw[1] || c.raw[0] : c.raw[c.raw.length - 2] || c.raw[c.raw.length - 1];
+          const far = q || { x: o.x + o.w / 2, y: o.y + o.h / 2 };
+          groups.get(k).push({ l, c, end, s, t: s === 0 || s === 2 ? far.x : far.y });
+        }
+      }
+      const redo = new Set();
+      groups.forEach((g, k) => {
+        const b = boxes.get(k.slice(0, k.lastIndexOf('|'))), s = g[0].s, len = s === 0 || s === 2 ? b.w : b.h;
+        g.sort((p, q) => p.t - q.t || (p.l.id < q.l.id ? -1 : 1));
+        const n = g.length, step = n > 1 ? Math.min(26, (len * (b.shape === 'diamond' || b.shape === 'circle' ? 0.5 : 0.8)) / (n - 1)) : 0;
+        g.forEach((e, i) => {
+          const o = Math.round((i - (n - 1) / 2) * step), f = e.end === 'a' ? 'oa' : 'ob';
+          if (e.c[f] !== o) { e.c[f] = o; redo.add(e.l); }
+        });
+      });
+      // 3) those wires are routed again from their own ports
+      for (const l of redo) {
+        const c = cache.get(l.id), A = boxes.get(l.a), B = boxes.get(l.b);
+        const r = one(A, B, obs, { sa: c.sa, sb: c.sb, oa: c.oa, ob: c.ob });
+        if (r) { c.raw = r.pts; c.pts = finish(A, B, r, c.oa, c.ob); }
+        else { c.raw = null; c.pts = null; }
+      }
+      return out();
+    }
+    let last = new Map();
+    function out() { // unchanged wires keep their old arrays, so the page can skip redrawing them
+      const all = new Map(); cache.forEach((c, id) => { if (c.pts) all.set(id, c.pts); });
+      const next = nudge(all);
+      next.forEach((p, id) => { const o = last.get(id); if (o && o.length === p.length && o.every((q, i) => q.x === p[i].x && q.y === p[i].y)) next.set(id, o); });
+      return (last = next);
+    }
+    return { update, reset() { prevBox = new Map(); cache.clear(); } };
+  }
+  return { create };
+})();
+// </route>
   const isSec = (i) => i.type === 'section';
   const isCard = (i) => i.type === 'sticky' || i.type === 'image' || i.type === 'text' || i.type === 'web' || i.type === 'node' || i.type === 'board';
   const isNode = (i) => !!i && i.type === 'node';
@@ -2476,20 +2706,46 @@ const Flow = (() => {
     r.vx = 0; r.vy = 0;
     linksSvg.appendChild(g); return r;
   }
+  // wires between diagram blocks run at right angles around the blocks; the router only redoes wires near what moved
+  const router = Route.create();
+  let hoverId = null, hoverT = 0;
+  function routeWires(list) {
+    const want = list.filter((l) => !l.temp && isNode(items.get(l.a)) && isNode(items.get(l.b)));
+    if (!want.length) return null;
+    const boxes = new Map();
+    for (const it of items.values()) if (isCard(it)) { const g = geom(it); boxes.set(it.id, { x: g.x, y: g.y, w: g.w, h: g.h, shape: isNode(it) ? it.shape || 'rect' : '' }); }
+    return router.update(boxes, want);
+  }
+  function setPts(r, pts) { // a routed wire: its polyline and running lengths, for the label, the pulse and the arrow
+    r.pts = pts; r.cum = [0];
+    for (let i = 1; i < pts.length; i++) r.cum.push(r.cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
+    r.len = r.cum[r.cum.length - 1]; r.p0 = pts[0]; r.p1 = pts[pts.length - 1]; r.t = null;
+  }
   function renderLinks() {
     const seen = new Set();
     const list = [...items.values()].filter(isLink);
     if (tempRope) list.push({ ...tempRope, id: '__temp' });
+    const routes = routeWires(list);
+    // the links of the block under the pointer, or of the selected cards, stand out; the rest step back
+    const focus = new Set(hoverId && items.has(hoverId) ? [hoverId] : []);
+    if (!focus.size) for (const id of selected) { const it = items.get(id); if (it && !isLink(it) && !isSec(it)) focus.add(id); }
+    const lit = focus.size ? list.filter((l) => !l.temp && (focus.has(l.a) || focus.has(l.b))) : [];
+    const dimOn = lit.length > 0 && lit.length < list.length;
+    linksSvg.classList.toggle('focus', dimOn); ropeLabels.classList.toggle('focus', dimOn);
     for (const l of list) {
       const ends = ropeEnds(l); if (!ends) continue;
       seen.add(l.id);
-      let r = ropes.get(l.id);
-      if (!r) { r = makeRope(l.id, ends, !!l.temp); ropes.set(l.id, r); }
+      let r = ropes.get(l.id), fresh = false;
+      if (!r) { r = makeRope(l.id, ends, !!l.temp); ropes.set(l.id, r); fresh = booted; }
       const A = items.get(l.a), B = items.get(l.temp ? l.to : l.b);
+      const pts = routes && routes.get(l.id);
       r.taut = isNode(A) && isNode(B); r.arrow = !l.temp && r.taut && l.flow !== false;
-      r.p0 = ends[0]; r.p1 = ends[1]; r.t = ropeTarget(ends[0], ends[1], r.taut);
+      if (pts) { if (r.pts !== pts) setPts(r, pts); if (fresh) { const g = r.g; g.classList.add('fresh'); setTimeout(() => g.classList.remove('fresh'), 400); } }
+      else { r.pts = null; r.p0 = ends[0]; r.p1 = ends[1]; r.t = ropeTarget(ends[0], ends[1], r.taut); }
       r.g.classList.toggle('arrow', r.arrow); r.g.classList.toggle('dash', !!l.dash); r.g.classList.toggle('thick', !!l.thick);
       r.g.classList.toggle('sel', selected.has(l.id));
+      const hi = dimOn && (focus.has(l.a) || focus.has(l.b));
+      r.g.classList.toggle('hi', hi); if (r.lab) r.lab.classList.toggle('hi', hi);
       r.g.classList.toggle('temp', !!l.temp);
       const rc = l.temp ? 'var(--accent)' : ropeColor(l);
       if (r.rc !== rc) { r.rc = rc; r.g.style.setProperty('--rc', rc); if (r.lab) r.lab.style.setProperty('--rc', rc); }
@@ -2505,7 +2761,21 @@ const Flow = (() => {
     if (!ropeRaf) { ropeLast = performance.now(); ropeRaf = requestAnimationFrame(ropeStep); }
     pulseKick();
   }
-  const ropeAt = (r, s) => { const m = 1 - s; return { x: m * m * r.p0.x + 2 * m * s * r.cx + s * s * r.p1.x, y: m * m * r.p0.y + 2 * m * s * r.cy + s * s * r.p1.y }; };
+  vp.addEventListener('pointerover', (e) => { // hovering a card lights up its links
+    if (e.pointerType && e.pointerType !== 'mouse') return;
+    const ie = e.target.closest && e.target.closest('.item'), it = ie && items.get(ie.dataset.id);
+    const h = it && isCard(it) ? it.id : null;
+    clearTimeout(hoverT); // a short wait, so sweeping the mouse across the board does not flicker the wires
+    if (h !== hoverId) hoverT = setTimeout(() => { hoverId = h; schedule('links'); }, h ? 140 : 90);
+  });
+  vp.addEventListener('pointerleave', () => { clearTimeout(hoverT); if (hoverId) { hoverId = null; schedule('links'); } });
+  const ropeAt = (r, s) => {
+    if (r.pts) { // along the polyline, by length
+      const want = s * r.len, c = r.cum; let i = 1; while (i < c.length - 1 && c[i] < want) i++;
+      const a = r.pts[i - 1], b = r.pts[i], k = c[i] > c[i - 1] ? (want - c[i - 1]) / (c[i] - c[i - 1]) : 0;
+      return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k };
+    }
+    const m = 1 - s; return { x: m * m * r.p0.x + 2 * m * s * r.cx + s * s * r.p1.x, y: m * m * r.p0.y + 2 * m * s * r.cy + s * s * r.p1.y }; };
   const ropeMid = (r) => ropeAt(r, 0.5);
   function syncLabel(r, l) {
     const text = l.label || '';
@@ -2556,7 +2826,7 @@ const Flow = (() => {
     let any = false;
     for (const r of ropes.values()) {
       if (!r.flowOn || !r.p0) continue; any = true;
-      const len = (Math.hypot(r.cx - r.p0.x, r.cy - r.p0.y) + Math.hypot(r.p1.x - r.cx, r.p1.y - r.cy) + Math.hypot(r.p1.x - r.p0.x, r.p1.y - r.p0.y)) / 2;
+      const len = r.pts ? r.len : (Math.hypot(r.cx - r.p0.x, r.cy - r.p0.y) + Math.hypot(r.p1.x - r.cx, r.p1.y - r.cy) + Math.hypot(r.p1.x - r.p0.x, r.p1.y - r.p0.y)) / 2;
       r.ph = ((r.ph || 0) + dt / Math.max(1400, len / 0.16)) % 1.3;
       if (r.ph >= 1) { if (r.pulseVis) { r.pulse.style.opacity = 0; r.pulseVis = false; } continue; }
       const u = r.ph, s = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2, p = ropeAt(r, s);
@@ -2565,13 +2835,32 @@ const Flow = (() => {
     }
     pulseRaf = any ? requestAnimationFrame(pulseStep) : 0;
   }
+  function elbowPath(p, f) { // straight runs joined by small rounded corners
+    let d = `M${f(p[0].x)},${f(p[0].y)}`;
+    for (let i = 1; i < p.length - 1; i++) {
+      const a = p[i - 1], b = p[i], c = p[i + 1], l1 = Math.hypot(b.x - a.x, b.y - a.y) || 1, l2 = Math.hypot(c.x - b.x, c.y - b.y) || 1;
+      const k = Math.min(14, l1 / 2, l2 / 2);
+      d += `L${f(b.x + ((a.x - b.x) / l1) * k)},${f(b.y + ((a.y - b.y) / l1) * k)}Q${f(b.x)},${f(b.y)} ${f(b.x + ((c.x - b.x) / l2) * k)},${f(b.y + ((c.y - b.y) / l2) * k)}`;
+    }
+    const e = p[p.length - 1]; return d + `L${f(e.x)},${f(e.y)}`;
+  }
   function drawRope(r) {
-    const f = (n) => n.toFixed(1), d = `M${f(r.p0.x)},${f(r.p0.y)} Q${f(r.cx)},${f(r.cy)} ${f(r.p1.x)},${f(r.p1.y)}`;
+    const f = (n) => n.toFixed(1);
+    if (r.pts && r.drawn === r.pts && r.drawnArrow === r.arrow) return; // a routed wire that has not changed
+    let d, tip = r.p1, from = { x: r.cx, y: r.cy };
+    if (r.pts) {
+      const p = r.pts, q = p[p.length - 2]; from = q;
+      if (r.arrow) { // the tip stops just short of the outline
+        const L = Math.hypot(r.p1.x - q.x, r.p1.y - q.y) || 1; tip = { x: r.p1.x + ((q.x - r.p1.x) / L) * 3, y: r.p1.y + ((q.y - r.p1.y) / L) * 3 };
+        d = elbowPath(p.slice(0, -1).concat([tip]), f);
+      } else d = elbowPath(p, f);
+      r.drawn = r.pts; r.drawnArrow = r.arrow;
+    } else d = `M${f(r.p0.x)},${f(r.p0.y)} Q${f(r.cx)},${f(r.cy)} ${f(r.p1.x)},${f(r.p1.y)}`;
     r.path.setAttribute('d', d); r.hit.setAttribute('d', d); r.halo.setAttribute('d', d);
     if (r.arrow) { // a small head at the end, along the rope's last tangent
-      let ux = r.p1.x - r.cx, uy = r.p1.y - r.cy; const n = Math.hypot(ux, uy) || 1; ux /= n; uy /= n;
-      const L = 13, W = 6.5, bx = r.p1.x - ux * L, by = r.p1.y - uy * L;
-      r.head.setAttribute('d', `M${f(r.p1.x)},${f(r.p1.y)}L${f(bx - uy * W)},${f(by + ux * W)}L${f(bx + uy * W)},${f(by - ux * W)}Z`);
+      let ux = tip.x - from.x, uy = tip.y - from.y; const n = Math.hypot(ux, uy) || 1; ux /= n; uy /= n;
+      const L = 13, W = 6.5, bx = tip.x - ux * L, by = tip.y - uy * L;
+      r.head.setAttribute('d', `M${f(tip.x)},${f(tip.y)}L${f(bx - uy * W)},${f(by + ux * W)}L${f(bx + uy * W)},${f(by - ux * W)}Z`);
     }
     placeLabel(r);
   }
@@ -2579,6 +2868,7 @@ const Flow = (() => {
     const dt = Math.min(0.033, Math.max(0.001, (t - ropeLast) / 1000)); ropeLast = t;
     let moving = false;
     for (const r of ropes.values()) {
+      if (r.pts) { drawRope(r); continue; } // routed wires follow their blocks exactly, no sway
       if (!r.t) continue;
       if (reduceMotion) { r.cx = r.t.x; r.cy = r.t.y; r.vx = r.vy = 0; }
       else { // damped spring on the rope's middle: it lags behind moving cards, then settles with a soft sway

@@ -183,7 +183,7 @@ const Flow = (() => {
         else if ((m = EDGE.exec(rest))) { e = { label: '', op: m[2], head: m[3], back: m[1] }; i += m[0].length; }
         if (!e) return null;
         ws(); const lm = /^\|([^|]*)\|/.exec(s.slice(i)); if (lm) { e.label = lm[1]; i += lm[0].length; }
-        e.label = cleanText(e.label).replace(/\n/g, ' ').slice(0, 60);
+        e.label = cleanText(e.label.replace(/^\s*"([\s\S]*)"\s*$/, '$1')).replace(/\n/g, ' ').slice(0, 60); // |"quoted"| labels lose their quotes
         return e;
       };
       let left = group(); if (!left) return;
