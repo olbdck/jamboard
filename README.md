@@ -3,6 +3,19 @@
 Спільна дошка для команди: стікери, секції, текст, мотузки між картками, штампи, коментарі, картки-посилання з превʼю.
 Один файл `index.html`, без збірки.
 
+## Локальний запуск
+
+1. У папці проєкту запустіть простий вебсервер:
+   ```sh
+   cd jamboard
+   python3 -m http.server 8000
+   ```
+   і відкрийте http://localhost:8000/ (можна й `npx serve .`). Збірка не потрібна. Відкривати `index.html` подвійним кліком не варто: через `file://` браузер може не завантажити шрифти й `config.js`.
+2. **Дані.** `config.js` уже вказує на робочий проєкт Supabase, тож локальна копія показує ті самі дошки, що й https://olbdck.github.io/jamboard/, і всі зміни одразу видно іншим. Потрібен інтернет (supabase.co і бібліотека supabase-js з cdn.jsdelivr.net).
+   - Окремий тестовий проєкт: створіть новий проєкт Supabase, виконайте `supabase/schema.sql` і `supabase/security.sql`, вставте його URL і publishable/anon-ключ у `config.js`.
+   - Повністю офлайн: поставте `window.JAMBOARD_CONFIG = null;` у `config.js` (як у `config.example.js`). Тоді дошка зберігається лише в цьому браузері.
+3. **MCP-функція локально** (необовʼязково): `supabase functions serve jamboard-mcp --env-file .env` через [Supabase CLI](https://supabase.com/docs/guides/cli), де `.env` містить `JAMBOARD_MCP_KEY=...`. Розгорнути в хмару: `supabase functions deploy jamboard-mcp --project-ref <ref>` (налаштування `verify_jwt = false` уже в `supabase/config.toml`). Секрети (`JAMBOARD_MCP_KEY`, `service_role`) задаються лише в Supabase → Edge Functions → Secrets або в локальному `.env`, ніколи не в git.
+
 ## Запуск на GitHub Pages + Supabase
 
 1. **Supabase.** Створіть проєкт на https://supabase.com (безкоштовний план).
