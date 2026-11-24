@@ -344,6 +344,10 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
 .sep { width: 1px; align-self: stretch; background: var(--line); margin: 6px 2px; flex: none; }
 #title { border: 0; background: transparent; color: var(--text); font: 400 14px var(--f-text); letter-spacing: -0.016em; min-width: 0; width: 14em; max-width: 100%; padding: 6px 10px; border-radius: var(--r-pill); text-overflow: ellipsis; }
 #title:hover { background: var(--chip); }
+#title[readonly] { cursor: default; }
+#title[readonly]:hover { background: transparent; }
+#title[readonly]:focus { box-shadow: none; background: transparent; }
+.menu-sep { height: 1px; background: var(--line); margin: 4px 10px; }
 #title:focus { outline: none; box-shadow: var(--focus); background: var(--surface); }
 .txt-btn { border: 0; background: transparent; padding: 7px 13px; border-radius: var(--r-pill); font-size: 14px; color: var(--accent); cursor: pointer; white-space: nowrap; transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease); }
 .txt-btn:hover { background: var(--chip); }
@@ -1192,8 +1196,18 @@ const Flow = (() => {
     const m = /[#?&]b=([A-Za-z0-9_-]{1,64})/.exec((location.hash || '') + '&' + (location.search || ''));
     return m ? m[1] : null;
   }
-  const titleOf = (id) => (id === 'main' ? mainTitle : (boards.get(id) && boards.get(id).title) || 'Нова дошка');
-  function showTitle() { if (document.activeElement !== $('#title')) $('#title').value = titleOf(boardId); }
+  const titleOf = (id) => (id === 'main' ? mainTitle : (boards.get(id) && boards.get(id).title) || (isDemo(id) ? 'Знайомство з JamBoard' : 'Нова дошка'));
+  // The demo board (config.defaultBoard) is shared by every visitor: it stays in «Мої дошки» for good,
+  // its name can't be changed, and «Очистити» there gives you a new empty board instead of wiping the demo.
+  const demoId = () => { const c = window.JAMBOARD_CONFIG; return privateLinks && c && secretBoard(c.defaultBoard) ? c.defaultBoard : null; };
+  const isDemo = (id = boardId) => !!id && id === demoId();
+  function showTitle() {
+    const t = $('#title'), demo = isDemo();
+    t.readOnly = demo; t.title = demo ? 'Демо-дошку бачать усі, її назва не змінюється' : '';
+    $('#clearBtn').textContent = demo ? 'Моя порожня дошка' : 'Очистити';
+    $('#clearBtn').title = demo ? 'Створити свою порожню дошку. Демо лишиться як є і відкривається з меню дошок' : '';
+    if (document.activeElement !== t) t.value = titleOf(boardId);
+  }
 
   // ---------- history (per action, only the items it touched, so undo never clobbers others' work) ----------
   function snapIds(ids) { const m = {}; ids.forEach((id) => { const it = items.get(id); m[id] = it ? { ...clean(it), id } : null; }); return m; }
@@ -3249,6 +3263,7 @@ const Flow = (() => {
   let clearArmed = null;
   $('#clearBtn').addEventListener('click', (e) => {
     const b = e.currentTarget;
+    if (isDemo()) { createBoard('Моя дошка', 'Демо лишилося як було. Ваша порожня дошка готова, демо завжди є в меню дошок'); return; }
     if (!clearArmed) {
       b.textContent = 'Очистити для всіх?'; b.classList.add('danger');
       clearArmed = setTimeout(() => { clearArmed = null; b.textContent = 'Очистити'; b.classList.remove('danger'); }, 3000);
@@ -3290,7 +3305,7 @@ const Flow = (() => {
   // ---------- boards menu, switching, share link ----------
   function boardIds() {
     const list = [...boards.entries()].sort((a, b) => (a[1].at || 0) - (b[1].at || 0)).map(([id]) => id);
-    if (privateLinks) return list.filter(secretBoard);
+    if (privateLinks) { const d = demoId(); return d ? [d, ...list.filter((id) => secretBoard(id) && id !== d)] : list.filter(secretBoard); }
     return ['main', ...list.filter((id) => id !== 'main')];
   }
   function renderBoardMenu() {
@@ -3306,6 +3321,7 @@ const Flow = (() => {
       who.textContent = here.slice(0, 4).map(peerEmoji).join(''); who.title = here.map(peerName).join(', ');
       b.append(tick, nm, who);
       b.addEventListener('click', () => { closeBoardUi(); if (id !== boardId) openBoard(id); });
+      if (isDemo(id)) { nm.textContent = '✦ ' + titleOf(id); b.title = 'Демо-дошка: її бачать усі'; box.appendChild(b); if (ids.length > 1) { const sep = document.createElement('div'); sep.className = 'menu-sep'; box.appendChild(sep); } return; }
       if (!privateLinks || id === boardId) { box.appendChild(b); return; }
       const row = document.createElement('div'); row.className = 'menu-row';
       const x = document.createElement('button'); x.className = 'menu-x'; x.textContent = '×';
@@ -3343,17 +3359,18 @@ const Flow = (() => {
     $('#copyBtn').textContent = ok ? 'Скопійовано' : 'Виділено, натисніть ⌘C';
     if (ok) toast('Посилання на дошку скопійовано');
   });
-  $('#newBoardBtn').addEventListener('click', () => {
+  function createBoard(title, msg) {
     closeBoardUi();
     const id = privateLinks ? newBoardId() : 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-    const meta = { title: 'Нова дошка', at: Date.now(), by: me.name };
+    const meta = { title, at: Date.now(), by: me.name };
     boards.set(id, meta);
     if (mode === 'shared') db.doc('boards/' + id).set(meta).catch(dbError);
     if (mode !== 'shared' || privateLinks) saveLocalBoards();
     openBoard(id);
     setTimeout(() => { $('#title').focus(); $('#title').select(); }, 260);
-    toast('Нову дошку створено');
-  });
+    toast(msg);
+  }
+  $('#newBoardBtn').addEventListener('click', () => createBoard('Нова дошка', 'Нову дошку створено'));
   addEventListener('pointerdown', (e) => { if (!e.target.closest('#boardMenu, #sharePop, #boardsBtn, #shareBtn')) closeBoardUi(); }, true);
   addEventListener('hashchange', () => {
     const b = boardFromUrl(); if (!b || b === boardId) return;
