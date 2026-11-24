@@ -43,6 +43,8 @@ const secretId = () => {
 };
 const itemsColl = (b) => (b === 'main' ? 'items' : `boards/${b}/items`);
 const timerPath = (b) => (b === 'main' ? 'board/timer' : `boards/${b}/timer/state`);
+const bdoc = (b, rest) => (b === 'main' ? 'board/' : `boards/${b}/`) + rest; // retro docs: mode/hide, mode/vote, votes/<voter>
+const APP_URL = 'https://olbdck.github.io/jamboard/';
 const uid = () => Date.now().toString(36).slice(-6) + Math.random().toString(36).slice(2, 10);
 let lastRev = 0;
 const rev = () => (lastRev = Math.max(Date.now(), lastRev + 1));
@@ -356,8 +358,270 @@ const Flow = (() => {
 })();
 // </flow>
 
+// <plan> shared by index.html and the MCP server: keep both copies identical
+// Planning pieces that need no DOM: timeline and table geometry, templates, sorting by votes, markdown export, task sources.
+const Plan = (() => {
+  const TOP = 60, SIDE = 168, PAD = 16, DAY = 864e5;
+  const UNITS = ['day', 'week', 'sprint', 'month'];
+  const STATUSES = ['todo', 'doing', 'review', 'done'];
+  const STATUS_NAMES = { todo: 'До роботи', doing: 'У роботі', review: 'На перевірці', done: 'Готово' };
+  const MON = ['січ.', 'лют.', 'бер.', 'квіт.', 'трав.', 'черв.', 'лип.', 'серп.', 'вер.', 'жовт.', 'лист.', 'груд.'];
+  const MONTHS = ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'];
+  const WD = ['нд', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const isGrid = (i) => !!i && (i.type === 'timeline' || i.type === 'table');
+
+  // ---------- dates: whole days since 1970-01-01, so a time zone never moves a column ----------
+  const dayOf = (s) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? Math.floor(Date.UTC(+m[1], +m[2] - 1, +m[3]) / DAY) : null; };
+  const isoOf = (d) => new Date(d * DAY).toISOString().slice(0, 10);
+  const localDay = (ms) => { const t = new Date(ms); return Math.floor(Date.UTC(t.getFullYear(), t.getMonth(), t.getDate()) / DAY); };
+  const monday = (d) => d - ((new Date(d * DAY).getUTCDay() + 6) % 7);
+  const isoWeek = (d) => { const th = monday(d) + 3, y = new Date(th * DAY).getUTCFullYear(); return 1 + Math.floor((th - (monday(Math.floor(Date.UTC(y, 0, 4) / DAY)) + 3)) / 7); };
+  const fmtD = (d) => { const t = new Date(d * DAY); return t.getUTCDate() + ' ' + MON[t.getUTCMonth()]; };
+  const range = (a, b) => { const A = new Date(a * DAY), B = new Date(b * DAY); return A.getUTCMonth() === B.getUTCMonth() && A.getUTCFullYear() === B.getUTCFullYear() ? A.getUTCDate() + '–' + B.getUTCDate() + ' ' + MON[B.getUTCMonth()] : fmtD(a) + ' – ' + fmtD(b); };
+  const thisMonday = (ms) => isoOf(monday(localDay(ms)));
+
+  // ---------- geometry: a header band on top, lane names on the left (when there are any), equal cells ----------
+  function dims(g) {
+    const tl = g.type === 'timeline', rows = (tl ? g.lanes : g.rows) || [];
+    const nc = tl ? clamp(Math.round(g.n) || 1, 1, 60) : Math.max(1, (g.cols || []).length);
+    const nr = Math.max(1, rows.length), side = rows.length ? SIDE : 0;
+    return { nc, nr, side, top: TOP, rows, cw: Math.max(1, (g.w - side) / nc), lh: Math.max(1, (g.h - TOP) / nr) };
+  }
+  const sizeFor = (g, cw, lh) => { const d = dims(g); return { w: Math.round(d.side + d.nc * cw), h: Math.round(TOP + d.nr * lh) }; };
+  function column(g, i) { // what a column header says: { t: title, d: dates or '', from, to } (from/to in days, timeline only)
+    if (g.type !== 'timeline') return { t: String((g.cols || [])[i] || '') };
+    const s = dayOf(g.start) ?? monday(localDay(Date.now()));
+    let from, to, t, d = '';
+    if (g.unit === 'day') { from = to = s + i; t = WD[new Date(from * DAY).getUTCDay()] + ', ' + fmtD(from); }
+    else if (g.unit === 'month') {
+      const a = new Date(s * DAY), y = a.getUTCFullYear(), m = a.getUTCMonth() + i;
+      from = Math.floor(Date.UTC(y, m, 1) / DAY); to = Math.floor(Date.UTC(y, m + 1, 1) / DAY) - 1;
+      const M = new Date(from * DAY); t = MONTHS[M.getUTCMonth()]; d = String(M.getUTCFullYear());
+    } else if (g.unit === 'sprint') {
+      const L = clamp(Math.round(g.len) || 14, 1, 70); from = s + L * i; to = from + L - 1;
+      t = 'Спринт ' + ((Number.isFinite(g.k) ? g.k : 1) + i); d = range(from, to);
+    } else { from = s + 7 * i; to = from + 6; t = 'Тиждень ' + isoWeek(from); d = range(from, to); }
+    const own = g.names && typeof g.names[i] === 'string' && g.names[i].trim();
+    if (own) { if (t && g.unit !== 'day') d = d ? t + ' · ' + d : t; t = own; }
+    return { t, d, from, to };
+  }
+  function nowAt(g, ms) { // where today is on a timeline: { i: column, f: 0..1 across it } or null
+    if (g.type !== 'timeline') return null;
+    const t = new Date(ms), today = localDay(ms) + (t.getHours() * 60 + t.getMinutes()) / 1440, n = dims(g).nc;
+    const a = column(g, 0), b = column(g, n - 1);
+    if (today < a.from || today >= b.to + 1) return null;
+    for (let i = 0; i < n; i++) { const c = column(g, i); if (today >= c.from && today < c.to + 1) return { i, f: (today - c.from) / (c.to + 1 - c.from) }; }
+    return null;
+  }
+  const rowName = (g, r) => String((dims(g).rows || [])[r] || '');
+  function cellRect(g, c, r) { const d = dims(g); return { x: g.x + d.side + c * d.cw, y: g.y + d.top + r * d.lh, w: d.cw, h: d.lh }; }
+  function cellAt(g, x, y) {
+    const d = dims(g), lx = x - g.x - d.side, ly = y - g.y - d.top;
+    if (lx < 0 || ly < 0 || lx >= g.w - d.side || ly >= g.h - d.top) return null;
+    return [clamp(Math.floor(lx / d.cw), 0, d.nc - 1), clamp(Math.floor(ly / d.lh), 0, d.nr - 1)];
+  }
+  const cellOf = (g, it) => { const d = dims(g), c = Array.isArray(it.cell) ? it.cell : [0, 0]; return [clamp(c[0] | 0, 0, d.nc - 1), clamp(c[1] | 0, 0, d.nr - 1)]; };
+  // A card dropped into a cell sticks to it: on a timeline or table it lines up in the column, in a matrix it stays where it was put.
+  function snap(g, it, cell) {
+    const R = cellRect(g, cell[0], cell[1]), w = it.w || 200, h = it.h || 120;
+    const fitY = (y) => (h > R.h - PAD * 2 ? R.y + PAD : clamp(y, R.y + PAD, R.y + R.h - h - PAD));
+    const fitX = (x) => (w > R.w - PAD * 2 ? R.x + PAD : clamp(x, R.x + PAD, R.x + R.w - w - PAD));
+    const x = g.kind === 'matrix' ? fitX(it.x) : w <= R.w - PAD * 2 ? R.x + (R.w - w) / 2 : R.x + PAD;
+    return { x: Math.round(x), y: Math.round(fitY(it.y)) };
+  }
+  // the next free spot in a cell: under the cards already there
+  function slotIn(g, cell, w, h, members) {
+    const R = cellRect(g, cell[0], cell[1]);
+    const here = members.filter((m) => Array.isArray(m.cell) && m.cell[0] === cell[0] && m.cell[1] === cell[1]);
+    const y = here.length ? Math.max(...here.map((m) => m.y + (m.h || 0))) + 20 : R.y + PAD;
+    return snap(g, { w, h, x: R.x + PAD, y }, cell);
+  }
+
+  // ---------- templates ----------
+  const RETRO = {
+    ssc: ['Ретро · Start / Stop / Continue', [['🟢 Почати', 'ok'], ['🔴 Припинити', 'pink'], ['🔵 Продовжити', 'info']]],
+    msg: ['Ретро · Mad / Sad / Glad', [['😠 Злить', 'warn'], ['😢 Засмучує', 'purple'], ['😊 Радує', 'ok']]],
+    '4l': ['Ретро · 4L', [['💚 Сподобалось', 'ok'], ['📚 Навчились', 'info'], ['🕳️ Бракувало', 'warn'], ['✨ Хотілося б', 'purple']]],
+    sail: ['Ретро · Вітрильник', [['🌬️ Вітер: що нас рухає', 'teal'], ['⚓ Якір: що гальмує', 'gray'], ['🪨 Скелі: ризики попереду', 'warn'], ['🏝️ Острів: наша мета', 'ok']]],
+  };
+  const TEMPLATES = [
+    ['sprints', 'Таймлайн спринтів', 'Спринти по 2 тижні з доріжками команд'],
+    ['weeks', 'Таймлайн тижнів', 'Шість тижнів від поточного'],
+    ['roadmap', 'Роадмап', 'Зараз · Далі · Потім'],
+    ['matrix', 'Матриця Impact / Effort', 'Пріоритети: вплив проти зусиль'],
+    ['table', 'Таблиця', 'Колонки й рядки, картки прилипають до клітинок'],
+    ['sprint', 'Спринт-планінг', 'Ціль, беклог і що беремо в спринт'],
+    ['ssc', 'Start / Stop / Continue', 'Ретро на три колонки'],
+    ['msg', 'Mad / Sad / Glad', 'Ретро про емоції команди'],
+    ['4l', '4L', 'Liked · Learned · Lacked · Longed for'],
+    ['sail', 'Вітрильник', 'Вітер, якір, скелі й острів'],
+  ];
+  function template(key, ox, oy, makeId, by, nowMs) {
+    const out = [], mk = (o) => { const it = { id: makeId(), by, ...o }; out.push(it); return it; };
+    const table = (o, cw, lh) => { const t = { type: 'table', x: ox, y: oy, color: 'gray', ...o }; Object.assign(t, sizeFor({ ...t, w: 0, h: 0 }, cw, lh)); return mk(t); };
+    const tl = (o, cw, lh) => { const t = { type: 'timeline', x: ox, y: oy, color: 'gray', start: thisMonday(nowMs || Date.now()), ...o }; Object.assign(t, sizeFor({ ...t, w: 0, h: 0 }, cw, lh)); return mk(t); };
+    if (key === 'sprints') tl({ title: 'Спринти', unit: 'sprint', len: 14, k: 1, n: 4, lanes: ['Дизайн', 'Фронтенд', 'Бекенд'] }, 340, 250);
+    else if (key === 'weeks') tl({ title: 'План на шість тижнів', unit: 'week', n: 6, lanes: [] }, 300, 420);
+    else if (key === 'roadmap') table({ title: 'Роадмап', cols: ['Зараз', 'Далі', 'Потім'], rows: ['Продукт', 'Дизайн', 'Розробка'], tint: ['ok', 'info', 'purple'] }, 380, 260);
+    else if (key === 'matrix') table({ title: 'Пріоритети · Impact / Effort', kind: 'matrix', cols: ['Мало зусиль', 'Багато зусиль'], rows: ['Великий вплив', 'Малий вплив'], cells: ['Швидкі перемоги', 'Великі проєкти', 'Дрібниці', 'Не варто зусиль'], ax: ['Зусилля', 'Вплив'], tint: ['ok', 'warn'] }, 480, 380);
+    else if (key === 'table') table({ title: 'Таблиця', cols: ['Колонка 1', 'Колонка 2', 'Колонка 3'], rows: ['Рядок 1', 'Рядок 2'] }, 320, 260);
+    else if (key === 'sprint') {
+      mk({ type: 'sticky', x: ox, y: oy, w: 300, h: 220, color: 'pink', text: '🎯 Ціль спринту\n\nЗа що ми хочемо, щоб нас похвалили наприкінці?' });
+      mk({ type: 'sticky', x: ox, y: oy + 250, w: 300, h: 160, color: 'caution', text: '👥 Ємність команди\n\n… сторіпоінтів' });
+      table({ title: 'Спринт-планінг', x: ox + 340, cols: ['📥 Беклог', '✅ Беремо в спринт', '🚧 Ризики й залежності'], rows: [], tint: ['gray', 'ok', 'warn'] }, 360, 640);
+    } else if (RETRO[key]) {
+      const [title, cols] = RETRO[key];
+      table({ title, cols: cols.map((c) => c[0]), rows: [], tint: cols.map((c) => c[1]) }, cols.length > 3 ? 330 : 380, 620);
+    } else throw new Error('Unknown template: ' + key);
+    return out;
+  }
+
+  // ---------- membership helpers (both sides store it the same way: card.grid = container id, card.cell = [column, row]) ----------
+  function secOf(i, all) {
+    if ('sec' in i) return all.find((s) => s.type === 'section' && s.id === i.sec) || null;
+    let best = null; const cx = i.x + (i.w || 0) / 2, cy = i.y + (i.h || 0) / 2;
+    for (const s of all) if (s.type === 'section' && cx >= s.x && cx <= s.x + s.w && cy >= s.y && cy <= s.y + s.h && (!best || s.w * s.h < best.w * best.h)) best = s;
+    return best;
+  }
+  const CARD = ['sticky', 'image', 'text', 'web', 'node', 'board', 'task'];
+  const isCardT = (i) => CARD.includes(i.type);
+  const gridOf = (i, byId) => { const g = i.grid && byId.get(i.grid); return isGrid(g) ? g : null; };
+
+  // ---------- after a vote: the most voted cards move to the top of their cell or section ----------
+  function sortByVotes(all, votes) {
+    const byId = new Map(all.map((i) => [i.id, i])), groups = new Map(), out = [];
+    for (const i of all) {
+      if (!isCardT(i)) continue;
+      const g = gridOf(i, byId), s = g ? null : secOf(i, all);
+      const key = g ? g.id + ':' + cellOf(g, i).join(',') : s ? s.id : null;
+      if (!key) continue;
+      if (!groups.has(key)) groups.set(key, { g, list: [] });
+      groups.get(key).list.push(i);
+    }
+    const v = (i) => votes[i.id] || 0;
+    for (const { g, list } of groups.values()) {
+      if (list.length < 2 || !list.some((i) => v(i) > 0)) continue;
+      const read = [...list].sort((a, b) => Math.round(a.y / 40) - Math.round(b.y / 40) || a.x - b.x);
+      const ranked = [...read].sort((a, b) => v(b) - v(a) || read.indexOf(a) - read.indexOf(b));
+      if (g) { // a column of cards: stack them again, best on top
+        let y = Math.min(...list.map((i) => i.y));
+        for (const i of ranked) { if (i.y !== y) out.push({ id: i.id, x: i.x, y }); y += (i.h || 120) + 20; }
+      } else ranked.forEach((i, k) => { const s = read[k]; if (s.x !== i.x || s.y !== i.y) out.push({ id: i.id, x: s.x, y: s.y }); });
+    }
+    return out;
+  }
+
+  // ---------- markdown export ----------
+  // o: { title, plain(it) → text, hidden(it) → bool, votes: { id: n }, boardUrl(bid) → url }
+  function markdown(all, o) {
+    o = o || {};
+    const plain = o.plain || ((i) => String(i.text || '').replace(/<[^>]*>/g, ''));
+    const votes = o.votes || {}, hidden = o.hidden || (() => false);
+    const byId = new Map(all.map((i) => [i.id, i])), L = [];
+    const one = (s) => String(s || '').replace(/\s*\n+\s*/g, ' · ').trim();
+    const read = (a, b) => Math.round(a.y / 40) - Math.round(b.y / 40) || a.x - b.x;
+    const vs = (i) => (votes[i.id] ? ` · 🗳 ${votes[i.id]}` : '');
+    const ranked = (list) => [...list].sort((a, b) => (votes[b.id] || 0) - (votes[a.id] || 0) || read(a, b));
+    const line = (i) => {
+      if (hidden(i)) return '- _(прихована картка)_';
+      if (i.type === 'task') {
+        const s = i.src && i.src.key ? (i.src.url ? `[${i.src.key}](${i.src.url})` : i.src.key) : '';
+        const bits = [STATUS_NAMES[i.status] || STATUS_NAMES.todo, i.who && '👤 ' + i.who, i.est && '⏱ ' + i.est, i.due && '📅 ' + i.due, ...(i.tags || []).map((t) => '#' + String(t).replace(/\s+/g, '-')), s].filter(Boolean);
+        return `- [${i.status === 'done' ? 'x' : ' '}] **${one(i.text) || 'Задача'}** · ${bits.join(' · ')}${vs(i)}`;
+      }
+      if (i.type === 'web') return `- [${one(i.title) || i.url}](${i.url})${vs(i)}`;
+      if (i.type === 'board') return `- [${one(i.title) || 'Дошка JamBoard'}](${o.boardUrl ? o.boardUrl(i.bid) : '#b=' + i.bid})${vs(i)}`;
+      if (i.type === 'image') return `- 🖼 Зображення${/^https:\/\//.test(i.url || '') ? ` (${i.url})` : ''}${vs(i)}`;
+      if (i.type === 'text') {
+        const t = plain(i).trim(); if (!t) return '';
+        return (i.ts === 'h1' ? '### ' : i.ts === 'h2' ? '#### ' : '') + (i.ts === 'h1' || i.ts === 'h2' ? one(t) : t) + vs(i);
+      }
+      const t = plain(i).trim();
+      return t.includes('\n') ? '- ' + t.split('\n').map((l, k) => (k ? '  ' + l : l)).join('\n') + vs(i) : '- ' + (t || '_(порожній стікер)_') + vs(i);
+    };
+    const put = (list) => ranked(list).forEach((i) => { const s = line(i); if (s) L.push(s); });
+    L.push('# ' + (one(o.title) || 'Дошка JamBoard'), '');
+    const nodes = all.filter((i) => i.type === 'node');
+    const cards = all.filter((i) => isCardT(i) && i.type !== 'node');
+    const homes = new Map(); // container id → cards
+    const loose = [];
+    for (const i of cards) {
+      const g = gridOf(i, byId), s = g ? null : secOf(i, all), k = g ? g.id : s ? s.id : null;
+      if (!k) { loose.push(i); continue; }
+      if (!homes.has(k)) homes.set(k, []); homes.get(k).push(i);
+    }
+    const boxes = all.filter((i) => isGrid(i) || i.type === 'section').sort(read);
+    for (const b of boxes) {
+      const list = homes.get(b.id) || [];
+      if (b.type === 'section') { if (!list.length) continue; L.push('## ' + (one(b.title) || 'Секція'), ''); put(list); L.push(''); continue; }
+      const d = dims(b), named = d.rows.length > 0;
+      L.push('## ' + (one(b.title) || (b.type === 'timeline' ? 'Таймлайн' : 'Таблиця')), '');
+      const inCell = (c, r) => list.filter((i) => { const q = cellOf(b, i); return q[0] === c && q[1] === r; });
+      if (b.kind === 'matrix') {
+        for (let r = 0; r < d.nr; r++) for (let c = 0; c < d.nc; c++) {
+          const nm = (b.cells || [])[r * d.nc + c], ax = [column(b, c).t, rowName(b, r)].filter(Boolean).join(' · ');
+          L.push('### ' + (one(nm) || ax || `Клітинка ${c + 1}.${r + 1}`) + (nm && ax ? ` (${ax})` : ''), ''); put(inCell(c, r)); L.push('');
+        }
+        continue;
+      }
+      for (let c = 0; c < d.nc; c++) {
+        const h = column(b, c);
+        L.push('### ' + (one(h.t) || `Колонка ${c + 1}`) + (h.d ? ' · ' + h.d : ''), '');
+        for (let r = 0; r < d.nr; r++) {
+          const here = inCell(c, r); if (!here.length) continue;
+          if (named) L.push(`**${one(rowName(b, r)) || 'Рядок ' + (r + 1)}**`, '');
+          put(here); L.push('');
+        }
+      }
+    }
+    if (loose.length) { if (boxes.length || nodes.length) L.push('## Інше на дошці', ''); put(loose); L.push(''); }
+    if (nodes.length) {
+      const nid = new Map(nodes.map((n, k) => [n.id, 'n' + (k + 1)]));
+      const q = (s) => '"' + (one(s) || ' ').replace(/"/g, '#quot;') + '"';
+      const wrap = { rect: ['[', ']'], round: ['(', ')'], pill: ['([', '])'], circle: ['((', '))'], diamond: ['{', '}'], cyl: ['[(', ')]'], hex: ['{{', '}}'] };
+      const bx = Math.max(...nodes.map((n) => n.x)) - Math.min(...nodes.map((n) => n.x)), by = Math.max(...nodes.map((n) => n.y)) - Math.min(...nodes.map((n) => n.y));
+      L.push('## Схема', '', '```mermaid', 'flowchart ' + (bx >= by ? 'LR' : 'TD'));
+      for (const n of nodes) { const [a, b] = wrap[n.shape] || wrap.rect; L.push(`  ${nid.get(n.id)}${a}${q(n.text)}${b}`); }
+      for (const l of all) {
+        if (l.type !== 'link' || !nid.has(l.a) || !nid.has(l.b)) continue;
+        const op = l.thick ? (l.flow === false ? '===' : '==>') : l.dash ? (l.flow === false ? '-.-' : '-.->') : l.flow === false ? '---' : '-->';
+        L.push(`  ${nid.get(l.a)} ${op}${l.label ? '|' + q(l.label) + '|' : ''} ${nid.get(l.b)}`);
+      }
+      L.push('```', '');
+    }
+    const name = (i) => (!i ? '?' : hidden(i) ? 'прихована картка' : i.type === 'section' || isGrid(i) ? one(i.title) : one(i.type === 'task' || i.type === 'node' ? i.text : i.type === 'web' || i.type === 'board' ? i.title : plain(i)).slice(0, 60) || i.type);
+    const ropes = all.filter((l) => l.type === 'link' && byId.has(l.a) && byId.has(l.b) && !(byId.get(l.a).type === 'node' && byId.get(l.b).type === 'node'));
+    if (ropes.length) { L.push('## Зв’язки', ''); ropes.forEach((l) => L.push(`- ${name(byId.get(l.a))} → ${name(byId.get(l.b))}${l.label ? ' (' + one(l.label) + ')' : ''}`)); L.push(''); }
+    const notes = all.filter((i) => i.type === 'comment' && Array.isArray(i.msgs) && i.msgs.length);
+    if (notes.length) {
+      L.push('## Коментарі', '');
+      for (const c of notes) { c.msgs.forEach((m) => L.push(`> **${one(m.n) || 'Гість'}**: ${one(m.t)}`)); L.push(''); }
+    }
+    return L.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
+  }
+
+  // ---------- task cards: where a task came from (Jira, Linear, GitHub) ----------
+  // A source turns a pasted issue link into { p, key, url }. One that can be read without a sign-in also has
+  // api(m) → JSON url and read(json) → task fields; the others are filled in later through the MCP server.
+  const SOURCES = {
+    github: {
+      name: 'GitHub',
+      match: (u) => { const m = /^https:\/\/github\.com\/([\w.-]+)\/([\w.-]+)\/(issues|pull)\/(\d+)/.exec(u); return m && { p: 'github', key: `${m[1]}/${m[2]}#${m[4]}`, url: m[0], api: `https://api.github.com/repos/${m[1]}/${m[2]}/issues/${m[4]}` }; },
+      read: (j) => j && typeof j.title === 'string' ? { text: j.title.slice(0, 400), status: j.state === 'closed' ? 'done' : j.pull_request ? 'review' : (j.assignee ? 'doing' : 'todo'), who: j.assignee && j.assignee.login ? String(j.assignee.login).slice(0, 40) : undefined, tags: Array.isArray(j.labels) ? j.labels.map((l) => String(l && l.name || '').slice(0, 24)).filter(Boolean).slice(0, 8) : undefined } : null,
+    },
+    jira: { name: 'Jira', match: (u) => { const m = /^https:\/\/[\w-]+\.atlassian\.net\/(?:browse\/|.*[?&]selectedIssue=)([A-Z][A-Z0-9_]+-\d+)/.exec(u); return m && { p: 'jira', key: m[1], url: u.split('#')[0].slice(0, 500) }; } },
+    linear: { name: 'Linear', match: (u) => { const m = /^https:\/\/linear\.app\/[\w-]+\/issue\/([A-Z][A-Z0-9]*-\d+)/.exec(u); return m && { p: 'linear', key: m[1], url: m[0] }; } },
+  };
+  const source = (u) => { for (const k in SOURCES) { const m = SOURCES[k].match(String(u || '')); if (m) return m; } return null; };
+
+  return { TOP, SIDE, PAD, UNITS, STATUSES, STATUS_NAMES, TEMPLATES, SOURCES, isGrid, dayOf, isoOf, localDay, thisMonday, dims, sizeFor, column, nowAt, rowName, cellRect, cellAt, cellOf, snap, slotIn, template, sortByVotes, markdown, source };
+})();
+// </plan>
+
 // ---------- helpers ----------
-const isCard = (i) => ['sticky', 'image', 'text', 'web', 'node', 'board'].includes(i.type);
+const isCard = (i) => ['sticky', 'image', 'text', 'web', 'node', 'board', 'task'].includes(i.type);
+const isGrid = Plan.isGrid;
 const centerIn = (i, s) => { const cx = i.x + i.w / 2, cy = i.y + i.h / 2; return cx >= s.x && cx <= s.x + s.w && cy >= s.y && cy <= s.y + s.h; };
 function ownerOf(i, all) {
   if (!isCard(i)) return null;
@@ -377,8 +641,116 @@ const num = (v) => (typeof v === 'number' && isFinite(v) ? Math.round(v) : undef
 // https://…/jamboard/#b=<id> (any host serving JamBoard) → the board id
 const boardOfUrl = (u) => { try { const x = new URL(u); if (!/\/jamboard\/?(index\.html)?$/.test(x.pathname) && !/github\.io$/.test(x.hostname)) return null; const m = /(?:^#|[#&?])b=([A-Za-z0-9_-]{20,64})(?:&|$)/.exec(x.hash + '&' + x.search.replace(/^\?/, '&')); return m ? m[1] : null; } catch { return null; } };
 function safeHttps(u) { try { const x = new URL(String(u).replace(/^http:/i, 'https:')); return x.protocol === 'https:' ? x.href : null; } catch { return null; } }
+const strs = (a, n, len) => (Array.isArray(a) ? a.slice(0, n).map((v) => (typeof v === 'string' ? v.slice(0, len) : String(v ?? '').slice(0, len))) : undefined);
+const clampN = (v, a, b, d) => { const n = Math.round(Number(v)); return isFinite(n) ? Math.max(a, Math.min(b, n)) : d; };
 
-function summary(i) {
+// ---------- timelines and tables ----------
+const gridLabel = (g) => (g.type === 'timeline' ? 'timeline' : g.kind === 'matrix' ? 'matrix' : 'table');
+// a column given as a 1-based number, a header name, or (timeline) a YYYY-MM-DD date inside it → 0-based index
+function colIndex(g, v) {
+  const d = Plan.dims(g);
+  if (v == null || v === '') return 0;
+  if (typeof v === 'number') return Math.max(0, Math.min(d.nc - 1, Math.round(v) - 1));
+  const s = String(v).trim(), day = Plan.dayOf(s);
+  if (day != null && g.type === 'timeline') { for (let i = 0; i < d.nc; i++) { const c = Plan.column(g, i); if (day >= c.from && day <= c.to) return i; } throw new Error(`Date ${s} is outside the timeline "${g.title || g.id}"`); }
+  if (/^\d+$/.test(s)) return Math.max(0, Math.min(d.nc - 1, +s - 1));
+  const low = s.toLowerCase();
+  for (let i = 0; i < d.nc; i++) { const c = Plan.column(g, i); if (String(c.t).toLowerCase() === low || (g.names && String(g.names[i] || '').toLowerCase() === low)) return i; }
+  for (let i = 0; i < d.nc; i++) if (String(Plan.column(g, i).t).toLowerCase().includes(low)) return i;
+  throw new Error(`No column "${s}" in "${g.title || g.id}"`);
+}
+function rowIndex(g, v) {
+  const d = Plan.dims(g);
+  if (v == null || v === '') return 0;
+  if (typeof v === 'number') return Math.max(0, Math.min(d.nr - 1, Math.round(v) - 1));
+  const s = String(v).trim(); if (/^\d+$/.test(s)) return Math.max(0, Math.min(d.nr - 1, +s - 1));
+  const low = s.toLowerCase(), i = d.rows.findIndex((r) => String(r).toLowerCase() === low);
+  if (i >= 0) return i;
+  const j = d.rows.findIndex((r) => String(r).toLowerCase().includes(low)); if (j >= 0) return j;
+  throw new Error(`No ${g.type === 'timeline' ? 'lane' : 'row'} "${s}" in "${g.title || g.id}"`);
+}
+// in a matrix a cell can also be named by its label ("Швидкі перемоги")
+function matrixCell(g, v) {
+  if (g.kind !== 'matrix' || typeof v !== 'string') return null;
+  const d = Plan.dims(g), k = (g.cells || []).findIndex((c) => String(c).toLowerCase() === v.trim().toLowerCase());
+  return k >= 0 ? [k % d.nc, Math.floor(k / d.nc)] : null;
+}
+const cellName = (g, c) => {
+  if (g.kind === 'matrix' && g.cells && g.cells[c[1] * Plan.dims(g).nc + c[0]]) return g.cells[c[1] * Plan.dims(g).nc + c[0]];
+  const h = Plan.column(g, c[0]), r = Plan.rowName(g, c[1]);
+  return [h.t + (h.d ? ' (' + h.d + ')' : ''), r].filter(Boolean).join(' / ');
+};
+const gridMembers = (g, all) => all.filter((i) => isCard(i) && i.grid === g.id);
+// cards keep their place inside their cell when the grid changes shape (same rule as the board)
+function memberOffsets(g, all) {
+  return gridMembers(g, all).map((m) => { const c = Plan.cellOf(g, m), R = Plan.cellRect(g, c[0], c[1]); return { m, c, fx: (m.x - R.x) / R.w, fy: (m.y - R.y) / R.h }; });
+}
+function resnap(g, offs) {
+  const d = Plan.dims(g);
+  for (const o of offs) {
+    const c = [Math.min(o.c[0], d.nc - 1), Math.min(o.c[1], d.nr - 1)], R = Plan.cellRect(g, c[0], c[1]);
+    o.m.cell = c; const q = Plan.snap(g, { ...o.m, x: R.x + o.fx * R.w, y: R.y + o.fy * R.h }, c); o.m.x = q.x; o.m.y = q.y;
+  }
+}
+function gridFields(it, spec) { // timeline / table fields from a tool call, normalised like the board does
+  if (spec.title != null) it.title = String(spec.title).slice(0, 120);
+  if (it.type === 'timeline') {
+    if (spec.unit != null) { if (!Plan.UNITS.includes(spec.unit)) throw new Error('unit: day, week, sprint or month'); it.unit = spec.unit; }
+    if (spec.start != null) { if (Plan.dayOf(spec.start) == null) throw new Error('start: a YYYY-MM-DD date'); it.start = spec.start; }
+    if (spec.columns != null) { if (Array.isArray(spec.columns)) { it.n = clampN(spec.columns.length, 1, 60, 4); it.names = strs(spec.columns, 60, 40); } else it.n = clampN(spec.columns, 1, 60, 4); }
+    if (spec.column_names != null) it.names = strs(spec.column_names, 60, 40) || [];
+    if (spec.sprint_days != null) it.len = clampN(spec.sprint_days, 1, 70, 14);
+    if (spec.first_sprint != null) it.k = clampN(spec.first_sprint, 0, 9999, 1);
+    if (spec.lanes != null) it.lanes = strs(spec.lanes, 12, 60) || [];
+  } else {
+    if (spec.columns != null) { const c = strs(spec.columns, 20, 60); if (!c || !c.length) throw new Error('columns: a list of column names'); it.cols = c; }
+    if (spec.rows != null) it.rows = strs(spec.rows, 20, 60) || [];
+    if (spec.cells != null) it.cells = strs(spec.cells, 400, 60) || [];
+    if (spec.axes != null) it.ax = strs(spec.axes, 2, 40) || [];
+    if (spec.matrix === true) it.kind = 'matrix'; else if (spec.matrix === false) delete it.kind;
+    if (spec.tints != null) it.tint = (Array.isArray(spec.tints) ? spec.tints : []).slice(0, 20).map((c) => stickyColor(c) || '');
+  }
+}
+function taskFields(it, spec) {
+  if (spec.text != null) it.text = String(spec.text).slice(0, 400);
+  if (spec.status != null) { if (!Plan.STATUSES.includes(spec.status)) throw new Error('status: ' + Plan.STATUSES.join(', ')); it.status = spec.status; }
+  for (const [k, f, n] of [['who', 'who', 40], ['assignee', 'who', 40], ['estimate', 'est', 16]]) if (spec[k] != null) { const v = String(spec[k]).trim().slice(0, n); if (v) it[f] = v; else delete it[f]; }
+  if (spec.due != null) { if (spec.due === '') delete it.due; else if (Plan.dayOf(spec.due) == null) throw new Error('due: a YYYY-MM-DD date'); else it.due = spec.due; }
+  if (spec.tags != null) { const t = (strs(spec.tags, 8, 24) || []).map((x) => x.trim()).filter(Boolean); if (t.length) it.tags = t; else delete it.tags; }
+  if (spec.url != null) {
+    if (spec.url === '') delete it.src;
+    else { const m = Plan.source(safeHttps(spec.url) || ''); if (!m) throw new Error('url: a Jira, Linear or GitHub issue link'); it.src = { p: m.p, key: m.key, url: m.url, at: Date.now() }; }
+  }
+}
+async function pullTask(it) { // fills a task from its tracker when that needs no sign-in (GitHub); others are filled by the agent via update_items
+  const src = it.src && Plan.SOURCES[it.src.p]; if (!src || !src.read) return false;
+  const m = src.match(it.src.url); if (!m || !m.api) return false;
+  try {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 6000);
+    const r = await fetch(m.api, { signal: ctl.signal, headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'jamboard-mcp' } }); clearTimeout(t);
+    if (!r.ok) return false;
+    const f = src.read(await r.json()); if (!f) return false;
+    for (const k in f) if (f[k] !== undefined) it[k] = f[k];
+    if (!it.tags || !it.tags.length) delete it.tags;
+    it.src.at = Date.now(); return true;
+  } catch { return false; }
+}
+// retro state of a board (hidden writing and dot voting)
+async function retroState(board) {
+  const [hide, vote, rows] = await Promise.all([getDoc(bdoc(board, 'mode/hide')), getDoc(bdoc(board, 'mode/vote')), listColl(bdoc(board, 'votes'))]);
+  const h = hide && hide.on === true && typeof hide.s === 'string' ? { on: true, s: hide.s, by: hide.by } : { on: false, s: hide && hide.s };
+  const v = vote && ['live', 'results'].includes(vote.st) && typeof vote.s === 'string' ? { st: vote.st, s: vote.s, n: clampN(vote.n, 1, 20, 3), show: vote.show === true, by: vote.by } : { st: 'idle' };
+  const tally = {}, voters = [];
+  if (v.st !== 'idle') for (const r of rows || []) {
+    const d = r.data; if (!d || d.s !== v.s || !d.v || typeof d.v !== 'object') continue;
+    let used = 0; for (const id in d.v) { const n = Math.min(20, Math.max(0, Math.round(+d.v[id]) || 0)); if (n) { tally[id] = (tally[id] || 0) + n; used += n; } }
+    if (used) voters.push({ name: String(d.n || 'Гість').slice(0, 32), used });
+  }
+  return { hide: h, vote: v, tally, voters };
+}
+const isHidden = (i, r) => !!(r && r.hide.on && i.hid && i.hid === r.hide.s);
+
+function summary(i, all, retro) {
   const o = { id: i.id, type: i.type, x: i.x, y: i.y, w: i.w, h: i.h };
   if (i.type === 'sticky' || i.type === 'text') o.text = i.text || '';
   if (i.type === 'text') o.style = i.ts || 'p';
@@ -390,6 +762,16 @@ function summary(i) {
   if (i.type === 'node') { o.text = i.text || ''; o.shape = i.shape || 'rect'; o.icon = i.icon || 'none'; }
   if (i.type === 'link') { if (i.flow === false) o.arrow = false; if (i.dash) o.dash = true; if (i.thick) o.thick = true; }
   if (i.type === 'comment') o.messages = (i.msgs || []).map((m) => `${m.n || '?'}: ${m.t || ''}`);
+  if (i.type === 'timeline') {
+    o.title = i.title || ''; o.unit = i.unit || 'week'; o.start = i.start; if (i.unit === 'sprint') { o.sprint_days = i.len || 14; o.first_sprint = i.k ?? 1; }
+    o.columns = Array.from({ length: Plan.dims(i).nc }, (_, k) => { const c = Plan.column(i, k); return c.d ? `${c.t} (${c.d})` : c.t; });
+    o.lanes = i.lanes || [];
+  }
+  if (i.type === 'table') { o.title = i.title || ''; if (i.kind === 'matrix') { o.matrix = true; o.cells = i.cells || []; if (i.ax && i.ax.length) o.axes = i.ax; } o.columns = i.cols || []; o.rows = i.rows || []; }
+  if (i.type === 'task') { o.text = i.text || ''; o.status = i.status || 'todo'; for (const [k, f] of [['who', 'who'], ['estimate', 'est'], ['due', 'due'], ['tags', 'tags']]) if (i[f]) o[k] = i[f]; if (i.src) o.source = { tracker: i.src.p, key: i.src.key, url: i.src.url }; }
+  if (all && i.grid) { const g = all.find((q) => q.id === i.grid); if (g && isGrid(g)) { o.grid = g.id; o.cell = cellName(g, Plan.cellOf(g, i)); } }
+  if (retro && isHidden(i, retro)) { o.hidden = true; if (o.text != null) o.text = '(hidden until revealed)'; }
+  if (retro && retro.tally[i.id]) o.votes = retro.tally[i.id];
   if (i.color) o.color = i.color;
   if (i.sec) o.section = i.sec;
   if (i.by) o.by = i.by;
@@ -421,10 +803,10 @@ function refit(sec, all) {
 const boardArg = { type: 'string', description: 'Board id from list_boards (the part after #b= in a board link).' };
 const TOOLS = [
   { name: 'list_boards', description: 'List the JamBoard boards (id and title).', inputSchema: { type: 'object', properties: {} } },
-  { name: 'get_board', description: 'Read everything on a board: stickies, text, sections, diagram nodes, ropes (links), link cards, stamps, comments. Coordinates are board pixels; a sticky is 200×200. A card\'s "section" is the id of the section it belongs to.', inputSchema: { type: 'object', properties: { board: boardArg } } },
+  { name: 'get_board', description: 'Read everything on a board: stickies, text, sections, timelines, tables and 2×2 matrices, task cards, diagram nodes, ropes (links), link cards, stamps, comments, plus the retro state (hidden writing, dot voting with vote counts). Coordinates are board pixels; a sticky is 200×200. A card\'s "section" is the id of the section it belongs to; "grid" and "cell" say which timeline/table cell it sits in.', inputSchema: { type: 'object', properties: { board: boardArg } } },
   {
     name: 'add_items',
-    description: 'Add items to a board in one go. Types: node (a diagram block for flows and architecture: text, shape rect|round|pill|circle|diamond|cyl|hex, icon service|db|cache|queue|api|user|web|mobile|cloud|storage|fn|lock|mail|none; ropes between two nodes are drawn straight with an arrow), stamp (emoji, on: a card to stamp, size), comment (text: a comment pin, on: a card), sticky (text, color), text (text, style h1|h2|p|s), section (title, color; give other items "section": its ref to put them inside — the section grows to fit), link (a rope from "from" to "to", optional label and color), web (url: a link card with preview; YouTube shows the video thumbnail). Leave x/y out to let the board lay items out in a tidy grid (inside their section if given). Use "ref" to name a new item so links and "section" can point at it in the same call; existing ids work too.',
+    description: 'Add items to a board in one go. Planning types: timeline (title, unit day|week|sprint|month, start YYYY-MM-DD, columns: a count or a list of names, sprint_days, first_sprint, lanes: team or stream names), table (title, columns, rows; matrix: true with cells: the 4 quadrant names and axes [x, y] makes a 2×2 prioritisation matrix), task (text, status todo|doing|review|done, who, estimate, due YYYY-MM-DD, tags, url: a Jira/Linear/GitHub issue link; GitHub issues fill themselves in). Put any card into a timeline or table cell with grid (ref or id) plus column (1-based number, header name, or a YYYY-MM-DD date on a timeline) and lane/row (number or name); in a matrix, cell can be the quadrant name. Other types: node (a diagram block for flows and architecture: text, shape rect|round|pill|circle|diamond|cyl|hex, icon service|db|cache|queue|api|user|web|mobile|cloud|storage|fn|lock|mail|none; ropes between two nodes are drawn straight with an arrow), stamp (emoji, on: a card to stamp, size), comment (text: a comment pin, on: a card), sticky (text, color), text (text, style h1|h2|p|s), section (title, color; give other items "section": its ref to put them inside — the section grows to fit), link (a rope from "from" to "to", optional label and color), web (url: a link card with preview; YouTube shows the video thumbnail). Leave x/y out to let the board lay items out in a tidy grid (inside their section if given). Use "ref" to name a new item so links and "section" can point at it in the same call; existing ids work too.',
     inputSchema: {
       type: 'object', required: ['items'],
       properties: {
@@ -434,7 +816,26 @@ const TOOLS = [
           items: {
             type: 'object', required: ['type'],
             properties: {
-              type: { type: 'string', enum: ['sticky', 'text', 'section', 'link', 'web', 'stamp', 'comment', 'node'] },
+              type: { type: 'string', enum: ['sticky', 'text', 'section', 'link', 'web', 'stamp', 'comment', 'node', 'timeline', 'table', 'task'] },
+              unit: { type: 'string', enum: ['day', 'week', 'sprint', 'month'], description: 'Timeline: what one column is (default week).' },
+              start: { type: 'string', description: 'Timeline: first day, YYYY-MM-DD (default: this Monday).' },
+              columns: { description: 'Timeline: number of columns, or a list of custom column names. Table: list of column names.', anyOf: [{ type: 'number' }, { type: 'array', items: { type: 'string' } }] },
+              sprint_days: { type: 'number', description: 'Timeline with unit sprint: sprint length in days (default 14).' },
+              first_sprint: { type: 'number', description: 'Timeline with unit sprint: number of the first sprint (default 1).' },
+              lanes: { type: 'array', items: { type: 'string' }, description: 'Timeline: swimlanes (teams, streams). Empty = one lane.' },
+              rows: { type: 'array', items: { type: 'string' }, description: 'Table: row names (empty = one row).' },
+              matrix: { type: 'boolean', description: 'Table: a 2×2 (or larger) matrix where cards stay where they are put.' },
+              cells: { type: 'array', items: { type: 'string' }, description: 'Matrix: cell names, row by row (e.g. Quick wins, Big bets, Fill-ins, Time sinks).' },
+              axes: { type: 'array', items: { type: 'string' }, description: 'Matrix: axis names [x, y].' },
+              tints: { type: 'array', items: { type: 'string' }, description: 'Table: a colour per column header.' },
+              status: { type: 'string', enum: ['todo', 'doing', 'review', 'done'], description: 'Task status.' },
+              who: { type: 'string', description: 'Task assignee.' }, estimate: { type: 'string', description: 'Task estimate, e.g. "3 SP" or "2d".' },
+              due: { type: 'string', description: 'Task due date YYYY-MM-DD.' }, tags: { type: 'array', items: { type: 'string' }, description: 'Task tags (up to 8).' },
+              grid: { type: 'string', description: 'Ref or id of a timeline or table to put this card into.' },
+              column: { description: 'With grid: column as a 1-based number, its name, or (timeline) a YYYY-MM-DD date.', anyOf: [{ type: 'number' }, { type: 'string' }] },
+              lane: { description: 'With grid: timeline lane or table row, 1-based number or name.', anyOf: [{ type: 'number' }, { type: 'string' }] },
+              row: { description: 'Same as lane (for tables).', anyOf: [{ type: 'number' }, { type: 'string' }] },
+              cell: { type: 'string', description: 'With grid on a matrix: the cell name, e.g. "Швидкі перемоги".' },
               shape: { type: 'string', enum: Flow.SHAPES, description: 'Node shape. cyl is a database, diamond a decision.' },
               icon: { type: 'string', enum: Flow.ICONS, description: 'Node icon (guessed from the text when left out).' },
               arrow: { type: 'boolean', description: 'Link: false hides the arrow and the moving dot (no direction).' },
@@ -450,7 +851,7 @@ const TOOLS = [
               section: { type: 'string', description: 'Ref or id of the section to place this card in.' },
               from: { type: 'string', description: 'Link start: ref or id.' }, to: { type: 'string', description: 'Link end: ref or id.' },
               label: { type: 'string', description: 'Link name shown on the rope.' },
-              url: { type: 'string', description: 'For web cards: an https link. A JamBoard board link (…/jamboard/#b=<id>) becomes a board card with its cover and a preview.' },
+              url: { type: 'string', description: 'For web cards: an https link. A JamBoard board link (…/jamboard/#b=<id>) becomes a board card with its cover and a preview. For tasks: the issue link in Jira, Linear or GitHub.' },
               x: { type: 'number' }, y: { type: 'number' }, w: { type: 'number' }, h: { type: 'number' },
             },
           },
@@ -460,8 +861,11 @@ const TOOLS = [
   },
   {
     name: 'update_items',
-    description: 'Change existing items: text, title, color, style, label, node shape and icon, link arrow/dash/thick, position (x, y), size (w, h), section (id, or "" to take a card out of its section). Only the fields you pass change.',
-    inputSchema: { type: 'object', required: ['changes'], properties: { board: boardArg, changes: { type: 'array', minItems: 1, maxItems: 200, items: { type: 'object', required: ['id'], properties: { id: { type: 'string' }, text: { type: 'string' }, shape: { type: 'string', enum: Flow.SHAPES }, icon: { type: 'string', enum: Flow.ICONS }, arrow: { type: 'boolean' }, dash: { type: 'boolean' }, thick: { type: 'boolean' }, title: { type: 'string' }, color: { type: 'string' }, style: { type: 'string', enum: TEXT_STYLES }, label: { type: 'string' }, section: { type: 'string' }, x: { type: 'number' }, y: { type: 'number' }, w: { type: 'number' }, h: { type: 'number' } } } } } },
+    description: 'Change existing items: text, title, color, style, label, node shape and icon, link arrow/dash/thick, position (x, y), size (w, h), section (id, or "" to take a card out of its section). Tasks: status, who, estimate, due, tags, url. Timelines/tables: title, unit, start, columns, sprint_days, first_sprint, lanes, rows, cells, axes, tints (cards keep their cells; moving one moves its cards). Move a card into a cell with grid + column + lane/row (or cell on a matrix), or grid "" to take it out. Only the fields you pass change.',
+    inputSchema: { type: 'object', required: ['changes'], properties: { board: boardArg, changes: { type: 'array', minItems: 1, maxItems: 200, items: { type: 'object', required: ['id'], properties: { id: { type: 'string' }, text: { type: 'string' },
+      status: { type: 'string', enum: ['todo', 'doing', 'review', 'done'] }, who: { type: 'string' }, estimate: { type: 'string' }, due: { type: 'string', description: 'YYYY-MM-DD, or "" to clear.' }, tags: { type: 'array', items: { type: 'string' } }, url: { type: 'string', description: 'Task: tracker issue link, or "" to unlink.' },
+      unit: { type: 'string', enum: ['day', 'week', 'sprint', 'month'] }, start: { type: 'string' }, columns: { anyOf: [{ type: 'number' }, { type: 'array', items: { type: 'string' } }] }, sprint_days: { type: 'number' }, first_sprint: { type: 'number' }, lanes: { type: 'array', items: { type: 'string' } }, rows: { type: 'array', items: { type: 'string' } }, cells: { type: 'array', items: { type: 'string' } }, axes: { type: 'array', items: { type: 'string' } }, tints: { type: 'array', items: { type: 'string' } }, matrix: { type: 'boolean' },
+      grid: { type: 'string', description: 'Timeline/table id to move the card into, or "" to take it out.' }, column: { anyOf: [{ type: 'number' }, { type: 'string' }] }, lane: { anyOf: [{ type: 'number' }, { type: 'string' }] }, row: { anyOf: [{ type: 'number' }, { type: 'string' }] }, cell: { type: 'string' }, shape: { type: 'string', enum: Flow.SHAPES }, icon: { type: 'string', enum: Flow.ICONS }, arrow: { type: 'boolean' }, dash: { type: 'boolean' }, thick: { type: 'boolean' }, title: { type: 'string' }, color: { type: 'string' }, style: { type: 'string', enum: TEXT_STYLES }, label: { type: 'string' }, section: { type: 'string' }, x: { type: 'number' }, y: { type: 'number' }, w: { type: 'number' }, h: { type: 'number' } } } } } },
   },
   {
     name: 'add_mermaid',
@@ -470,6 +874,31 @@ const TOOLS = [
   },
   { name: 'delete_items', description: 'Delete items by id. Ropes attached to deleted cards go too. Deleting a section keeps its cards.', inputSchema: { type: 'object', required: ['ids'], properties: { board: boardArg, ids: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 500 } } } },
   { name: 'create_board', description: 'Create a new empty board and return its id.', inputSchema: { type: 'object', required: ['title'], properties: { title: { type: 'string' } } } },
+  {
+    name: 'add_template',
+    description: 'Put a ready-made planning or retro template on the board (placed to the right of existing content unless x/y are given): sprints (timeline of 2-week sprints with team lanes), weeks (6-week timeline), roadmap (Now/Next/Later table), matrix (Impact/Effort 2×2), table (3×2), sprint (sprint goal + backlog/commit/risks), ssc (Start/Stop/Continue retro), msg (Mad/Sad/Glad), 4l (Liked/Learned/Lacked/Longed for), sail (sailboat retro). Returns the ids; fill it with add_items using grid + column/lane.',
+    inputSchema: { type: 'object', required: ['template'], properties: { board: boardArg, template: { type: 'string', enum: Plan.TEMPLATES.map((t) => t[0]) }, title: { type: 'string', description: 'Optional title for the main timeline/table.' }, x: { type: 'number' }, y: { type: 'number' } } },
+  },
+  {
+    name: 'voting',
+    description: 'Run dot voting for everyone on the board. start (votes per person 1–20, show_others: see others\' dots live), stop (end it and show results to all), status (counts so far, ranked cards), sort (after voting: move the most voted cards to the top of their cell or section), clear (remove the results). People vote by clicking cards in the app.',
+    inputSchema: { type: 'object', required: ['action'], properties: { board: boardArg, action: { type: 'string', enum: ['start', 'stop', 'status', 'sort', 'clear'] }, votes_per_person: { type: 'number', description: 'For start: 1–20 (default 3).' }, show_others: { type: 'boolean', description: 'For start: show everyone\'s dots while voting (default false: only after the vote).' } } },
+  },
+  {
+    name: 'hidden_writing',
+    description: 'Silent brainstorming: while on, new stickies, text and tasks are visible only to their author (others see "… пише"), so nobody anchors on others\' ideas. on starts it, off reveals every card to everyone, status tells whether it is on and how many cards are hidden. get_board hides their text too while it is on.',
+    inputSchema: { type: 'object', required: ['action'], properties: { board: boardArg, action: { type: 'string', enum: ['on', 'off', 'status'] } } },
+  },
+  {
+    name: 'export_markdown',
+    description: 'The board as Markdown: sections, timelines by column and lane, tables and matrices by cell, task checklists with status/assignee/estimate, diagrams as a mermaid block, ropes and comments. Vote counts are included after a vote; hidden cards stay hidden. Pass ids to export only those items (containers bring their cards).',
+    inputSchema: { type: 'object', properties: { board: boardArg, ids: { type: 'array', items: { type: 'string' } } } },
+  },
+  {
+    name: 'sync_tasks',
+    description: 'Refresh task cards from their tracker. GitHub issues and PRs are read directly (title, open/closed, assignee, labels). Jira and Linear need a sign-in, so they are listed under needs_agent: read them with your Jira/Linear tools and write the fields back with update_items (text, status, who, estimate, due, tags).',
+    inputSchema: { type: 'object', properties: { board: boardArg, ids: { type: 'array', items: { type: 'string' }, description: 'Task ids (default: every task with a link).' } } },
+  },
   { name: 'timer', description: 'Control the board\'s shared timer that everyone sees: start (with minutes), pause, resume, reset, or status.', inputSchema: { type: 'object', required: ['action'], properties: { board: boardArg, action: { type: 'string', enum: ['start', 'pause', 'resume', 'reset', 'status'] }, minutes: { type: 'number', description: 'For start: 0.1 to 120.' } } } },
 ];
 
@@ -486,8 +915,11 @@ async function callTool(name, a) {
   const board = a.board;
   if (!validBoard(board)) throw new Error('Pass board: an id from list_boards');
   if (name === 'get_board') {
-    const all = await loadItems(board);
-    return { board, count: all.length, items: all.sort((p, q) => (p.type === 'section' ? -1 : 0) - (q.type === 'section' ? -1 : 0) || p.y - q.y || p.x - q.x).map(summary) };
+    const [all, r] = await Promise.all([loadItems(board), retroState(board)]);
+    const back = (i) => (i.type === 'section' || isGrid(i) ? -1 : 0);
+    const out = { board, count: all.length, items: all.sort((p, q) => back(p) - back(q) || p.y - q.y || p.x - q.x).map((i) => summary(i, all, r)) };
+    if (r.hide.on || r.vote.st !== 'idle') out.retro = { hidden_writing: r.hide.on, voting: r.vote.st, votes_per_person: r.vote.n, voters: r.voters };
+    return out;
   }
   if (name === 'timer') {
     const cur = (await getDoc(timerPath(board))) || { dur: 300000 };
@@ -505,6 +937,84 @@ async function callTool(name, a) {
   const all = await loadItems(board);
   const byId = new Map(all.map((i) => [i.id, i]));
   let z = all.reduce((m, i) => Math.max(m, i.z || 0), 0);
+  const plain = (i) => (typeof i.text === 'string' && i.text ? i.text : String(i.html || '').replace(/<(br|\/div|\/h[126])\b[^>]*>/gi, '\n').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').trim());
+  const label = (i, r) => (isHidden(i, r) ? '(hidden card)' : (i.type === 'web' || i.type === 'board' || i.type === 'section' || isGrid(i) ? i.title || i.url : plain(i)) || i.type).replace(/\s+/g, ' ').slice(0, 100);
+  // the section a card is in by geometry (used for cards put into a timeline that sits in a section)
+  const geoSec = (i, list) => { const { sec, ...rest } = i; return ownerOf(rest, list); };
+
+  if (name === 'add_template') {
+    const key = String(a.template || '');
+    if (!Plan.TEMPLATES.some((t) => t[0] === key)) throw new Error('template: ' + Plan.TEMPLATES.map((t) => t[0]).join(', '));
+    const list = Plan.template(key, 0, 0, uid, BY, Date.now());
+    const main = list.find(isGrid); if (main && typeof a.title === 'string' && a.title.trim()) main.title = a.title.trim().slice(0, 120);
+    const nb = bbox(list), b0 = bbox(all.filter((i) => i.type !== 'link' && i.type !== 'comment'));
+    const ox = num(a.x) ?? (b0 ? b0.x2 + 200 : 0), oy = num(a.y) ?? (b0 ? b0.y1 + 60 : 0);
+    for (const it of list) { it.x += ox - nb.x1; it.y += oy - nb.y1; it.z = ++z; }
+    await save(board, list);
+    return { added: list.map((i) => summary(i, list)), hint: 'Add cards into it with add_items: { type: "sticky" | "task", text, grid: "<id>", column: <number, name or date>, lane: <number or name> }.' };
+  }
+
+  if (name === 'hidden_writing') {
+    const r = await retroState(board);
+    if (a.action === 'on') {
+      if (r.hide.on) return { hidden_writing: true, note: 'Already on' };
+      await putDocs([{ path: bdoc(board, 'mode/hide'), data: { on: true, s: uid(), by: BY, at: Date.now() } }]);
+      return { hidden_writing: true, note: 'New stickies, text and tasks are now visible only to their authors until revealed.' };
+    }
+    if (a.action === 'off') {
+      const n = all.filter((i) => isHidden(i, r)).length;
+      await putDocs([{ path: bdoc(board, 'mode/hide'), data: { on: false, s: r.hide.s || '', by: BY, at: Date.now() } }]);
+      return { hidden_writing: false, revealed: n };
+    }
+    return { hidden_writing: r.hide.on, hidden_cards: all.filter((i) => isHidden(i, r)).length, started_by: r.hide.on ? r.hide.by : undefined };
+  }
+
+  if (name === 'voting') {
+    let r = await retroState(board);
+    const put = (d) => putDocs([{ path: bdoc(board, 'mode/vote'), data: { ...d, by: BY, at: Date.now() } }]);
+    if (a.action === 'start') {
+      const n = clampN(a.votes_per_person, 1, 20, 3);
+      await put({ st: 'live', s: uid(), n, show: a.show_others === true });
+      return { voting: 'live', votes_per_person: n, note: `Everyone on the board now has ${n} votes: a click on a card adds one. Call voting stop to show the results.` };
+    }
+    if (a.action === 'clear') { await put({ st: 'idle' }); return { voting: 'idle' }; }
+    if (a.action === 'stop') {
+      if (r.vote.st !== 'live') throw new Error('No vote is running');
+      const { st, ...rest } = r.vote; await put({ ...rest, st: 'results' }); r = { ...r, vote: { ...r.vote, st: 'results' } };
+    }
+    if (a.action === 'sort') {
+      if (r.vote.st === 'idle') throw new Error('No vote results to sort by');
+      const moves = Plan.sortByVotes(all, r.tally), moved = [];
+      for (const m of moves) { const it = byId.get(m.id); if (it) { it.x = m.x; it.y = m.y; moved.push(it); } }
+      await save(board, moved);
+      return { moved: moved.length };
+    }
+    const ranked = Object.entries(r.tally).filter(([id]) => byId.has(id)).sort((p, q) => q[1] - p[1]).slice(0, 40).map(([id, n]) => ({ id, votes: n, type: byId.get(id).type, text: label(byId.get(id), r) }));
+    return { voting: r.vote.st, votes_per_person: r.vote.n, voters: r.voters, ranked };
+  }
+
+  if (name === 'export_markdown') {
+    const [r, meta] = await Promise.all([retroState(board), getDoc(board === 'main' ? 'board/meta' : 'boards/' + board)]);
+    let list = all;
+    if (Array.isArray(a.ids) && a.ids.length) {
+      const ids = new Set(a.ids.map(String));
+      for (const i of all) if (ids.has(i.id)) { if (isGrid(i)) gridMembers(i, all).forEach((m) => ids.add(m.id)); if (i.type === 'section') all.filter((m) => ownerOf(m, all) === i).forEach((m) => ids.add(m.id)); }
+      list = all.filter((i) => ids.has(i.id) || (i.type === 'link' && ids.has(i.a) && ids.has(i.b)));
+    }
+    return { markdown: Plan.markdown(list, { title: meta && meta.title, plain, hidden: (i) => isHidden(i, r), votes: r.vote.st !== 'idle' ? r.tally : {}, boardUrl: (bid) => APP_URL + '#b=' + bid }) };
+  }
+
+  if (name === 'sync_tasks') {
+    const want = Array.isArray(a.ids) && a.ids.length ? new Set(a.ids.map(String)) : null;
+    const tasks = all.filter((i) => i.type === 'task' && i.src && (!want || want.has(i.id)));
+    const updated = [], needs_agent = [], failed = [];
+    for (const t of tasks) {
+      if (Plan.SOURCES[t.src.p] && Plan.SOURCES[t.src.p].read) { if (await pullTask(t)) updated.push(t); else failed.push({ id: t.id, url: t.src.url }); }
+      else needs_agent.push({ id: t.id, tracker: t.src.p, key: t.src.key, url: t.src.url });
+    }
+    await save(board, updated);
+    return { updated: updated.map((i) => summary(i, all)), needs_agent, failed };
+  }
 
   if (name === 'add_items') {
     const list = Array.isArray(a.items) ? a.items.slice(0, 200) : [];
@@ -527,13 +1037,26 @@ async function callTool(name, a) {
       const p = { x: st.x, y: st.y }; st.x += w + 40; st.rowH = Math.max(st.rowH, h); st.col++; return p;
     };
     // sections first, so cards can be placed inside them
-    const order = [...list].sort((p, q) => (p.type === 'section' ? 0 : p.type === 'link' ? 2 : 1) - (q.type === 'section' ? 0 : q.type === 'link' ? 2 : 1));
+    const rank = (t) => (t === 'section' || t === 'timeline' || t === 'table' ? 0 : t === 'link' ? 2 : 1);
+    const order = [...list].sort((p, q) => rank(p.type) - rank(q.type));
     for (const spec of order) {
       const t = spec.type; let it;
       if (t === 'section') {
         it = { id: uid(), type: 'section', x: num(spec.x) ?? 0, y: num(spec.y) ?? 0, w: num(spec.w) ?? 640, h: num(spec.h) ?? 420, color: stickyColor(spec.color) || 'gray', title: str(spec.title ?? spec.text, 120) || 'Нова секція', z: ++z, by: BY };
         if (spec.x == null || spec.y == null) { const p = slot(it.w, it.h); it.x = p.x; it.y = p.y; }
         if (spec.w != null || spec.h != null) it.autofit = false;
+      } else if (t === 'timeline' || t === 'table') {
+        it = { id: uid(), type: t, x: 0, y: 0, w: 0, h: 0, color: stickyColor(spec.color) || 'gray', title: t === 'timeline' ? 'Таймлайн' : 'Таблиця', z: ++z, by: BY };
+        if (t === 'timeline') Object.assign(it, { start: Plan.thisMonday(Date.now()), unit: 'week', n: 6, len: 14, k: 1, lanes: [], names: [] });
+        else Object.assign(it, { cols: ['Колонка 1', 'Колонка 2', 'Колонка 3'], rows: [], cells: [] });
+        if (t === 'timeline' && spec.unit === 'sprint' && spec.columns == null) it.n = 4;
+        gridFields(it, spec);
+        const d = Plan.dims(it), cw = t === 'timeline' ? (it.unit === 'day' ? 220 : 300) : it.kind === 'matrix' ? 480 : 320;
+        const lh = it.kind === 'matrix' ? 380 : d.rows.length ? 250 : 560;
+        Object.assign(it, Plan.sizeFor(it, cw, lh));
+        if (num(spec.w) != null) it.w = Math.max(num(spec.w), d.side + d.nc * 80);
+        if (num(spec.h) != null) it.h = Math.max(num(spec.h), Plan.TOP + d.nr * 80);
+        if (spec.x != null && spec.y != null) { it.x = num(spec.x); it.y = num(spec.y); } else { const p = slot(it.w, it.h + 50); it.x = p.x; it.y = p.y + 50; }
       } else if (t === 'link') {
         const A = resolve(spec.from), B = resolve(spec.to);
         if (!A || !B || !isCard(A) || !isCard(B) || A === B) throw new Error(`Link needs "from" and "to" pointing at two different cards (got ${spec.from} → ${spec.to})`);
@@ -543,7 +1066,12 @@ async function callTool(name, a) {
         if (spec.arrow === false) it.flow = false;
         if (spec.dash === true) it.dash = true;
         if (spec.thick === true) it.thick = true;
-      } else if (t === 'sticky' || t === 'text' || t === 'web' || t === 'node') {
+      } else if (t === 'sticky' || t === 'text' || t === 'web' || t === 'node' || t === 'task') {
+        if (t === 'task') {
+          it = { id: uid(), type: 'task', w: num(spec.w) ?? 280, h: 120, text: '', status: 'todo' };
+          taskFields(it, spec);
+          if (it.src && (await pullTask(it))) taskFields(it, { ...spec, url: undefined }); // what the caller passed wins over the tracker
+        }
         if (t === 'node') {
           const shape = Flow.SHAPES.includes(spec.shape) ? spec.shape : 'rect', text = str(spec.text, 400) || '';
           const icon = Flow.ICONS.includes(spec.icon) ? spec.icon : Flow.guessIcon(text, shape);
@@ -569,12 +1097,21 @@ async function callTool(name, a) {
           const meta = await webMeta(url, !!ym); for (const k in meta) if (meta[k] !== undefined) it[k] = meta[k];
         }
         it.z = ++z; it.by = BY;
-        const sec = spec.section != null ? resolve(spec.section) : null;
-        if (spec.section != null && (!sec || sec.type !== 'section')) throw new Error(`No section "${spec.section}"`);
-        if (spec.x != null && spec.y != null) { it.x = num(spec.x); it.y = num(spec.y); }
-        else { const p = sec ? secSlot(sec, it.w, it.h) : slot(it.w, it.h); it.x = p.x; it.y = p.y; }
-        it.sec = sec ? sec.id : null;
-        if (sec) touched.add(sec);
+        const g = spec.grid != null ? resolve(spec.grid) : null;
+        if (spec.grid != null && (!g || !isGrid(g))) throw new Error(`No timeline or table "${spec.grid}"`);
+        const sec = !g && spec.section != null ? resolve(spec.section) : null;
+        if (!g && spec.section != null && (!sec || sec.type !== 'section')) throw new Error(`No section "${spec.section}"`);
+        if (g) { // into a timeline or table cell, under the cards already there
+          const cell = matrixCell(g, spec.cell) || [colIndex(g, spec.column), rowIndex(g, spec.lane ?? spec.row)];
+          const q = spec.x != null && spec.y != null ? Plan.snap(g, { ...it, x: num(spec.x), y: num(spec.y) }, cell) : Plan.slotIn(g, cell, it.w, it.h, gridMembers(g, all.concat(made)));
+          it.x = q.x; it.y = q.y; it.grid = g.id; it.cell = cell;
+          const home = geoSec(it, all.concat(made)); it.sec = home ? home.id : null;
+        } else {
+          if (spec.x != null && spec.y != null) { it.x = num(spec.x); it.y = num(spec.y); }
+          else { const p = sec ? secSlot(sec, it.w, it.h) : slot(it.w, it.h); it.x = p.x; it.y = p.y; }
+          it.sec = sec ? sec.id : null;
+          if (sec) touched.add(sec);
+        }
       } else if (t === 'stamp' || t === 'comment') {
         const card = spec.on != null ? resolve(spec.on) : null;
         if (spec.on != null && (!card || !isCard(card))) throw new Error(`No card "${spec.on}" for the ${t}`);
@@ -606,7 +1143,13 @@ async function callTool(name, a) {
     const changed = new Set(), touched = new Set();
     for (const c of (a.changes || []).slice(0, 200)) {
       const it = byId.get(String(c.id)); if (!it) throw new Error('No item ' + c.id);
-      const was = ownerOf(it, all), ox = it.x, oy = it.y;
+      const was = ownerOf(it, all), ox = it.x, oy = it.y, ow = it.w, oh = it.h;
+      const offs = isGrid(it) ? memberOffsets(it, all) : null, d0 = isGrid(it) ? Plan.dims(it) : null;
+      if (it.type === 'task') taskFields(it, c);
+      if (isGrid(it)) {
+        gridFields(it, c);
+        if (c.w == null && c.h == null) Object.assign(it, Plan.sizeFor(it, d0.cw, d0.lh)); // cells keep their size
+      }
       if (c.text != null && (it.type === 'sticky' || it.type === 'text')) { it.text = String(c.text).slice(0, 4000); delete it.html; }
       if (c.text != null && it.type === 'node') it.text = String(c.text).slice(0, 400);
       if (it.type === 'node' && Flow.SHAPES.includes(c.shape)) it.shape = c.shape;
@@ -617,6 +1160,16 @@ async function callTool(name, a) {
         if (c.thick != null) { if (c.thick) it.thick = true; else delete it.thick; }
       }
       if (c.title != null && it.type === 'section') it.title = String(c.title).slice(0, 120);
+      if (c.grid != null && isCard(it)) {
+        if (c.grid === '') { delete it.grid; delete it.cell; }
+        else {
+          const g = byId.get(String(c.grid)); if (!g || !isGrid(g)) throw new Error('No timeline or table ' + c.grid);
+          const cell = matrixCell(g, c.cell) || [colIndex(g, c.column), rowIndex(g, c.lane ?? c.row)];
+          const q = Plan.slotIn(g, cell, it.w, it.h, gridMembers(g, all).filter((m) => m !== it));
+          it.x = q.x; it.y = q.y; it.grid = g.id; it.cell = cell;
+          const home = geoSec(it, all); it.sec = home ? home.id : null;
+        }
+      }
       if (c.label != null && it.type === 'link') { const l = String(c.label).trim().slice(0, 60); if (l) it.label = l; else delete it.label; }
       if (c.style != null && it.type === 'text' && TEXT_STYLES.includes(c.style)) it.ts = c.style;
       if (c.color != null) {
@@ -625,6 +1178,10 @@ async function callTool(name, a) {
       }
       for (const k of ['x', 'y', 'w', 'h']) if (num(c[k]) != null && it.type !== 'link') it[k] = num(c[k]);
       if ((c.w != null || c.h != null) && it.type === 'section') it.autofit = false;
+      if (isGrid(it)) {
+        const d = Plan.dims(it); it.w = Math.max(it.w, d.side + d.nc * 80); it.h = Math.max(it.h, Plan.TOP + d.nr * 80);
+        if (it.x !== ox || it.y !== oy || it.w !== ow || it.h !== oh || offs.some((o) => o.c[0] >= d.nc || o.c[1] >= d.nr)) { resnap(it, offs); offs.forEach((o) => changed.add(o.m)); }
+      }
       if (c.section != null && isCard(it)) {
         const s = c.section === '' ? null : byId.get(String(c.section));
         if (c.section !== '' && (!s || s.type !== 'section')) throw new Error('No section ' + c.section);
@@ -656,7 +1213,7 @@ async function callTool(name, a) {
   if (name === 'delete_items') {
     const ids = new Set((a.ids || []).map(String).filter((id) => byId.has(id)));
     for (const i of all) if (i.type === 'link' && (ids.has(i.a) || ids.has(i.b))) ids.add(i.id);
-    const freed = all.filter((i) => isCard(i) && !ids.has(i.id) && i.sec && ids.has(i.sec)).map((i) => { i.sec = null; return i; });
+    const freed = all.filter((i) => isCard(i) && !ids.has(i.id) && ((i.sec && ids.has(i.sec)) || (i.grid && ids.has(i.grid)))).map((i) => { if (i.sec && ids.has(i.sec)) i.sec = null; if (i.grid && ids.has(i.grid)) { delete i.grid; delete i.cell; } return i; });
     const owners = new Set(all.filter((i) => ids.has(i.id)).map((i) => ownerOf(i, all)).filter((s) => s && !ids.has(s.id)));
     const rest = all.filter((i) => !ids.has(i.id)), refitted = [...owners].filter((s) => refit(s, rest));
     await delDocs([...ids].map((id) => itemsColl(board) + '/' + id));

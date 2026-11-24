@@ -642,6 +642,153 @@ body.view-only .ro-note { display: flex; animation: palIn var(--base) var(--ease
 #toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
 #dropzone { position: fixed; inset: 10px; border: 2px dashed var(--accent); border-radius: var(--r-xl); background: var(--accent-soft); pointer-events: none; display: grid; place-items: center; font: 600 21px var(--f-display); color: var(--accent); }
 :focus-visible { outline: none; box-shadow: var(--focus); }
+/* timelines and tables: a frame with a header band, lane names and cells; cards dropped in stick to a cell */
+.item.grid { color: var(--text); }
+.grid .stitle { position: absolute; left: 0; bottom: 100%; margin-bottom: 8px; max-width: 100%; box-sizing: border-box; font: 600 20px/1.2 var(--f-display); letter-spacing: -0.01em; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 2px 4px; border-radius: 6px; outline: none; cursor: default; }
+.grid .stitle:empty::before { content: "Без назви"; color: var(--muted); }
+.grid.editing .stitle { cursor: text; user-select: text; -webkit-user-select: text; background: var(--surface); overflow: visible; text-overflow: clip; }
+.item.grid.editing { box-shadow: none; }
+.g-in { position: absolute; inset: 0; box-sizing: border-box; border-radius: var(--r-lg); overflow: hidden; background: color-mix(in srgb, var(--c, var(--t-gray)) 7%, var(--surface)); border: calc(1px / var(--z)) solid color-mix(in srgb, var(--c, var(--t-gray)) 62%, var(--line)); box-shadow: var(--note-shadow); }
+.g-cells { position: absolute; inset: 0; display: grid; --gl: color-mix(in srgb, var(--c, var(--t-gray)) 38%, var(--line)); }
+.g-cells > div { box-sizing: border-box; min-width: 0; min-height: 0; border-right: calc(1px / var(--z)) solid var(--gl); border-bottom: calc(1px / var(--z)) solid var(--gl); }
+.g-cells > .last { border-right: 0; } .g-cells > .bot { border-bottom: 0; }
+.gk { background: color-mix(in srgb, var(--c, var(--t-gray)) 30%, var(--surface)); }
+.gh { position: relative; display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 16px; background: color-mix(in srgb, var(--tc) 34%, var(--surface)); transition: background-color var(--base) var(--ease); }
+.gh b { font: 600 16px/1.2 var(--f-display); letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; outline: none; border-radius: 6px; }
+.gh span { font-size: 13px; line-height: 1.2; color: color-mix(in srgb, var(--muted) 72%, var(--text)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gh span:empty { display: none; }
+.gh.now { background: color-mix(in srgb, var(--accent) 15%, var(--surface)); }
+.gh.now b { color: var(--accent); }
+.gs { display: flex; align-items: flex-start; padding: 16px; background: color-mix(in srgb, var(--c, var(--t-gray)) 18%, var(--surface)); }
+.gs b { font: 600 15px/1.3 var(--f-text); overflow-wrap: anywhere; outline: none; border-radius: 6px; }
+.gc { position: relative; background: color-mix(in srgb, var(--tc) 8%, transparent); transition: background-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease); }
+.gc.hi { background: color-mix(in srgb, var(--accent) 11%, transparent); box-shadow: inset 0 0 0 calc(2px / var(--z)) var(--accent); }
+.gc i { position: absolute; left: 18px; top: 14px; right: 18px; font: 600 22px/1.2 var(--f-display); font-style: normal; letter-spacing: -0.015em; color: color-mix(in srgb, var(--tc) 45%, var(--text)); opacity: .6; outline: none; border-radius: 6px; overflow-wrap: anywhere; }
+.gc i:empty { display: none; }
+[data-hk].editing { opacity: 1; background: var(--surface); box-shadow: 0 0 0 2px var(--accent); cursor: text; user-select: text; -webkit-user-select: text; text-overflow: clip; padding: 0 4px; margin: 0 -4px; }
+.g-now { position: absolute; top: 60px; bottom: 0; width: 0; border-left: calc(2px / var(--z)) solid var(--accent); pointer-events: none; z-index: 1; transition: left var(--slow) var(--ease-em); }
+.g-now::before { content: ""; position: absolute; top: -1px; left: calc(-5px / var(--z)); width: calc(8px / var(--z)); height: calc(8px / var(--z)); border-radius: 50%; background: var(--accent); }
+.g-now span { position: absolute; top: -10px; left: 0; translate: -50% 0; transform-origin: 50% 0; scale: max(1, calc(0.75 / var(--z))); background: var(--accent); color: var(--accent-fg); font: 600 11px/1 var(--f-text); padding: 4px 8px; border-radius: var(--r-pill); white-space: nowrap; }
+.g-ax { position: absolute; font: 600 14px/1 var(--f-text); color: var(--muted); white-space: nowrap; pointer-events: none; letter-spacing: 0.01em; }
+.g-ax:empty { display: none; }
+.g-ax.x { top: 100%; margin-top: 12px; translate: -50% 0; }
+.g-ax.y { left: -16px; translate: -50% -50%; rotate: -90deg; }
+.peek-world { --z: 1; }
+.pv-grid { overflow: visible; }
+.pv-task { padding: 12px 14px; gap: 6px; } .pv-task b, .pv-task small { padding: 0; }
+.pv-task small { justify-self: start; padding: 3px 9px; border-radius: var(--r-pill); background: var(--t-gray); color: var(--ink); font-weight: 600; }
+.pv-task small[data-s="doing"] { background: var(--t-info); } .pv-task small[data-s="review"] { background: var(--t-purple); } .pv-task small[data-s="done"] { background: var(--t-ok); }
+/* task cards: status, title, tags, who / estimate / due date; later filled from Jira, Linear or GitHub */
+.item.task { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px 13px 16px; background: var(--surface); color: var(--text); border-radius: var(--r-md); box-shadow: var(--note-shadow); border: calc(1px / var(--z)) solid var(--line); --sc: var(--t-gray); }
+.item.task::before { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 4px; border-radius: 0 4px 4px 0; background: color-mix(in srgb, var(--sc) 70%, var(--text) 12%); transition: background-color var(--base) var(--ease); }
+.task[data-s="doing"] { --sc: var(--t-info); } .task[data-s="review"] { --sc: var(--t-purple); } .task[data-s="done"] { --sc: var(--t-ok); }
+.task:hover:not(.dragging) { box-shadow: var(--shadow-lg); }
+.tk-top { order: -1; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tk-st { flex: none; border: 0; font: 600 12px/1 var(--f-text); padding: 6px 10px; border-radius: var(--r-pill); background: var(--sc); color: var(--ink); cursor: pointer; transition: background-color var(--base) var(--ease), scale var(--fast) var(--ease-spring); }
+.tk-st:hover { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ink) 25%, transparent); }
+.tk-st:active { scale: .94; }
+body.view-only .tk-st { cursor: default; box-shadow: none; }
+.tk-key { min-width: 0; margin-left: auto; font: 500 12px/1.3 var(--f-text); color: var(--muted); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 6px; }
+.tk-key[href]:hover { color: var(--accent); }
+.tk-key:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.task .txt { font: 600 16px/1.3 var(--f-text); letter-spacing: -0.01em; white-space: pre-wrap; overflow-wrap: anywhere; outline: none; min-height: 1.3em; }
+.task .txt:empty::before { content: "Назва задачі"; color: var(--muted); font-weight: 500; }
+.task.editing .txt { cursor: text; user-select: text; -webkit-user-select: text; }
+.task[data-s="done"]:not(.editing) .txt { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--text) 45%, transparent); color: var(--muted); }
+.task.loading .txt::after { content: " · завантажуємо…"; color: var(--muted); font-weight: 400; }
+.tk-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.tk-tags:empty { display: none; }
+.tk-tags span { font: 500 12px/1.2 var(--f-text); padding: 3px 8px; border-radius: var(--r-pill); background: var(--chip); color: var(--text); }
+.tk-foot { display: flex; flex-wrap: wrap; gap: 4px 12px; font: 500 12px/1.3 var(--f-text); color: var(--muted); }
+.tk-foot span::before { margin-right: 4px; }
+.tk-who::before { content: "👤"; } .tk-est::before { content: "⏱"; } .tk-due::before { content: "📅"; }
+.tk-due.late { color: var(--bad); font-weight: 600; }
+/* hidden writing: someone else's card shows only who is writing it; your own carries a quiet dashed frame */
+.sticky.masked { background-image: repeating-linear-gradient(-45deg, transparent 0 11px, rgba(0, 0, 0, .045) 11px 22px); }
+.sticky.masked .txt::before { content: "🙈"; position: absolute; inset: 0 0 22px; display: grid; place-items: center; font-size: 46px; opacity: .9; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+.text.masked .txt, .task.masked .txt { color: var(--muted); font-weight: 500; }
+.sticky.mine-hidden:not(.sel):not(.editing) { outline: calc(1.5px / var(--z)) dashed color-mix(in srgb, var(--ink) 38%, transparent); outline-offset: calc(-7px / var(--z)); }
+.item.reveal { animation: reveal 620ms var(--ease-spring) both; }
+@keyframes reveal { from { transform: perspective(700px) rotateY(75deg) scale(.94); } 55% { transform: perspective(700px) rotateY(-6deg); } to { transform: none; } }
+.item.settle.snapping, .item.snapping { transition: translate 360ms var(--ease-em), rotate var(--slow) var(--ease-spring), scale var(--slow) var(--ease-spring), box-shadow var(--slow) var(--ease-em); }
+/* dot voting: dots along the card's top edge, a count after the vote */
+.vb { position: absolute; right: 10px; top: -11px; display: flex; flex-direction: row-reverse; gap: 3px; z-index: 4; pointer-events: none; transform-origin: 100% 50%; scale: max(1, calc(0.7 / var(--z))); }
+.vdot { width: 20px; height: 20px; border-radius: 50%; background: var(--pc); box-shadow: 0 0 0 2px var(--surface), 0 2px 6px rgba(0, 0, 0, .25); animation: dotIn var(--slow) var(--ease-spring) both; transition: scale var(--fast) var(--ease-spring); }
+.vdot.mine { pointer-events: auto; cursor: pointer; }
+.vdot.mine:hover { scale: 1.18; }
+.vdot.out, .vb.out { animation: dotOut 170ms var(--ease) both; pointer-events: none; }
+@keyframes dotIn { from { scale: 0; } }
+@keyframes dotOut { to { scale: 0; opacity: 0; } }
+.vtot { display: block; min-width: 32px; height: 32px; padding: 0 9px; box-sizing: border-box; border-radius: var(--r-pill); background: var(--accent); color: var(--accent-fg); font: 700 15px/32px var(--f-text); text-align: center; box-shadow: 0 0 0 2px var(--surface), 0 3px 10px rgba(0, 0, 0, .25); animation: dotIn var(--slow) var(--ease-spring) both; }
+body.voting #viewport.tool-select .item:is(.sticky, .text, .image, .web, .node, .board, .task) { cursor: pointer; }
+/* chips beside the timer: voting and hidden writing */
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px 0 10px; border: 0; border-radius: var(--r-pill); font: 500 13px var(--f-text); color: var(--accent); background: color-mix(in srgb, var(--accent) 11%, var(--surface)); cursor: pointer; white-space: nowrap; animation: avIn var(--slow) var(--ease-spring) both; transition: background-color var(--fast) var(--ease); }
+.chip:hover { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); }
+.chip:focus-visible { outline: none; box-shadow: var(--focus); }
+.chip > span[aria-hidden] { font-size: 15px; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+.vc-dots { display: inline-flex; gap: 3px; }
+.vc-dots:empty { display: none; }
+.vc-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); transition: background-color var(--base) var(--ease), scale var(--base) var(--ease-spring); }
+.vc-dots i.used { background: color-mix(in srgb, var(--accent) 24%, transparent); scale: .75; }
+.vc-dots.big { gap: 6px; } .vc-dots.big i { width: 16px; height: 16px; }
+/* the «Планінг і ретро» popover: tiles for templates and facilitation tools */
+.panel.popover.plan-pop { top: auto; right: auto; left: 50%; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); translate: -50% 0; width: 660px; max-width: calc(100vw - 24px); max-height: calc(100vh - 160px); overflow: auto; overscroll-behavior: contain; box-sizing: border-box; transform-origin: 50% 100%; display: flex; flex-direction: column; gap: 14px; padding: 16px 16px 18px; }
+.plan-pop .tm-head { display: flex; align-items: center; justify-content: space-between; }
+.pl-sec h3 { margin: 0 0 8px; font: 600 12px var(--f-text); color: var(--muted); letter-spacing: -0.01em; }
+.pl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 6px; }
+.pl-tile { display: flex; align-items: center; gap: 10px; text-align: left; border: 0; background: var(--chip); padding: 9px 12px 9px 9px; border-radius: 14px; cursor: pointer; color: var(--text); min-width: 0; transition: background-color var(--fast) var(--ease), scale var(--fast) var(--ease-spring), translate var(--base) var(--ease-em); }
+.pl-tile:hover { background: color-mix(in srgb, var(--accent) 12%, var(--chip)); translate: 0 -1px; }
+.pl-tile:active { scale: .97; }
+.pl-ico { flex: none; width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; font-size: 20px; line-height: 1; background: var(--surface); box-shadow: 0 1px 2px rgba(0, 0, 0, .1); font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+.pl-t { display: grid; gap: 1px; min-width: 0; }
+.pl-t b { font-weight: 600; font-size: 14px; line-height: 1.25; overflow-wrap: anywhere; }
+.pl-t small { font-size: 12px; line-height: 1.3; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+body.view-only .pl-edit { display: none !important; }
+/* small popovers under the context bar: timeline dates, task details */
+.panel.popover.side-pop { top: 0; right: auto; left: 0; width: 344px; max-width: calc(100vw - 24px); box-sizing: border-box; padding: 16px; gap: 12px; z-index: 7; transform-origin: 50% 0; }
+.side-pop .tm-head, #votePop .tm-head { display: flex; align-items: center; justify-content: space-between; }
+.seg { display: flex; padding: 3px; gap: 2px; background: var(--chip); border-radius: var(--r-pill); min-width: 0; }
+.seg button { flex: 1; min-width: 0; border: 0; background: transparent; padding: 7px 8px; border-radius: var(--r-pill); font: 500 13px var(--f-text); color: var(--text); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease); }
+.seg button:hover:not([aria-checked="true"]):not(:disabled) { background: color-mix(in srgb, var(--text) 7%, transparent); }
+.seg button[aria-checked="true"] { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.seg button:disabled { opacity: .4; cursor: default; }
+.fl { display: grid; gap: 6px; min-width: 0; align-content: start; }
+.fl2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.field.sm { height: 38px; font-size: 15px; padding: 0 12px; letter-spacing: -0.01em; }
+select.field.sm { padding-right: 8px; }
+.stepper { display: flex; align-items: center; gap: 10px; height: 38px; }
+.stepper b { min-width: 2.2ch; text-align: center; font: 600 17px var(--f-text); font-variant-numeric: tabular-nums; }
+.stepper .step { width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--chip); color: var(--text); font-size: 19px; line-height: 1; cursor: pointer; transition: background-color var(--fast) var(--ease), scale var(--fast) var(--ease-spring); }
+.stepper .step:hover { background: color-mix(in srgb, var(--accent) 14%, var(--chip)); }
+.stepper .step:active { scale: .92; }
+.stepper .step:disabled { opacity: .35; cursor: default; }
+.side-pop .txt-btn { justify-self: start; padding-left: 0; }
+.side-pop .hint { margin: -4px 0 0; }
+.check { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 12px 0; cursor: pointer; }
+.check input { accent-color: var(--accent); width: 18px; height: 18px; margin: 0; }
+#votePop { width: 330px; box-sizing: border-box; transform-origin: 85% 0; }
+.vt-mine { display: grid; gap: 10px; }
+.vt-top { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 300px; overflow: auto; overscroll-behavior: contain; }
+.vt-top button { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: var(--chip); padding: 8px 10px; border-radius: 11px; text-align: left; cursor: pointer; color: var(--text); font-size: 14px; transition: background-color var(--fast) var(--ease); }
+.vt-top button:hover { background: color-mix(in srgb, var(--accent) 12%, var(--chip)); }
+.vt-top b { flex: none; min-width: 26px; height: 26px; padding: 0 6px; box-sizing: border-box; border-radius: var(--r-pill); background: var(--accent); color: var(--accent-fg); font: 700 13px/26px var(--f-text); text-align: center; }
+.vt-top span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vt-top .empty { color: var(--muted); font-size: 14px; }
+/* markdown export dialog */
+.panel.md-pop { position: fixed; left: 50%; top: 50%; translate: -50% -50%; width: min(780px, calc(100vw - 32px)); height: min(660px, calc(100vh - 48px)); z-index: 21; display: flex; flex-direction: column; gap: 12px; padding: 18px 18px 16px 20px; box-sizing: border-box; border-radius: var(--r-xl); background: var(--surface); box-shadow: var(--shadow-lg), 0 30px 80px rgba(0, 0, 0, .25); animation: mdIn var(--base) var(--ease-em) both; }
+.md-pop.out { animation: mdOut 160ms var(--ease) both; pointer-events: none; }
+@keyframes mdIn { from { opacity: 0; scale: .96; } }
+@keyframes mdOut { to { opacity: 0; scale: .97; } }
+.md-head { display: flex; align-items: flex-start; gap: 12px; }
+.md-head .seg { flex: none; width: 270px; }
+#taskPop .seg { display: grid; grid-template-columns: 1fr 1fr; border-radius: 14px; }
+#taskPop .seg button { border-radius: 11px; }
+.md-text { flex: 1; min-height: 0; height: auto; resize: none; padding: 14px 16px; font: 400 13.5px/1.55 ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing: 0; white-space: pre; overflow: auto; background: var(--bg); color: var(--text); tab-size: 2; }
+.md-text:focus { border-color: var(--accent); box-shadow: var(--focus); }
+.md-actions { display: flex; align-items: center; gap: 8px; }
+.md-actions .mm-note { margin-right: auto; font-size: 12px; color: var(--muted); }
+#mdCopy { min-width: 132px; }
+@media (max-width: 560px) { .md-head { flex-wrap: wrap; } .md-head .seg { width: 100%; } .fl2 { grid-template-columns: 1fr; } }
 @media (max-width: 1320px) {
   .hints { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
 }
@@ -651,7 +798,7 @@ body.view-only .ro-note { display: flex; animation: palIn var(--base) var(--ease
   .rail { gap: 2px; padding: 5px; }
 }
 @media (max-width: 760px) {
-  .hints, #hintsOpen, .logo span, .status span, .me-name, #shareBtn span, #timerPill .st { display: none !important; }
+  .hints, #hintsOpen, .logo span, .status span, .me-name, #shareBtn span, #timerPill .st, .chip .st { display: none !important; }
   #shareBtn.primary { padding: 0 10px; }
   .br-dock { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
   .board-pill { max-width: calc(100vw - 250px); }
@@ -691,6 +838,8 @@ body.view-only .ro-note { display: flex; animation: palIn var(--base) var(--ease
     <div class="avatars" id="avatars"></div>
     <button class="me-name" id="meName" title="Змінити ім’я"></button>
     <span class="vsep"></span>
+    <button class="chip" id="hideChip" hidden title="Приховане писання: чужі картки не видно. Натисніть, щоб відкрити всі"><span aria-hidden="true">🙈</span><span class="st">Відкрити всі</span></button>
+    <button class="chip" id="voteChip" hidden aria-haspopup="dialog" aria-expanded="false"><span aria-hidden="true">🗳️</span><span class="vc-dots" id="voteDots"></span><span class="st" id="voteText"></span></button>
     <button id="timerPill" data-s="idle" aria-label="Таймер для всіх" aria-haspopup="dialog" aria-expanded="false" title="Таймер для всіх"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7"/><path d="M12 10v3.8l2.4 1.6M9.5 3.5h5M18.6 6.4l1.2-1.2"/></svg><span class="ring"></span><span class="tm digits" id="tmText">00:00</span><span class="st" id="tmState"></span></button>
     <button class="primary" id="shareBtn" title="Скопіювати посилання на цю дошку"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg><span>Поділитися</span></button>
   </div>
@@ -739,6 +888,7 @@ body.view-only .ro-note { display: flex; animation: palIn var(--base) var(--ease
   <button class="icon-btn" data-tool="section" aria-label="Секція"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M4 7.5h4"/><rect x="3.5" y="10" width="17" height="10" rx="2.5"/><path d="M3.5 4.5h7"/></svg><span class="tip">Секція<kbd>F</kbd></span></button>
   <button class="icon-btn" data-tool="node" aria-label="Блок схеми"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="8" height="6" rx="1.6"/><ellipse cx="17" cy="16" rx="4" ry="1.6"/><path d="M13 16v3.4c0 .9 1.8 1.6 4 1.6s4-.7 4-1.6V16M7 9.5v3.5a2 2 0 002 2h4"/></svg><span class="tip">Блок схеми: сервіс, база, черга…<kbd>D</kbd></span></button>
   <button class="icon-btn" id="mermaidBtn" aria-label="Схема з Mermaid" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7.5L4 12l4 4.5M16 7.5l4 4.5-4 4.5"/><path d="M10.5 12h.01M13.5 12h.01" stroke-width="2.6"/></svg><span class="tip">Схема з тексту Mermaid<kbd>M</kbd></span></button>
+  <button class="icon-btn" id="planBtn" aria-label="Планінг і ретро" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v3M16 3v3"/><rect x="6.5" y="12.5" width="6" height="2.6" rx="1.3" fill="currentColor" stroke="none"/><rect x="10.5" y="16" width="7" height="2.6" rx="1.3" fill="currentColor" stroke="none" opacity=".55"/></svg><span class="tip">Планінг і ретро: таймлайн, матриця, шаблони<kbd>P</kbd></span></button>
   <button class="icon-btn" id="imageBtn" aria-label="Зображення"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M20.5 16l-5-5-9 8.5"/></svg><span class="tip">Зображення<kbd>Ctrl+V</kbd></span></button>
   <div class="rule"></div>
   <button class="icon-btn" id="undoBtn" aria-label="Скасувати"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L4.5 11.5 9 16"/><path d="M5 11.5h9a5 5 0 010 10h-2"/></svg><span class="tip">Скасувати<kbd>Ctrl+Z</kbd></span></button>
@@ -750,6 +900,46 @@ body.view-only .ro-note { display: flex; animation: palIn var(--base) var(--ease
   <textarea class="field" id="mmInput" spellcheck="false" aria-label="Текст Mermaid" placeholder="flowchart LR&#10;  U([Користувач]) --> W[Вебзастосунок]&#10;  W --> A{{API}}&#10;  A --> D[(База даних)]"></textarea>
   <p class="mm-err" id="mmErr" role="alert"></p>
   <div class="mm-actions"><button class="primary sm" id="mmGo">Побудувати</button><button class="txt-btn" id="mmExample">Вставити приклад</button><span class="mm-note">Ctrl+Enter · або просто вставте текст на дошку</span></div>
+</div>
+<div class="panel popover plan-pop" id="planPop" role="dialog" aria-label="Планінг і ретро" hidden>
+  <div class="tm-head"><span class="label">Планінг і ретро</span><button class="close" id="plClose" aria-label="Закрити">×</button></div>
+  <div class="pl-sec pl-edit"><h3>Планування</h3><div class="pl-grid" id="plPlan"></div></div>
+  <div class="pl-sec pl-edit"><h3>Ретро</h3><div class="pl-grid" id="plRetro"></div></div>
+  <div class="pl-sec"><h3>Фасилітація</h3><div class="pl-grid" id="plFac"></div></div>
+</div>
+<div class="panel popover side-pop" id="tlPop" role="dialog" aria-label="Дати й крок таймлайну" hidden>
+  <div class="tm-head"><span class="label">Таймлайн</span><button class="close" id="tlClose" aria-label="Закрити">×</button></div>
+  <div class="seg" id="tlUnit" role="radiogroup" aria-label="Крок"><button data-u="day" role="radio">Дні</button><button data-u="week" role="radio">Тижні</button><button data-u="sprint" role="radio">Спринти</button><button data-u="month" role="radio">Місяці</button></div>
+  <div class="fl2"><label class="fl"><span class="label">Початок</span><input type="date" class="field sm" id="tlStart"></label><div class="fl"><span class="label">Колонок</span><div class="stepper"><button class="step" id="tlMinus" aria-label="Менше колонок">−</button><b id="tlN" aria-live="polite">4</b><button class="step" id="tlPlus" aria-label="Більше колонок">+</button></div></div></div>
+  <div class="fl2" id="tlSprintRow"><label class="fl"><span class="label">Довжина спринту</span><select class="field sm" id="tlLen"><option value="7">1 тиждень</option><option value="14">2 тижні</option><option value="21">3 тижні</option><option value="28">4 тижні</option></select></label><label class="fl"><span class="label">Номер першого</span><input type="number" class="field sm" id="tlK" min="0" max="9999"></label></div>
+  <button class="txt-btn" id="tlToday">Почати з поточного тижня</button>
+</div>
+<div class="panel popover side-pop" id="taskPop" role="dialog" aria-label="Деталі задачі" hidden>
+  <div class="tm-head"><span class="label">Задача</span><button class="close" id="tkClose" aria-label="Закрити">×</button></div>
+  <div class="seg" id="tkStatus" role="radiogroup" aria-label="Статус"></div>
+  <div class="fl2"><label class="fl"><span class="label">Виконавець</span><input class="field sm" id="tkWho" maxlength="40" autocomplete="off" placeholder="Ім’я"></label><label class="fl"><span class="label">Естімейт</span><input class="field sm" id="tkEst" maxlength="16" autocomplete="off" placeholder="3 SP"></label></div>
+  <div class="fl2"><label class="fl"><span class="label">Дедлайн</span><input type="date" class="field sm" id="tkDue"></label><label class="fl"><span class="label">Теги</span><input class="field sm" id="tkTags" maxlength="200" autocomplete="off" placeholder="дизайн, api"></label></div>
+  <label class="fl"><span class="label">Задача в трекері</span><input class="field sm" id="tkSrc" maxlength="500" autocomplete="off" placeholder="Посилання на Jira, Linear чи GitHub"></label>
+  <p class="hint" id="tkSrcNote"></p>
+  <button class="txt-btn" id="tkPull" hidden>Оновити з GitHub</button>
+</div>
+<div class="panel popover" id="votePop" role="dialog" aria-label="Голосування крапками" hidden>
+  <div class="tm-head"><span class="label">Голосування крапками</span><button class="close" id="vtClose" aria-label="Закрити">×</button></div>
+  <div id="vtIdle">
+    <p class="tm-note" style="text-align:left">Кожен ставить крапки на картки, які вважає найважливішими. Клік на картці додає голос, клік на своїй крапці забирає.</p>
+    <div class="fl" style="margin-top:12px"><span class="label">Голосів на кожного</span><div class="stepper"><button class="step" id="vtMinus" aria-label="Менше голосів">−</button><b id="vtN" aria-live="polite">3</b><button class="step" id="vtPlus" aria-label="Більше голосів">+</button></div></div>
+    <label class="check"><input type="checkbox" id="vtShow"> Показувати чужі голоси одразу</label>
+    <button class="primary sm" id="vtGo" style="width:100%;margin-top:4px">Почати голосування</button>
+  </div>
+  <div id="vtLive" hidden>
+    <div class="vt-mine" id="vtMine"></div>
+    <p class="tm-note" id="vtWho" style="text-align:left"></p>
+    <div class="tm-actions"><button class="primary sm" id="vtEnd">Завершити й показати</button><button class="txt-btn" id="vtCancel">Скасувати</button></div>
+  </div>
+  <div id="vtRes" hidden>
+    <ol class="vt-top" id="vtTop"></ol>
+    <div class="tm-actions"><button class="primary sm" id="vtSort">Відсортувати за голосами</button><button class="txt-btn" id="vtClear">Прибрати підсумки</button></div>
+  </div>
 </div>
 <div class="panel popover" id="timerPop" role="dialog" aria-label="Таймер" hidden>
   <div class="tm-head"><span class="label">Таймер для всіх на дошці</span><button class="close" id="tmClose" aria-label="Закрити">×</button></div>
@@ -779,6 +969,18 @@ body.view-only .ro-note { display: flex; animation: palIn var(--base) var(--ease
     <div class="panel node-menu" id="nodeMenu" role="menu" hidden></div>
   </div>
   <div class="sep" id="ctxNodeSep"></div>
+  <div class="group" id="ctxGrid" style="gap:2px;padding:0 2px">
+    <button class="icon-btn" id="gAddCol" aria-label="Додати колонку"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="10" height="15" rx="2"/><path d="M8.5 4.5v15M18.5 9v6M15.5 12h6"/></svg><span class="tip" id="gAddColTip">Додати колонку</span></button>
+    <button class="icon-btn" id="gDelCol" aria-label="Прибрати останню колонку"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="10" height="15" rx="2"/><path d="M8.5 4.5v15M15.5 12h6"/></svg><span class="tip">Прибрати останню колонку</span></button>
+    <button class="icon-btn" id="gAddRow" aria-label="Додати рядок"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="3.5" width="15" height="10" rx="2"/><path d="M4.5 8.5h15M12 15.5v6M9 18.5h6"/></svg><span class="tip" id="gAddRowTip">Додати рядок</span></button>
+    <button class="icon-btn" id="gDelRow" aria-label="Прибрати останній рядок"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="3.5" width="15" height="10" rx="2"/><path d="M4.5 8.5h15M9 18.5h6"/></svg><span class="tip" id="gDelRowTip">Прибрати останній рядок</span></button>
+    <button class="icon-btn" id="gSetBtn" aria-label="Дати й крок таймлайну" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></svg><span class="tip">Дати й крок</span></button>
+  </div>
+  <div class="sep" id="ctxGridSep"></div>
+  <div class="group" id="ctxTask" style="gap:2px;padding:0 2px">
+    <button class="icon-btn" id="tkBtn" aria-label="Деталі задачі" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></svg><span class="tip">Виконавець, естімейт, дедлайн</span></button>
+  </div>
+  <div class="sep" id="ctxTaskSep"></div>
   <div class="group" id="ctxColors"></div>
   <div class="sep" id="ctxSep"></div>
   <div class="group txt-tools" id="ctxText">
@@ -803,6 +1005,15 @@ body.view-only .ro-note { display: flex; animation: palIn var(--base) var(--ease
   <button class="icon-btn" id="delBtn" aria-label="Видалити"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13"/></svg><span class="tip">Видалити<kbd>Del</kbd></span></button>
 </div>
 
+<div class="peek-back" id="mdBack" hidden></div>
+<div class="panel md-pop" id="mdPop" role="dialog" aria-modal="true" aria-labelledby="mdTitle" hidden>
+  <div class="md-head">
+    <div class="peek-hd"><h2 id="mdTitle">Markdown дошки</h2><p id="mdSub">Текст можна скопіювати в Notion, Confluence, GitHub чи будь-куди</p></div>
+    <div class="seg" id="mdScope" role="radiogroup" aria-label="Що експортувати"><button data-s="all" role="radio">Уся дошка</button><button data-s="sel" role="radio">Виділене</button></div>
+  </div>
+  <textarea class="field md-text" id="mdText" readonly spellcheck="false" aria-label="Markdown дошки"></textarea>
+  <div class="md-actions"><span class="mm-note" id="mdNote"></span><button class="txt-btn" id="mdClose">Закрити</button><button class="primary sm" id="mdCopy">Скопіювати</button></div>
+</div>
 <div class="peek-back" id="peekBack" hidden></div>
 <div class="panel peek" id="peek" role="dialog" aria-modal="true" aria-labelledby="peekTitle" hidden>
   <div class="peek-head">
@@ -836,6 +1047,8 @@ body.view-only .ro-note { display: flex; animation: palIn var(--base) var(--ease
     <li>Коментар <b>C і клік</b></li>
     <li>Блок схеми: сервіс, база, черга <b>D і клік</b></li>
     <li>Схема з Mermaid <b>M · або вставте текст</b></li>
+    <li>Таймлайн, матриця, ретро <b>P</b></li>
+    <li>Перейменувати колонку <b>Подвійний клік на назві</b></li>
     <li>Змінити своє ім’я <b>Клік на аватарці</b></li>
   </ul>
 </div>
@@ -887,6 +1100,11 @@ body.view-only .ro-note { display: flex; animation: palIn var(--base) var(--ease
   let dragBase = new Map();    // peer|id -> {x, y}: where it stood when that peer's drag began
   const ghost = new Map();     // id -> {x, y, until}: a peer's drop, held until their db write lands
   const remoteSize = new Map();
+  // retro facilitation, per board: dot voting and hidden writing (see «planning & retro» below)
+  const myVid = (() => { let v = store.get('jamboard:vid'); if (!/^[A-Za-z0-9]{16}$/.test(v || '')) { v = Array.from(crypto.getRandomValues(new Uint8Array(16)), (x) => 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[x % 62]).join(''); store.set('jamboard:vid', v); } return v; })();
+  let hideMode = { on: false }, voteMode = { st: 'idle' };
+  const votes = new Map(); // voter id -> { s, v: { itemId: n }, n, e, c }
+  const HIDEABLE = ['sticky', 'text', 'task'];
 
 // <flow> shared by index.html and the MCP server: keep both copies identical
 const Flow = (() => {
@@ -1407,8 +1625,271 @@ const Route = (() => {
   return { create };
 })();
 // </route>
+// <plan> shared by index.html and the MCP server: keep both copies identical
+// Planning pieces that need no DOM: timeline and table geometry, templates, sorting by votes, markdown export, task sources.
+const Plan = (() => {
+  const TOP = 60, SIDE = 168, PAD = 16, DAY = 864e5;
+  const UNITS = ['day', 'week', 'sprint', 'month'];
+  const STATUSES = ['todo', 'doing', 'review', 'done'];
+  const STATUS_NAMES = { todo: 'До роботи', doing: 'У роботі', review: 'На перевірці', done: 'Готово' };
+  const MON = ['січ.', 'лют.', 'бер.', 'квіт.', 'трав.', 'черв.', 'лип.', 'серп.', 'вер.', 'жовт.', 'лист.', 'груд.'];
+  const MONTHS = ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'];
+  const WD = ['нд', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const isGrid = (i) => !!i && (i.type === 'timeline' || i.type === 'table');
+
+  // ---------- dates: whole days since 1970-01-01, so a time zone never moves a column ----------
+  const dayOf = (s) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? Math.floor(Date.UTC(+m[1], +m[2] - 1, +m[3]) / DAY) : null; };
+  const isoOf = (d) => new Date(d * DAY).toISOString().slice(0, 10);
+  const localDay = (ms) => { const t = new Date(ms); return Math.floor(Date.UTC(t.getFullYear(), t.getMonth(), t.getDate()) / DAY); };
+  const monday = (d) => d - ((new Date(d * DAY).getUTCDay() + 6) % 7);
+  const isoWeek = (d) => { const th = monday(d) + 3, y = new Date(th * DAY).getUTCFullYear(); return 1 + Math.floor((th - (monday(Math.floor(Date.UTC(y, 0, 4) / DAY)) + 3)) / 7); };
+  const fmtD = (d) => { const t = new Date(d * DAY); return t.getUTCDate() + ' ' + MON[t.getUTCMonth()]; };
+  const range = (a, b) => { const A = new Date(a * DAY), B = new Date(b * DAY); return A.getUTCMonth() === B.getUTCMonth() && A.getUTCFullYear() === B.getUTCFullYear() ? A.getUTCDate() + '–' + B.getUTCDate() + ' ' + MON[B.getUTCMonth()] : fmtD(a) + ' – ' + fmtD(b); };
+  const thisMonday = (ms) => isoOf(monday(localDay(ms)));
+
+  // ---------- geometry: a header band on top, lane names on the left (when there are any), equal cells ----------
+  function dims(g) {
+    const tl = g.type === 'timeline', rows = (tl ? g.lanes : g.rows) || [];
+    const nc = tl ? clamp(Math.round(g.n) || 1, 1, 60) : Math.max(1, (g.cols || []).length);
+    const nr = Math.max(1, rows.length), side = rows.length ? SIDE : 0;
+    return { nc, nr, side, top: TOP, rows, cw: Math.max(1, (g.w - side) / nc), lh: Math.max(1, (g.h - TOP) / nr) };
+  }
+  const sizeFor = (g, cw, lh) => { const d = dims(g); return { w: Math.round(d.side + d.nc * cw), h: Math.round(TOP + d.nr * lh) }; };
+  function column(g, i) { // what a column header says: { t: title, d: dates or '', from, to } (from/to in days, timeline only)
+    if (g.type !== 'timeline') return { t: String((g.cols || [])[i] || '') };
+    const s = dayOf(g.start) ?? monday(localDay(Date.now()));
+    let from, to, t, d = '';
+    if (g.unit === 'day') { from = to = s + i; t = WD[new Date(from * DAY).getUTCDay()] + ', ' + fmtD(from); }
+    else if (g.unit === 'month') {
+      const a = new Date(s * DAY), y = a.getUTCFullYear(), m = a.getUTCMonth() + i;
+      from = Math.floor(Date.UTC(y, m, 1) / DAY); to = Math.floor(Date.UTC(y, m + 1, 1) / DAY) - 1;
+      const M = new Date(from * DAY); t = MONTHS[M.getUTCMonth()]; d = String(M.getUTCFullYear());
+    } else if (g.unit === 'sprint') {
+      const L = clamp(Math.round(g.len) || 14, 1, 70); from = s + L * i; to = from + L - 1;
+      t = 'Спринт ' + ((Number.isFinite(g.k) ? g.k : 1) + i); d = range(from, to);
+    } else { from = s + 7 * i; to = from + 6; t = 'Тиждень ' + isoWeek(from); d = range(from, to); }
+    const own = g.names && typeof g.names[i] === 'string' && g.names[i].trim();
+    if (own) { if (t && g.unit !== 'day') d = d ? t + ' · ' + d : t; t = own; }
+    return { t, d, from, to };
+  }
+  function nowAt(g, ms) { // where today is on a timeline: { i: column, f: 0..1 across it } or null
+    if (g.type !== 'timeline') return null;
+    const t = new Date(ms), today = localDay(ms) + (t.getHours() * 60 + t.getMinutes()) / 1440, n = dims(g).nc;
+    const a = column(g, 0), b = column(g, n - 1);
+    if (today < a.from || today >= b.to + 1) return null;
+    for (let i = 0; i < n; i++) { const c = column(g, i); if (today >= c.from && today < c.to + 1) return { i, f: (today - c.from) / (c.to + 1 - c.from) }; }
+    return null;
+  }
+  const rowName = (g, r) => String((dims(g).rows || [])[r] || '');
+  function cellRect(g, c, r) { const d = dims(g); return { x: g.x + d.side + c * d.cw, y: g.y + d.top + r * d.lh, w: d.cw, h: d.lh }; }
+  function cellAt(g, x, y) {
+    const d = dims(g), lx = x - g.x - d.side, ly = y - g.y - d.top;
+    if (lx < 0 || ly < 0 || lx >= g.w - d.side || ly >= g.h - d.top) return null;
+    return [clamp(Math.floor(lx / d.cw), 0, d.nc - 1), clamp(Math.floor(ly / d.lh), 0, d.nr - 1)];
+  }
+  const cellOf = (g, it) => { const d = dims(g), c = Array.isArray(it.cell) ? it.cell : [0, 0]; return [clamp(c[0] | 0, 0, d.nc - 1), clamp(c[1] | 0, 0, d.nr - 1)]; };
+  // A card dropped into a cell sticks to it: on a timeline or table it lines up in the column, in a matrix it stays where it was put.
+  function snap(g, it, cell) {
+    const R = cellRect(g, cell[0], cell[1]), w = it.w || 200, h = it.h || 120;
+    const fitY = (y) => (h > R.h - PAD * 2 ? R.y + PAD : clamp(y, R.y + PAD, R.y + R.h - h - PAD));
+    const fitX = (x) => (w > R.w - PAD * 2 ? R.x + PAD : clamp(x, R.x + PAD, R.x + R.w - w - PAD));
+    const x = g.kind === 'matrix' ? fitX(it.x) : w <= R.w - PAD * 2 ? R.x + (R.w - w) / 2 : R.x + PAD;
+    return { x: Math.round(x), y: Math.round(fitY(it.y)) };
+  }
+  // the next free spot in a cell: under the cards already there
+  function slotIn(g, cell, w, h, members) {
+    const R = cellRect(g, cell[0], cell[1]);
+    const here = members.filter((m) => Array.isArray(m.cell) && m.cell[0] === cell[0] && m.cell[1] === cell[1]);
+    const y = here.length ? Math.max(...here.map((m) => m.y + (m.h || 0))) + 20 : R.y + PAD;
+    return snap(g, { w, h, x: R.x + PAD, y }, cell);
+  }
+
+  // ---------- templates ----------
+  const RETRO = {
+    ssc: ['Ретро · Start / Stop / Continue', [['🟢 Почати', 'ok'], ['🔴 Припинити', 'pink'], ['🔵 Продовжити', 'info']]],
+    msg: ['Ретро · Mad / Sad / Glad', [['😠 Злить', 'warn'], ['😢 Засмучує', 'purple'], ['😊 Радує', 'ok']]],
+    '4l': ['Ретро · 4L', [['💚 Сподобалось', 'ok'], ['📚 Навчились', 'info'], ['🕳️ Бракувало', 'warn'], ['✨ Хотілося б', 'purple']]],
+    sail: ['Ретро · Вітрильник', [['🌬️ Вітер: що нас рухає', 'teal'], ['⚓ Якір: що гальмує', 'gray'], ['🪨 Скелі: ризики попереду', 'warn'], ['🏝️ Острів: наша мета', 'ok']]],
+  };
+  const TEMPLATES = [
+    ['sprints', 'Таймлайн спринтів', 'Спринти по 2 тижні з доріжками команд'],
+    ['weeks', 'Таймлайн тижнів', 'Шість тижнів від поточного'],
+    ['roadmap', 'Роадмап', 'Зараз · Далі · Потім'],
+    ['matrix', 'Матриця Impact / Effort', 'Пріоритети: вплив проти зусиль'],
+    ['table', 'Таблиця', 'Колонки й рядки, картки прилипають до клітинок'],
+    ['sprint', 'Спринт-планінг', 'Ціль, беклог і що беремо в спринт'],
+    ['ssc', 'Start / Stop / Continue', 'Ретро на три колонки'],
+    ['msg', 'Mad / Sad / Glad', 'Ретро про емоції команди'],
+    ['4l', '4L', 'Liked · Learned · Lacked · Longed for'],
+    ['sail', 'Вітрильник', 'Вітер, якір, скелі й острів'],
+  ];
+  function template(key, ox, oy, makeId, by, nowMs) {
+    const out = [], mk = (o) => { const it = { id: makeId(), by, ...o }; out.push(it); return it; };
+    const table = (o, cw, lh) => { const t = { type: 'table', x: ox, y: oy, color: 'gray', ...o }; Object.assign(t, sizeFor({ ...t, w: 0, h: 0 }, cw, lh)); return mk(t); };
+    const tl = (o, cw, lh) => { const t = { type: 'timeline', x: ox, y: oy, color: 'gray', start: thisMonday(nowMs || Date.now()), ...o }; Object.assign(t, sizeFor({ ...t, w: 0, h: 0 }, cw, lh)); return mk(t); };
+    if (key === 'sprints') tl({ title: 'Спринти', unit: 'sprint', len: 14, k: 1, n: 4, lanes: ['Дизайн', 'Фронтенд', 'Бекенд'] }, 340, 250);
+    else if (key === 'weeks') tl({ title: 'План на шість тижнів', unit: 'week', n: 6, lanes: [] }, 300, 420);
+    else if (key === 'roadmap') table({ title: 'Роадмап', cols: ['Зараз', 'Далі', 'Потім'], rows: ['Продукт', 'Дизайн', 'Розробка'], tint: ['ok', 'info', 'purple'] }, 380, 260);
+    else if (key === 'matrix') table({ title: 'Пріоритети · Impact / Effort', kind: 'matrix', cols: ['Мало зусиль', 'Багато зусиль'], rows: ['Великий вплив', 'Малий вплив'], cells: ['Швидкі перемоги', 'Великі проєкти', 'Дрібниці', 'Не варто зусиль'], ax: ['Зусилля', 'Вплив'], tint: ['ok', 'warn'] }, 480, 380);
+    else if (key === 'table') table({ title: 'Таблиця', cols: ['Колонка 1', 'Колонка 2', 'Колонка 3'], rows: ['Рядок 1', 'Рядок 2'] }, 320, 260);
+    else if (key === 'sprint') {
+      mk({ type: 'sticky', x: ox, y: oy, w: 300, h: 220, color: 'pink', text: '🎯 Ціль спринту\n\nЗа що ми хочемо, щоб нас похвалили наприкінці?' });
+      mk({ type: 'sticky', x: ox, y: oy + 250, w: 300, h: 160, color: 'caution', text: '👥 Ємність команди\n\n… сторіпоінтів' });
+      table({ title: 'Спринт-планінг', x: ox + 340, cols: ['📥 Беклог', '✅ Беремо в спринт', '🚧 Ризики й залежності'], rows: [], tint: ['gray', 'ok', 'warn'] }, 360, 640);
+    } else if (RETRO[key]) {
+      const [title, cols] = RETRO[key];
+      table({ title, cols: cols.map((c) => c[0]), rows: [], tint: cols.map((c) => c[1]) }, cols.length > 3 ? 330 : 380, 620);
+    } else throw new Error('Unknown template: ' + key);
+    return out;
+  }
+
+  // ---------- membership helpers (both sides store it the same way: card.grid = container id, card.cell = [column, row]) ----------
+  function secOf(i, all) {
+    if ('sec' in i) return all.find((s) => s.type === 'section' && s.id === i.sec) || null;
+    let best = null; const cx = i.x + (i.w || 0) / 2, cy = i.y + (i.h || 0) / 2;
+    for (const s of all) if (s.type === 'section' && cx >= s.x && cx <= s.x + s.w && cy >= s.y && cy <= s.y + s.h && (!best || s.w * s.h < best.w * best.h)) best = s;
+    return best;
+  }
+  const CARD = ['sticky', 'image', 'text', 'web', 'node', 'board', 'task'];
+  const isCardT = (i) => CARD.includes(i.type);
+  const gridOf = (i, byId) => { const g = i.grid && byId.get(i.grid); return isGrid(g) ? g : null; };
+
+  // ---------- after a vote: the most voted cards move to the top of their cell or section ----------
+  function sortByVotes(all, votes) {
+    const byId = new Map(all.map((i) => [i.id, i])), groups = new Map(), out = [];
+    for (const i of all) {
+      if (!isCardT(i)) continue;
+      const g = gridOf(i, byId), s = g ? null : secOf(i, all);
+      const key = g ? g.id + ':' + cellOf(g, i).join(',') : s ? s.id : null;
+      if (!key) continue;
+      if (!groups.has(key)) groups.set(key, { g, list: [] });
+      groups.get(key).list.push(i);
+    }
+    const v = (i) => votes[i.id] || 0;
+    for (const { g, list } of groups.values()) {
+      if (list.length < 2 || !list.some((i) => v(i) > 0)) continue;
+      const read = [...list].sort((a, b) => Math.round(a.y / 40) - Math.round(b.y / 40) || a.x - b.x);
+      const ranked = [...read].sort((a, b) => v(b) - v(a) || read.indexOf(a) - read.indexOf(b));
+      if (g) { // a column of cards: stack them again, best on top
+        let y = Math.min(...list.map((i) => i.y));
+        for (const i of ranked) { if (i.y !== y) out.push({ id: i.id, x: i.x, y }); y += (i.h || 120) + 20; }
+      } else ranked.forEach((i, k) => { const s = read[k]; if (s.x !== i.x || s.y !== i.y) out.push({ id: i.id, x: s.x, y: s.y }); });
+    }
+    return out;
+  }
+
+  // ---------- markdown export ----------
+  // o: { title, plain(it) → text, hidden(it) → bool, votes: { id: n }, boardUrl(bid) → url }
+  function markdown(all, o) {
+    o = o || {};
+    const plain = o.plain || ((i) => String(i.text || '').replace(/<[^>]*>/g, ''));
+    const votes = o.votes || {}, hidden = o.hidden || (() => false);
+    const byId = new Map(all.map((i) => [i.id, i])), L = [];
+    const one = (s) => String(s || '').replace(/\s*\n+\s*/g, ' · ').trim();
+    const read = (a, b) => Math.round(a.y / 40) - Math.round(b.y / 40) || a.x - b.x;
+    const vs = (i) => (votes[i.id] ? ` · 🗳 ${votes[i.id]}` : '');
+    const ranked = (list) => [...list].sort((a, b) => (votes[b.id] || 0) - (votes[a.id] || 0) || read(a, b));
+    const line = (i) => {
+      if (hidden(i)) return '- _(прихована картка)_';
+      if (i.type === 'task') {
+        const s = i.src && i.src.key ? (i.src.url ? `[${i.src.key}](${i.src.url})` : i.src.key) : '';
+        const bits = [STATUS_NAMES[i.status] || STATUS_NAMES.todo, i.who && '👤 ' + i.who, i.est && '⏱ ' + i.est, i.due && '📅 ' + i.due, ...(i.tags || []).map((t) => '#' + String(t).replace(/\s+/g, '-')), s].filter(Boolean);
+        return `- [${i.status === 'done' ? 'x' : ' '}] **${one(i.text) || 'Задача'}** · ${bits.join(' · ')}${vs(i)}`;
+      }
+      if (i.type === 'web') return `- [${one(i.title) || i.url}](${i.url})${vs(i)}`;
+      if (i.type === 'board') return `- [${one(i.title) || 'Дошка JamBoard'}](${o.boardUrl ? o.boardUrl(i.bid) : '#b=' + i.bid})${vs(i)}`;
+      if (i.type === 'image') return `- 🖼 Зображення${/^https:\/\//.test(i.url || '') ? ` (${i.url})` : ''}${vs(i)}`;
+      if (i.type === 'text') {
+        const t = plain(i).trim(); if (!t) return '';
+        return (i.ts === 'h1' ? '### ' : i.ts === 'h2' ? '#### ' : '') + (i.ts === 'h1' || i.ts === 'h2' ? one(t) : t) + vs(i);
+      }
+      const t = plain(i).trim();
+      return t.includes('\n') ? '- ' + t.split('\n').map((l, k) => (k ? '  ' + l : l)).join('\n') + vs(i) : '- ' + (t || '_(порожній стікер)_') + vs(i);
+    };
+    const put = (list) => ranked(list).forEach((i) => { const s = line(i); if (s) L.push(s); });
+    L.push('# ' + (one(o.title) || 'Дошка JamBoard'), '');
+    const nodes = all.filter((i) => i.type === 'node');
+    const cards = all.filter((i) => isCardT(i) && i.type !== 'node');
+    const homes = new Map(); // container id → cards
+    const loose = [];
+    for (const i of cards) {
+      const g = gridOf(i, byId), s = g ? null : secOf(i, all), k = g ? g.id : s ? s.id : null;
+      if (!k) { loose.push(i); continue; }
+      if (!homes.has(k)) homes.set(k, []); homes.get(k).push(i);
+    }
+    const boxes = all.filter((i) => isGrid(i) || i.type === 'section').sort(read);
+    for (const b of boxes) {
+      const list = homes.get(b.id) || [];
+      if (b.type === 'section') { if (!list.length) continue; L.push('## ' + (one(b.title) || 'Секція'), ''); put(list); L.push(''); continue; }
+      const d = dims(b), named = d.rows.length > 0;
+      L.push('## ' + (one(b.title) || (b.type === 'timeline' ? 'Таймлайн' : 'Таблиця')), '');
+      const inCell = (c, r) => list.filter((i) => { const q = cellOf(b, i); return q[0] === c && q[1] === r; });
+      if (b.kind === 'matrix') {
+        for (let r = 0; r < d.nr; r++) for (let c = 0; c < d.nc; c++) {
+          const nm = (b.cells || [])[r * d.nc + c], ax = [column(b, c).t, rowName(b, r)].filter(Boolean).join(' · ');
+          L.push('### ' + (one(nm) || ax || `Клітинка ${c + 1}.${r + 1}`) + (nm && ax ? ` (${ax})` : ''), ''); put(inCell(c, r)); L.push('');
+        }
+        continue;
+      }
+      for (let c = 0; c < d.nc; c++) {
+        const h = column(b, c);
+        L.push('### ' + (one(h.t) || `Колонка ${c + 1}`) + (h.d ? ' · ' + h.d : ''), '');
+        for (let r = 0; r < d.nr; r++) {
+          const here = inCell(c, r); if (!here.length) continue;
+          if (named) L.push(`**${one(rowName(b, r)) || 'Рядок ' + (r + 1)}**`, '');
+          put(here); L.push('');
+        }
+      }
+    }
+    if (loose.length) { if (boxes.length || nodes.length) L.push('## Інше на дошці', ''); put(loose); L.push(''); }
+    if (nodes.length) {
+      const nid = new Map(nodes.map((n, k) => [n.id, 'n' + (k + 1)]));
+      const q = (s) => '"' + (one(s) || ' ').replace(/"/g, '#quot;') + '"';
+      const wrap = { rect: ['[', ']'], round: ['(', ')'], pill: ['([', '])'], circle: ['((', '))'], diamond: ['{', '}'], cyl: ['[(', ')]'], hex: ['{{', '}}'] };
+      const bx = Math.max(...nodes.map((n) => n.x)) - Math.min(...nodes.map((n) => n.x)), by = Math.max(...nodes.map((n) => n.y)) - Math.min(...nodes.map((n) => n.y));
+      L.push('## Схема', '', '```mermaid', 'flowchart ' + (bx >= by ? 'LR' : 'TD'));
+      for (const n of nodes) { const [a, b] = wrap[n.shape] || wrap.rect; L.push(`  ${nid.get(n.id)}${a}${q(n.text)}${b}`); }
+      for (const l of all) {
+        if (l.type !== 'link' || !nid.has(l.a) || !nid.has(l.b)) continue;
+        const op = l.thick ? (l.flow === false ? '===' : '==>') : l.dash ? (l.flow === false ? '-.-' : '-.->') : l.flow === false ? '---' : '-->';
+        L.push(`  ${nid.get(l.a)} ${op}${l.label ? '|' + q(l.label) + '|' : ''} ${nid.get(l.b)}`);
+      }
+      L.push('```', '');
+    }
+    const name = (i) => (!i ? '?' : hidden(i) ? 'прихована картка' : i.type === 'section' || isGrid(i) ? one(i.title) : one(i.type === 'task' || i.type === 'node' ? i.text : i.type === 'web' || i.type === 'board' ? i.title : plain(i)).slice(0, 60) || i.type);
+    const ropes = all.filter((l) => l.type === 'link' && byId.has(l.a) && byId.has(l.b) && !(byId.get(l.a).type === 'node' && byId.get(l.b).type === 'node'));
+    if (ropes.length) { L.push('## Зв’язки', ''); ropes.forEach((l) => L.push(`- ${name(byId.get(l.a))} → ${name(byId.get(l.b))}${l.label ? ' (' + one(l.label) + ')' : ''}`)); L.push(''); }
+    const notes = all.filter((i) => i.type === 'comment' && Array.isArray(i.msgs) && i.msgs.length);
+    if (notes.length) {
+      L.push('## Коментарі', '');
+      for (const c of notes) { c.msgs.forEach((m) => L.push(`> **${one(m.n) || 'Гість'}**: ${one(m.t)}`)); L.push(''); }
+    }
+    return L.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
+  }
+
+  // ---------- task cards: where a task came from (Jira, Linear, GitHub) ----------
+  // A source turns a pasted issue link into { p, key, url }. One that can be read without a sign-in also has
+  // api(m) → JSON url and read(json) → task fields; the others are filled in later through the MCP server.
+  const SOURCES = {
+    github: {
+      name: 'GitHub',
+      match: (u) => { const m = /^https:\/\/github\.com\/([\w.-]+)\/([\w.-]+)\/(issues|pull)\/(\d+)/.exec(u); return m && { p: 'github', key: `${m[1]}/${m[2]}#${m[4]}`, url: m[0], api: `https://api.github.com/repos/${m[1]}/${m[2]}/issues/${m[4]}` }; },
+      read: (j) => j && typeof j.title === 'string' ? { text: j.title.slice(0, 400), status: j.state === 'closed' ? 'done' : j.pull_request ? 'review' : (j.assignee ? 'doing' : 'todo'), who: j.assignee && j.assignee.login ? String(j.assignee.login).slice(0, 40) : undefined, tags: Array.isArray(j.labels) ? j.labels.map((l) => String(l && l.name || '').slice(0, 24)).filter(Boolean).slice(0, 8) : undefined } : null,
+    },
+    jira: { name: 'Jira', match: (u) => { const m = /^https:\/\/[\w-]+\.atlassian\.net\/(?:browse\/|.*[?&]selectedIssue=)([A-Z][A-Z0-9_]+-\d+)/.exec(u); return m && { p: 'jira', key: m[1], url: u.split('#')[0].slice(0, 500) }; } },
+    linear: { name: 'Linear', match: (u) => { const m = /^https:\/\/linear\.app\/[\w-]+\/issue\/([A-Z][A-Z0-9]*-\d+)/.exec(u); return m && { p: 'linear', key: m[1], url: m[0] }; } },
+  };
+  const source = (u) => { for (const k in SOURCES) { const m = SOURCES[k].match(String(u || '')); if (m) return m; } return null; };
+
+  return { TOP, SIDE, PAD, UNITS, STATUSES, STATUS_NAMES, TEMPLATES, SOURCES, isGrid, dayOf, isoOf, localDay, thisMonday, dims, sizeFor, column, nowAt, rowName, cellRect, cellAt, cellOf, snap, slotIn, template, sortByVotes, markdown, source };
+})();
+// </plan>
   const isSec = (i) => i.type === 'section';
-  const isCard = (i) => i.type === 'sticky' || i.type === 'image' || i.type === 'text' || i.type === 'web' || i.type === 'node' || i.type === 'board';
+  const isCard = (i) => i.type === 'sticky' || i.type === 'image' || i.type === 'text' || i.type === 'web' || i.type === 'node' || i.type === 'board' || i.type === 'task';
+  const isGrid = Plan.isGrid; // timeline or table: cards dropped in stick to a cell
+  const isBack = (i) => !!i && (isSec(i) || isGrid(i)); // containers you can click "through" to make things on
+  const titled = (i) => !!i && (isSec(i) || isGrid(i)); // their name is `title`, edited above the box
   const isNode = (i) => !!i && i.type === 'node';
   const ICON_SVG = {
     service: '<rect x="4" y="4.5" width="16" height="6" rx="1.6"/><rect x="4" y="13.5" width="16" height="6" rx="1.6"/><path d="M7.5 7.5h.01M7.5 16.5h.01" stroke-width="2.6"/>',
@@ -1457,10 +1938,10 @@ const Route = (() => {
   const TEXT_TS = ['h1', 'h2', 'p', 's'];
   const isMark = (i) => i.type === 'stamp' || i.type === 'comment';
   // paint order: sections under everything, stamps over cards, comment pins on top
-  const RANK = { section: 0, stamp: 2, comment: 3 };
+  const RANK = { section: 0, timeline: 0.5, table: 0.5, stamp: 2, comment: 3 };
   const rank = (i) => (i.type in RANK ? RANK[i.type] : 1);
   const sorted = () => [...items.values()].filter((i) => !isLink(i)).sort((a, b) => rank(a) - rank(b) || (a.z || 0) - (b.z || 0) || (a.id < b.id ? -1 : 1));
-  const TYPES_OK = ['sticky', 'image', 'section', 'stamp', 'comment', 'text', 'link', 'web', 'node', 'board'];
+  const TYPES_OK = ['sticky', 'image', 'section', 'stamp', 'comment', 'text', 'link', 'web', 'node', 'board', 'timeline', 'table', 'task'];
   const STAMPS = ['👍', '❤️', '🔥', '⭐', '✅', '❌', '❓', '💡', '🎉', '😂', '👀', '🚀'];
   let stampEmoji = STAMPS.includes(store.get('jamboard:stamp')) ? store.get('jamboard:stamp') : STAMPS[0];
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1505,6 +1986,36 @@ const Route = (() => {
       if (typeof o.title !== 'string') delete o.title; else o.title = o.title.slice(0, 120);
     }
     if (o.ts != null && !TEXT_TS.includes(o.ts)) delete o.ts;
+    const strs = (a, n, len) => (Array.isArray(a) ? a.slice(0, n).map((s) => (typeof s === 'string' ? s.slice(0, len) : '')) : []);
+    if (o.type === 'timeline' || o.type === 'table') {
+      o.title = typeof o.title === 'string' ? o.title.slice(0, 120) : '';
+      if (!COLORS.includes(o.color)) o.color = 'gray';
+      if (o.type === 'timeline') {
+        if (Plan.dayOf(o.start) == null) o.start = Plan.thisMonday(Date.now());
+        if (!Plan.UNITS.includes(o.unit)) o.unit = 'week';
+        o.n = clamp(Math.round(+o.n) || 4, 1, 60); o.len = clamp(Math.round(+o.len) || 14, 1, 70); o.k = Number.isFinite(+o.k) ? clamp(Math.round(+o.k), 0, 9999) : 1;
+        o.lanes = strs(o.lanes, 12, 60); o.names = strs(o.names, 60, 40);
+      } else {
+        o.cols = strs(o.cols, 20, 60); if (!o.cols.length) o.cols = ['Колонка 1'];
+        o.rows = strs(o.rows, 20, 60); o.cells = strs(o.cells, 400, 60);
+        o.tint = Array.isArray(o.tint) ? o.tint.slice(0, 20).map((c) => (COLORS.includes(c) ? c : '')) : [];
+        if (o.kind !== 'matrix') delete o.kind;
+        o.ax = strs(o.ax, 2, 40);
+      }
+      const d = Plan.dims({ ...o, w: 0, h: 0 });
+      o.w = Math.max(+o.w || 0, d.side + d.nc * 80); o.h = Math.max(+o.h || 0, Plan.TOP + d.nr * 80);
+    }
+    if (o.type === 'task') {
+      o.text = typeof o.text === 'string' ? o.text.slice(0, 400) : '';
+      if (!Plan.STATUSES.includes(o.status)) o.status = 'todo';
+      ['who', 'est'].forEach((k) => { if (typeof o[k] !== 'string' || !o[k].trim()) delete o[k]; else o[k] = o[k].slice(0, k === 'who' ? 40 : 16); });
+      if (Plan.dayOf(o.due) == null) delete o.due;
+      o.tags = strs(o.tags, 8, 24).filter((t) => t.trim()); if (!o.tags.length) delete o.tags;
+      const s = o.src; if (s && typeof s === 'object' && Plan.SOURCES[s.p]) o.src = { p: s.p, key: String(s.key || '').slice(0, 60), url: safeHttps(s.url) || '', at: +s.at || 0 }; else delete o.src;
+      delete o.html;
+    }
+    if (o.grid != null && typeof o.grid !== 'string') delete o.grid;
+    if (o.cell != null && !(Array.isArray(o.cell) && o.cell.length === 2 && o.cell.every((v) => Number.isInteger(v) && v >= 0 && v < 100))) delete o.cell;
     return o;
   };
 
@@ -1588,6 +2099,10 @@ const Route = (() => {
   function commit(before, newIds = []) {
     if (viewOnly()) return; // nothing on a view-only board is ever saved
     newIds.forEach((id) => { if (!(id in before)) before[id] = null; });
+    if (hideMode.on) for (const id in before) { // made while writing is hidden: only its author sees it until the reveal
+      const it = before[id] === null && items.get(id);
+      if (it && HIDEABLE.includes(it.type) && !it.hid) { it.hid = hideMode.s; it.own = myVid; }
+    }
     for (const [id, prev] of autofitSections()) if (!(id in before)) before[id] = prev;
     const after = snapIds(Object.keys(before));
     undoStack.push({ before, after }); if (undoStack.length > 120) undoStack.shift();
@@ -1843,6 +2358,17 @@ const Route = (() => {
       const t = d.firstChild;
       t.addEventListener('input', () => liveText(id));
       t.addEventListener('blur', () => { if (editingId === id) finishEdit(); });
+    } else if (isGrid(it)) {
+      d.classList.add('grid');
+      d.innerHTML = '<div class="stitle"></div><div class="g-in"><div class="g-cells"></div><div class="g-now" hidden><span>Сьогодні</span></div></div><div class="g-ax x"></div><div class="g-ax y"></div><div class="handle" title="Змінити розмір"></div>';
+      const t = d.firstChild;
+      t.addEventListener('blur', () => { if (editingId === id) finishEdit(); });
+      t.addEventListener('input', () => liveText(id));
+    } else if (it.type === 'task') {
+      d.innerHTML = '<div class="txt"></div><div class="tk-top"><button class="tk-st" type="button"></button><a class="tk-key" target="_blank" rel="noopener noreferrer"></a></div><div class="tk-tags"></div><div class="tk-foot"><span class="tk-who"></span><span class="tk-est"></span><span class="tk-due"></span></div><div class="handle" title="Змінити ширину"></div>' + PORTS;
+      const t = d.firstChild;
+      t.addEventListener('input', () => { liveText(id); const cur = items.get(id); if (cur) { cur.h = d.offsetHeight; schedule('links'); updateCtx(); } });
+      t.addEventListener('blur', () => { if (editingId === id) finishEdit(); });
     } else if (it.type === 'stamp') {
       d.innerHTML = '<span class="emo"></span>';
     } else if (it.type === 'comment') {
@@ -1899,16 +2425,18 @@ const Route = (() => {
       d.title = '';
     } else if (it.type === 'sticky') {
       d.style.setProperty('--c', `var(--t-${COLORS.includes(it.color) ? it.color : 'caution'})`);
-      const t = d.firstChild;
-      if (editingId !== it.id) setRich(t, it);
-      d.children[1].textContent = it.by || '';
+      const t = d.firstChild, masked = maskFor(d, it);
+      if (masked) { if (t._k !== 'masked') { t._k = 'masked'; t.textContent = ''; d._fit = null; } }
+      else if (editingId !== it.id) setRich(t, it);
+      d.children[1].textContent = masked ? it.by + ' пише…' : mineHidden(it) ? '🙈 Бачите лише ви' + (it.by ? ' · ' + it.by : '') : it.by || '';
       t.style.fontWeight = it.b || it.ts === 'h1' ? '700' : it.ts === 'h2' ? '600' : '';
       t.style.textAlign = it.al || '';
       t.style.lineHeight = it.ts === 'p' || it.ts === 's' ? '1.4' : '';
-      fit(d, it.id);
+      if (!masked) fit(d, it.id);
     } else if (it.type === 'text') {
-      const t = d.firstChild;
-      if (editingId !== it.id) setRich(t, it);
+      const t = d.firstChild, masked = maskFor(d, it);
+      if (masked) { if (t._k !== 'masked') { t._k = 'masked'; t.textContent = '🙈 ' + (it.by || 'Хтось') + ' пише…'; } }
+      else if (editingId !== it.id) setRich(t, it);
       d.dataset.ts = TEXT_TS.includes(it.ts) ? it.ts : 'p';
       t.style.fontWeight = it.b ? '700' : ''; t.style.textAlign = it.al || '';
       d.style.height = 'auto';
@@ -1923,6 +2451,12 @@ const Route = (() => {
       const hh = d.offsetHeight; if (hh && Math.abs(hh - (it.h || 0)) > 0.5) it.h = hh;
     } else if (it.type === 'node') {
       renderNode(d, it, g);
+    } else if (isGrid(it)) {
+      renderGrid(d, it, g);
+    } else if (it.type === 'task') {
+      renderTask(d, it);
+      d.style.height = 'auto';
+      const hh = d.offsetHeight; if (hh && Math.abs(hh - (it.h || 0)) > 0.5) it.h = hh;
     } else if (it.type === 'stamp') {
       const e = d.firstChild; if (e.textContent !== it.emoji) e.textContent = it.emoji;
       d.style.fontSize = Math.round(g.h * 0.8) + 'px';
@@ -1938,6 +2472,7 @@ const Route = (() => {
       const img = d.firstChild, src = it.src || it.url || '';
       if (img.getAttribute('src') !== src) img.src = src;
     }
+    if (VOTABLE(it)) paintVotes(d, it);
     d.classList.toggle('sel', selected.has(it.id));
     d.classList.toggle('solo', selected.size === 1);
     if (!d.classList.contains('dragging')) d.classList.toggle('lifted', !active.has(it.id) && remotePos.has(it.id) && !isSec(it));
@@ -1989,6 +2524,97 @@ const Route = (() => {
     if ((ico.getAttribute('src') || '') !== icoSrc) { if (icoSrc) ico.src = icoSrc; else { ico.removeAttribute('src'); ico.classList.add('off'); } }
     d.title = '';
   }
+  // timelines and tables: a CSS grid of header, lane names and cells, rebuilt only when its structure or labels change
+  const tintOf = (it, i) => { const c = (it.tint || [])[i]; return `var(--t-${COLORS.includes(c) ? c : COLORS.includes(it.color) ? it.color : 'gray'})`; };
+  function fillGrid(wrap, it, now) {
+    const dm = Plan.dims(it), cols = Array.from({ length: dm.nc }, (_, i) => Plan.column(it, i)), mx = it.kind === 'matrix';
+    wrap.style.gridTemplateColumns = (dm.side ? dm.side + 'px ' : '') + `repeat(${dm.nc}, minmax(0, 1fr))`;
+    wrap.style.gridTemplateRows = `${Plan.TOP}px repeat(${dm.nr}, minmax(0, 1fr))`;
+    let h = dm.side ? '<div class="gk"></div>' : '';
+    cols.forEach((c, i) => { h += `<div class="gh${now && now.i === i ? ' now' : ''}${i === dm.nc - 1 ? ' last' : ''}" style="--tc:${tintOf(it, i)}"><b data-hk="c:${i}"></b><span></span></div>`; });
+    for (let r = 0; r < dm.nr; r++) {
+      if (dm.side) h += `<div class="gs"><b data-hk="r:${r}"></b></div>`;
+      for (let c = 0; c < dm.nc; c++) h += `<div class="gc${c === dm.nc - 1 ? ' last' : ''}${r === dm.nr - 1 ? ' bot' : ''}" data-c="${c}" data-r="${r}" style="--tc:${tintOf(it, c)}">${mx ? `<i data-hk="m:${r * dm.nc + c}"></i>` : ''}</div>`;
+    }
+    wrap.innerHTML = h;
+    wrap.querySelectorAll('[data-hk]').forEach((e) => {
+      const [k, n] = e.dataset.hk.split(':'), i = +n;
+      if (k === 'c') { e.textContent = cols[i].t; e.nextSibling.textContent = cols[i].d || ''; }
+      else if (k === 'r') e.textContent = dm.rows[i] || '';
+      else e.textContent = (it.cells || [])[i] || '';
+    });
+  }
+  let headEdit = null; // a column, lane or cell name being typed in
+  function renderGrid(d, it, g) {
+    const box = { ...it, ...g }, dm = Plan.dims(box);
+    d.style.setProperty('--c', `var(--t-${COLORS.includes(it.color) ? it.color : 'gray'})`);
+    d.classList.toggle('matrix', it.kind === 'matrix');
+    const t = d.firstChild;
+    if (editingId !== it.id && t.textContent !== (it.title || '')) t.textContent = it.title || '';
+    const now = it.type === 'timeline' ? Plan.nowAt(it, Date.now()) : null;
+    const sig = JSON.stringify([it.type, it.kind, dm.nc, dm.nr, dm.side, it.start, it.unit, it.len, it.k, it.names, it.cols, dm.rows, it.cells, it.tint, now && now.i]);
+    if (d._gs !== sig && !(headEdit && headEdit.id === it.id)) { d._gs = sig; fillGrid(d.querySelector('.g-cells'), box, now); }
+    const nl = d.querySelector('.g-now');
+    nl.hidden = !now;
+    if (now) nl.style.left = `calc(${dm.side}px + (100% - ${dm.side}px) * ${((now.i + now.f) / dm.nc).toFixed(4)})`;
+    const ax = it.kind === 'matrix' ? it.ax || [] : [], [axX, axY] = [d.querySelector('.g-ax.x'), d.querySelector('.g-ax.y')];
+    axX.textContent = ax[0] ? ax[0] + ' →' : ''; axY.textContent = ax[1] ? ax[1] + ' →' : '';
+    axY.style.top = (Plan.TOP + (g.h - Plan.TOP) / 2) + 'px'; axX.style.left = (dm.side + (g.w - dm.side) / 2) + 'px';
+    d.title = '';
+  }
+  const dueText = (s) => { const n = Plan.dayOf(s); return n == null ? '' : new Date(n * 864e5).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short', timeZone: 'UTC' }); };
+  function renderTask(d, it) {
+    const t = d.firstChild, masked = maskFor(d, it);
+    if (masked) { if (t._k !== 'masked') { t._k = 'masked'; t.textContent = '🙈 ' + (it.by || 'Хтось') + ' пише…'; } }
+    else if (editingId !== it.id && t._k !== 'T' + it.text) { t._k = 'T' + it.text; t.textContent = it.text || ''; }
+    d.dataset.s = it.status || 'todo';
+    const st = d.querySelector('.tk-st'), sn = Plan.STATUS_NAMES[it.status] || Plan.STATUS_NAMES.todo;
+    if (st.textContent !== sn) st.textContent = sn;
+    st.title = viewOnly() ? 'Статус: ' + sn : 'Статус: ' + sn + '. Клік змінює статус';
+    const k = d.querySelector('.tk-key'), src = it.src, url = src && safeHttps(src.url);
+    k.hidden = !src;
+    if (src) { const txt = (Plan.SOURCES[src.p] || {}).name + ' · ' + (src.key || ''); if (k.textContent !== txt) k.textContent = txt; if (url) { if (k.getAttribute('href') !== url) k.href = url; } else k.removeAttribute('href'); }
+    const tags = masked ? [] : it.tags || [], tg = d.querySelector('.tk-tags'), tsig = tags.join('\n');
+    if (tg._k !== tsig) { tg._k = tsig; tg.textContent = ''; tags.forEach((x) => { const s = document.createElement('span'); s.textContent = '#' + x; tg.appendChild(s); }); }
+    const set = (sel, v) => { const e = d.querySelector(sel); if (e.textContent !== v) e.textContent = v; e.hidden = !v; return e; };
+    set('.tk-who', !masked && it.who ? it.who : '');
+    set('.tk-est', !masked && it.est ? it.est : '');
+    const due = set('.tk-due', !masked && it.due ? 'до ' + dueText(it.due) : '');
+    due.classList.toggle('late', !!it.due && it.status !== 'done' && Plan.dayOf(it.due) < Plan.localDay(Date.now()));
+    d.querySelector('.tk-foot').hidden = masked || !(it.who || it.est || it.due);
+    d.title = '';
+  }
+  // hidden writing: someone else's card from this session shows only who is writing it, never the text
+  const hiddenFor = (it) => !!(hideMode.on && it.hid && it.hid === hideMode.s && it.own !== myVid);
+  const mineHidden = (it) => !!(hideMode.on && it.hid && it.hid === hideMode.s && it.own === myVid);
+  function maskFor(d, it) {
+    const m = hiddenFor(it);
+    if (d._mask && !m && booted && !reduceMotion) { d.classList.remove('reveal'); void d.offsetWidth; d.classList.add('reveal'); setTimeout(() => d.classList.remove('reveal'), 700); }
+    d._mask = m; d.classList.toggle('masked', m); d.classList.toggle('mine-hidden', mineHidden(it));
+    return m;
+  }
+  // dot voting: your dots (and, if the facilitator allows, everyone's) on each card; after the vote, a count
+  const VOTABLE = (it) => isCard(it);
+  let tally = new Map(), myTally = new Map(), otherDots = new Map();
+  function paintVotes(d, it) {
+    const live = voteMode.st === 'live', res = voteMode.st === 'results';
+    const want = live ? Array.from({ length: myTally.get(it.id) || 0 }, () => ['mine', me.color]).concat((voteMode.show && otherDots.get(it.id)) || []) : [];
+    const total = res ? tally.get(it.id) || 0 : 0, key = live ? 'L' + want.map((w) => w.join()).join('|') : res ? 'R' + total : '';
+    if (d._vk === key) return; d._vk = key;
+    let el = d._vb;
+    if (!want.length && !total) { if (el) { const e = el; d._vb = null; e.classList.add('out'); setTimeout(() => e.remove(), 200); } return; }
+    if (!el) { el = document.createElement('div'); el.className = 'vb'; d.appendChild(el); d._vb = el; }
+    if (res) { el.classList.add('res'); el.innerHTML = ''; const b = document.createElement('b'); b.className = 'vtot'; b.textContent = total; b.title = 'Голосів: ' + total; el.appendChild(b); return; }
+    el.classList.remove('res'); if (el.firstChild && el.firstChild.classList.contains('vtot')) el.innerHTML = '';
+    const kids = [...el.children].filter((e) => !e.classList.contains('out'));
+    want.forEach(([cls, c], i) => {
+      let e = kids[i];
+      if (!e) { e = document.createElement('i'); el.appendChild(e); }
+      e.className = 'vdot' + (cls ? ' mine' : ''); e.style.setProperty('--pc', c);
+      e.title = cls ? 'Ваш голос · клік, щоб забрати' : 'Голос';
+    });
+    kids.slice(want.length).forEach((e) => { e.classList.add('out'); setTimeout(() => e.remove(), 180); });
+  }
   function renderAll() {
     for (const [id, d] of els) if (!items.has(id)) {
       els.delete(id);
@@ -1996,7 +2622,7 @@ const Route = (() => {
     }
     // sections paint first, the rope layer sits just above them, then cards, stamps and pins
     const list = sorted(); let secs = 0;
-    list.forEach((it, i) => { if (isSec(it)) secs++; render(it, isSec(it) ? i : i + 1); });
+    list.forEach((it, i) => { const back = rank(it) < 1; if (back) secs++; render(it, back ? i : i + 1); });
     linksSvg.style.zIndex = secs + 1; ropeLabels.style.zIndex = secs + 1;
     $('#empty').hidden = mode === 'connecting' || loadingBoard || items.size > 0;
     updateCtx(); schedule('boxes'); refreshThread();
@@ -2110,7 +2736,7 @@ const Route = (() => {
   });
   let ctxSig = '';
   function updateCtxNow() {
-    if (ctxHidden || !selected.size) { ctx.hidden = true; closeStyleMenu(); closeNodeMenu(); return; }
+    if (ctxHidden || !selected.size) { ctx.hidden = true; closeStyleMenu(); closeNodeMenu(); if (!selected.size) closeSidePops(); return; }
     const sel = [...selected].map((id) => items.get(id)).filter((i) => i && !isLink(i));
     if (!sel.length) { updateLinkCtx(); return; }
     ctx.classList.remove('link-mode');
@@ -2133,7 +2759,21 @@ const Route = (() => {
       $('#nShapeIco').innerHTML = shapeIcon(nodes[0].shape || 'rect');
       $('#nIconIco').innerHTML = iconSvg(nodes[0].icon) || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12"/><rect x="4" y="4" width="16" height="16" rx="3"/></svg>';
     } else closeNodeMenu();
-    const tinted = sel.filter((i) => i.type === 'sticky' || isSec(i) || isNode(i));
+    const grids = sel.filter(isGrid), g0 = grids.length === 1 ? grids[0] : null;
+    $('#ctxGrid').hidden = $('#ctxGridSep').hidden = !g0;
+    if (g0) {
+      const tl = g0.type === 'timeline', dm = Plan.dims(g0), rows = tl ? g0.lanes : g0.rows;
+      $('#gSetBtn').hidden = !tl;
+      $('#gAddColTip').textContent = tl ? 'Додати ' + ({ day: 'день', week: 'тиждень', sprint: 'спринт', month: 'місяць' }[g0.unit] || 'колонку') : 'Додати колонку';
+      $('#gAddRowTip').textContent = tl ? 'Додати доріжку' : 'Додати рядок'; $('#gDelRowTip').textContent = tl ? 'Прибрати останню доріжку' : 'Прибрати останній рядок';
+      $('#gAddRow').setAttribute('aria-label', $('#gAddRowTip').textContent); $('#gDelRow').setAttribute('aria-label', $('#gDelRowTip').textContent);
+      $('#gDelCol').disabled = dm.nc <= 1; $('#gAddCol').disabled = dm.nc >= (tl ? 60 : 20);
+      $('#gDelRow').disabled = !rows.length; $('#gAddRow').disabled = rows.length >= (tl ? 12 : 20);
+    } else if (!$('#tlPop').hidden) openTlPop(false);
+    const task1 = sel.length === 1 && sel[0].type === 'task' && !hiddenFor(sel[0]);
+    $('#ctxTask').hidden = $('#ctxTaskSep').hidden = !task1;
+    if (!task1 && !$('#taskPop').hidden) openTaskPop(false);
+    const tinted = sel.filter((i) => i.type === 'sticky' || isSec(i) || isNode(i) || isGrid(i));
     $('#wrapBtn').hidden = !sel.some(isCard);
     const secs = sel.filter(isSec);
     $('#fitSecBtn').hidden = !secs.length;
@@ -2299,17 +2939,21 @@ const Route = (() => {
     const it = { id: uid(), type: 'text', x: Math.round(p.x - 6), y: Math.round(p.y - 16), w: 360, h: 36, ts: 'p', text: '', z: topZ(), by: me.name };
     items.set(it.id, it); freshText.add(it.id); write(it); renderAll(); return it;
   }
-  function createStickyAt(p) { const it = addSticky(p.x, p.y); commit({}, [it.id]); renderAll(); return it; }
+  function createStickyAt(p) { const it = addSticky(p.x, p.y); placeInGrid(it); commit({}, [it.id]); renderAll(); return it; }
   function createNodeAt(p) {
     const [icon, shape] = NODE_PRESETS[nodePreset];
     const name = shape === 'diamond' ? 'Умова?' : icon === 'none' ? '' : ICON_NAMES[icon];
     const [w, h] = Flow.sizeOf({ text: name || 'Назва блока', shape, icon });
     const it = { id: uid(), type: 'node', x: Math.round(p.x - w / 2), y: Math.round(p.y - h / 2), w: Math.round(w), h: Math.round(h), shape, icon, color: Flow.ICON_COLOR[icon] || 'gray', text: name, z: topZ(), by: me.name };
-    items.set(it.id, it); commit({}, [it.id]); renderAll(); return it;
+    items.set(it.id, it); placeInGrid(it); commit({}, [it.id]); renderAll(); return it;
+  }
+  function createTaskAt(p, extra) {
+    const it = { id: uid(), type: 'task', x: Math.round(p.x - 140), y: Math.round(p.y - 60), w: 280, h: 120, text: '', status: 'todo', z: topZ(), by: me.name, ...extra };
+    items.set(it.id, it); placeInGrid(it, true); commit({}, [it.id]); setSel([it.id]); renderAll(); return it;
   }
   function startEdit(id) {
     finishEdit();
-    const it = items.get(id); if (!it || (it.type !== 'sticky' && it.type !== 'text' && !isNode(it) && !isSec(it))) return;
+    const it = items.get(id); if (!it || (it.type !== 'sticky' && it.type !== 'text' && it.type !== 'task' && !isNode(it) && !titled(it)) || hiddenFor(it)) return;
     editingId = id; editBefore = freshText.delete(id) ? { [id]: null } : snapIds([id]); active.add(id);
     const d = els.get(id); d.classList.add('editing');
     const t = d.firstChild;
@@ -2322,7 +2966,7 @@ const Route = (() => {
     }
     t.focus();
     const r = document.createRange(); r.selectNodeContents(t); r.collapse(isSec(it) && it.title === 'Нова секція' ? true : false);
-    if (isSec(it) || isNode(it)) r.selectNodeContents(t);
+    if (titled(it) || isNode(it)) r.selectNodeContents(t);
     const s = getSelection(); s.removeAllRanges(); s.addRange(r);
     setSel([id]); sendPresence({ editing: id });
   }
@@ -2332,7 +2976,7 @@ const Route = (() => {
     textTimer = setTimeout(() => {
       const it = items.get(id), d = els.get(id);
       if (!it || editingId !== id || !d) return;
-      it[isSec(it) ? 'title' : 'text'] = d.firstChild.innerText.replace(/\n+$/, '');
+      it[titled(it) ? 'title' : 'text'] = d.firstChild.innerText.replace(/\n+$/, '');
       if (isRich(it)) { const h = cleanRich(d.firstChild.innerHTML); if (hasFormatting(h)) it.html = h; else delete it.html; d.firstChild._k = null; }
       write(it);
     }, 350);
@@ -2352,9 +2996,9 @@ const Route = (() => {
       renderAll(); return;
     }
     if (it) {
-      const f = isSec(it) ? 'title' : 'text';
+      const f = titled(it) ? 'title' : 'text';
       const prev = editBefore[id] ? editBefore[id][f] : null, prevHtml = editBefore[id] ? editBefore[id].html : undefined;
-      it[f] = isSec(it) ? text.replace(/\s+/g, ' ').trim().slice(0, 80) : text;
+      it[f] = titled(it) ? text.replace(/\s+/g, ' ').trim().slice(0, isSec(it) ? 80 : 120) : it.type === 'task' ? text.slice(0, 400) : text;
       if (isRich(it)) { const h = cleanRich(t.innerHTML); if (hasFormatting(h)) it.html = h; else delete it.html; t._k = null; }
       if (text !== prev || it.html !== prevHtml) commit(editBefore); else write(it);
       render(it); updateCtx();
@@ -2409,6 +3053,69 @@ const Route = (() => {
     if (dropEl) dropEl.classList.remove('drop-target');
     dropEl = el; if (el) el.classList.add('drop-target');
   }
+  // ---------- timelines and tables: a card remembers its container in `grid` and its cell in `cell` ----------
+  const members = (g) => [...items.values()].filter((i) => isCard(i) && i.grid === g.id);
+  const gridOfItem = (i) => { const g = i && i.grid && items.get(i.grid); return isGrid(g) ? g : null; };
+  function gridAt(p, exclude) {
+    const list = sorted().filter((i) => isGrid(i) && !(exclude && exclude.has(i.id)) && Plan.cellAt(i, p.x, p.y));
+    return list[list.length - 1] || null;
+  }
+  let gridHi = null;
+  function setGridDrop(g, p) {
+    const cell = g && p ? Plan.cellAt(g, p.x, p.y) : null, d = cell && els.get(g.id);
+    const el = d ? d.querySelector(`.gc[data-c="${cell[0]}"][data-r="${cell[1]}"]`) : null;
+    if (el === gridHi) return;
+    if (gridHi) gridHi.classList.remove('hi');
+    gridHi = el; if (el) el.classList.add('hi');
+  }
+  // where each card sits inside its cell, as a share of the cell, so it stays put while the grid is resized or reshaped
+  function memberOffsets(g) {
+    return members(g).map((m) => { const c = Plan.cellOf(g, m), R = Plan.cellRect(g, c[0], c[1]); return { m, c, fx: (m.x - R.x) / R.w, fy: (m.y - R.y) / R.h }; });
+  }
+  function resnap(g, offs) {
+    const d = Plan.dims(g);
+    offs.forEach(({ m, c, fx, fy }) => {
+      const cc = [Math.min(c[0], d.nc - 1), Math.min(c[1], d.nr - 1)], R = Plan.cellRect(g, cc[0], cc[1]);
+      const q = Plan.snap(g, { ...m, x: R.x + fx * R.w, y: R.y + fy * R.h }, cc);
+      m.cell = cc; m.x = q.x; m.y = q.y;
+    });
+  }
+  // a card made inside a grid joins the cell under it; `stack` puts it under the cards already there
+  function placeInGrid(it, stack) {
+    const c = { x: it.x + it.w / 2, y: it.y + it.h / 2 }, g = gridAt(c, new Set([it.id]));
+    if (!g) return false;
+    const cell = Plan.cellAt(g, c.x, c.y), q = stack ? Plan.slotIn(g, cell, it.w, it.h, members(g).filter((m) => m.id !== it.id)) : Plan.snap(g, it, cell);
+    it.grid = g.id; it.cell = cell; it.x = q.x; it.y = q.y;
+    return true;
+  }
+  // double-click a column, lane or cell name to rename it
+  function startHeadEdit(id, hk) {
+    const g = items.get(id), d = els.get(id); if (!g || !d || viewOnly()) return;
+    finishEdit(); finishHeadEdit();
+    const el = d.querySelector(`[data-hk="${hk}"]`); if (!el) return;
+    headEdit = { id, hk, el, before: snapIds([id]), was: el.textContent };
+    el.contentEditable = 'plaintext-only'; if (el.contentEditable !== 'plaintext-only') el.contentEditable = 'true';
+    el.classList.add('editing'); el.focus();
+    const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); el.blur(); }
+      else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); el.textContent = headEdit ? headEdit.was : el.textContent; el.blur(); }
+    });
+    el.addEventListener('blur', () => finishHeadEdit(), { once: true });
+    setSel([id]);
+  }
+  function finishHeadEdit() {
+    const h = headEdit; if (!h) return; headEdit = null;
+    h.el.contentEditable = 'false'; h.el.classList.remove('editing');
+    const g = items.get(h.id); if (!g) return;
+    const v = h.el.textContent.replace(/\s+/g, ' ').trim().slice(0, 60), [k, n] = h.hk.split(':'), i = +n;
+    if (v === h.was.trim()) { renderAll(); return; }
+    if (k === 'c' && g.type === 'timeline') { const nm = (g.names || []).slice(); while (nm.length < i) nm.push(''); nm[i] = v; g.names = nm; }
+    else if (k === 'c') { g.cols = g.cols.slice(); g.cols[i] = v || 'Колонка ' + (i + 1); }
+    else if (k === 'r') { const key = g.type === 'timeline' ? 'lanes' : 'rows'; g[key] = g[key].slice(); g[key][i] = v || (g.type === 'timeline' ? 'Доріжка ' : 'Рядок ') + (i + 1); }
+    else { const c = (g.cells || []).slice(); while (c.length < i) c.push(''); c[i] = v; g.cells = c; }
+    commit(h.before); renderAll();
+  }
   function tiltLoop(a) {
     if (action !== a || !a.moved) return;
     a.vx *= 0.82;
@@ -2423,7 +3130,12 @@ const Route = (() => {
     stopGlide(); cancelFly();
     const itemEl = e.target.closest('.item');
     if (editingId && itemEl && itemEl.dataset.id === editingId && e.target.closest('.txt, .stitle')) return;
-    if (e.button === 0 && e.target.closest('.web-go[href]')) return; // let the browser open the link
+    if (headEdit && e.target.closest('[data-hk][contenteditable]')) return;
+    if (e.button === 0 && e.target.closest('.web-go[href], .tk-key[href]')) return; // let the browser open the link
+    if (e.button === 0 && itemEl && !viewOnly()) {
+      if (e.target.closest('.vdot.mine')) { castVote(itemEl.dataset.id, -1); return; } // take a vote back
+      if (e.target.closest('.tk-st')) { cycleStatus(itemEl.dataset.id); return; }
+    }
     if (e.button === 0 && e.target.closest('.bd-peek')) return; // the board card's preview button
     if (e.target.closest('.rope-label.editing')) return;
     if (e.button === 2) { if (!editingId && !viewOnly()) showCatcher(e); return; }
@@ -2453,17 +3165,19 @@ const Route = (() => {
       setSel(e.shiftKey ? [...selected, lid] : [lid]); return;
     }
     if ((e.target.closest('.port') || tool === 'link') && LINKABLE(hit)) { startLink(id, e); return; }
-    if (tool === 'text' && (!hit || isSec(hit))) { pendingEdit = createTextAt(toWorld(e.clientX, e.clientY)).id; setTool('select'); action = null; return; }
+    if (tool === 'text' && (!hit || isBack(hit))) { pendingEdit = createTextAt(toWorld(e.clientX, e.clientY)).id; setTool('select'); action = null; return; }
 
     if (dbl && !e.target.closest('.handle')) {
-      if (hit && (hit.type === 'sticky' || hit.type === 'text' || isNode(hit))) pendingEdit = id;
+      const hk = hit && isGrid(hit) && e.target.closest('[data-hk]');
+      if (hit && (hit.type === 'sticky' || hit.type === 'text' || hit.type === 'task' || isNode(hit))) pendingEdit = id;
       else if (hit && hit.type === 'web') openWeb(hit);
       else if (hit && hit.type === 'board') openPeek(hit.bid, els.get(id));
-      else if (hit && isSec(hit) && e.target.closest('.stitle')) pendingEdit = id;
-      else if (!hit || isSec(hit)) pendingEdit = createStickyAt(toWorld(e.clientX, e.clientY)).id;
+      else if (hk) { action = null; startHeadEdit(id, hk.dataset.hk); return; }
+      else if (hit && titled(hit) && e.target.closest('.stitle')) pendingEdit = id;
+      else if (!hit || isBack(hit)) pendingEdit = createStickyAt(toWorld(e.clientX, e.clientY)).id;
       action = null; return;
     }
-    if (tool === 'section' && (!hit || isSec(hit))) {
+    if (tool === 'section' && (!hit || isBack(hit))) {
       const p = toWorld(e.clientX, e.clientY);
       action = { type: 'draw', x: p.x, y: p.y, sx: e.clientX, sy: e.clientY };
       return;
@@ -2471,6 +3185,7 @@ const Route = (() => {
     const handle = e.target.closest('.handle');
     if (handle && id) {
       action = { type: 'resize', id, sx: e.clientX, sy: e.clientY, w: hit.w, h: hit.h, before: snapIds([id]), moved: false };
+      if (isGrid(hit)) { const offs = memberOffsets(hit); action.offs = offs; Object.assign(action.before, snapIds(offs.map((o) => o.m.id))); }
       active.add(id); itemEl.classList.add('resizing'); return;
     }
     if (id) {
@@ -2479,12 +3194,13 @@ const Route = (() => {
       const selList = [...items.values()].filter((i) => selected.has(i.id));
       const ids = new Set(selList.map((i) => i.id));
       selList.filter(isSec).forEach((sec) => contained(sec).forEach((i) => ids.add(i.id)));
+      [...ids].map((k) => items.get(k)).filter(isGrid).forEach((g) => members(g).forEach((i) => ids.add(i.id))); // a timeline or table takes its cards along
       // stamps and comment pins sitting on a moved card travel with it
       const carriers = [...ids].map((k) => items.get(k)).filter(isCard);
       if (carriers.length) items.forEach((i) => { if (isMark(i) && !ids.has(i.id) && carriers.some((c) => centerIn(i, c))) ids.add(i.id); });
       const starts = [...ids].map((k) => items.get(k)).map((i) => ({ it: i, x: i.x, y: i.y }));
       ids.forEach((k) => active.add(k));
-      const tilt = !reduceMotion && !selList.some(isSec);
+      const tilt = !reduceMotion && !selList.some(isBack);
       action = { type: 'move', id, sx: e.clientX, sy: e.clientY, starts, ids, before: snapIds([...ids]), moved: false, shift: e.shiftKey, tilt, vx: 0, r: 0, lastX: e.clientX };
       return;
     }
@@ -2526,16 +3242,21 @@ const Route = (() => {
       action.vx = action.vx * 0.6 + (e.clientX - action.lastX) * 0.4; action.lastX = e.clientX;
       const wdx = Math.round(dx / view.z), wdy = Math.round(dy / view.z);
       action.starts.forEach((s) => { s.it.x = s.x + wdx; s.it.y = s.y + wdy; render(s.it); });
-      if (action.tilt) setDropTarget(sectionAt(w, action.ids));
+      if (action.tilt) { setDropTarget(sectionAt(w, action.ids)); setGridDrop(gridAt(w, action.ids), w); }
       sendPresence({ drag: { ids: action.starts.slice(0, 60).map((s) => s.it.id), dx: wdx, dy: wdy } });
       updateCtx(); schedule('boxes'); if (threadId && action.ids.has(threadId)) schedule('thread');
     } else if (action.type === 'resize') {
       const it = items.get(action.id); action.moved = true;
       if (it.type === 'text') it.w = Math.round(Math.max(60, action.w + dx / view.z));
-      else if (it.type === 'web' || it.type === 'board') it.w = Math.round(clamp(action.w + dx / view.z, 220, 720));
+      else if (it.type === 'web' || it.type === 'board' || it.type === 'task') it.w = Math.round(clamp(action.w + dx / view.z, 220, 720));
       else if (it.type === 'node') {
         it.w = Math.round(Math.max(64, action.w + dx / view.z)); it.h = Math.round(Math.max(44, action.h + dy / view.z));
         if (it.shape === 'circle' && !e.shiftKey) it.h = it.w;
+      }
+      else if (isGrid(it)) {
+        const dm = Plan.dims(it);
+        it.w = Math.round(Math.max(dm.side + dm.nc * 80, action.w + dx / view.z)); it.h = Math.round(Math.max(Plan.TOP + dm.nr * 80, action.h + dy / view.z));
+        resnap(it, action.offs); action.offs.forEach((o) => render(o.m));
       }
       else if (it.type === 'image') { const ar = action.w / action.h; const w2 = Math.max(40, action.w + dx / view.z); it.w = Math.round(w2); it.h = Math.round(w2 / ar); }
       else {
@@ -2564,7 +3285,7 @@ const Route = (() => {
       const s = new Set(action.base);
       items.forEach((i) => {
         if (isLink(i)) return;
-        const inside = isSec(i) ? (i.x >= a.x && i.y >= a.y && i.x + i.w <= b.x && i.y + i.h <= b.y) : (i.x < b.x && i.x + i.w > a.x && i.y < b.y && i.y + i.h > a.y);
+        const inside = isBack(i) ? (i.x >= a.x && i.y >= a.y && i.x + i.w <= b.x && i.y + i.h <= b.y) : (i.x < b.x && i.x + i.w > a.x && i.y < b.y && i.y + i.h > a.y);
         if (inside) s.add(i.id);
       });
       if (s.size !== selected.size || [...s].some((k) => !selected.has(k))) setSel(s);
@@ -2594,6 +3315,15 @@ const Route = (() => {
           const z = topZ(); action.starts.forEach((s, i) => { if (!isSec(s.it)) s.it.z = z + i; });
           const p = lastPointer ? toWorld(lastPointer.x, lastPointer.y) : null;
           const target = p && sectionAt(p, action.ids);
+          action.starts.forEach((s) => { // a card dropped on a timeline or table sticks to the cell under its centre
+            const it = s.it; if (!isCard(it)) return;
+            const own = gridOfItem(it); if (own && action.ids.has(own.id)) return; // it travelled with its grid
+            const g = gridAt({ x: it.x + it.w / 2, y: it.y + it.h / 2 }, action.ids);
+            if (!g) { delete it.grid; delete it.cell; return; }
+            const cell = Plan.cellAt(g, it.x + it.w / 2, it.y + it.h / 2), q = Plan.snap(g, it, cell);
+            it.grid = g.id; it.cell = cell;
+            if (q.x !== it.x || q.y !== it.y) { it.x = q.x; it.y = q.y; const d = els.get(it.id); if (d) { d.classList.add('snapping'); setTimeout(() => d.classList.remove('snapping'), 420); } }
+          });
           action.starts.forEach((s) => {
             const it = s.it; if (!isCard(it)) return;
             const own = ownerOf(it); if (own && action.ids.has(own.id)) return; // it travelled with its section
@@ -2607,13 +3337,14 @@ const Route = (() => {
             d.classList.remove('dragging', 'lifted'); d.classList.add('settle'); d.style.rotate = ''; d.style.scale = '';
             setTimeout(() => d.classList.remove('settle'), 520);
           });
-          setDropTarget(null);
+          setDropTarget(null); setGridDrop(null);
           commit(action.before); sendPresence({ drag: null }); renderAll();
         } else {
           action.ids.forEach((k) => active.delete(k));
           if (!action.shift && selected.size > 1) setSel([action.id]);
           const it = items.get(action.id);
           if (it && it.type === 'comment' && !action.shift) openThread(action.id);
+          if (it && voteMode.st === 'live' && VOTABLE(it) && !action.shift && !viewOnly()) castVote(action.id, 1); // voting: a click is a vote
         }
       }
       if (action.type === 'resize') {
@@ -3051,10 +3782,13 @@ const Route = (() => {
   }
   function cloneInto(list, dx, dy) {
     const z = topZ();
+    list = list.filter((i) => !hiddenFor(i)); if (!list.length) return;
     const clones = list.map((i, k) => ({ ...clean(i), id: uid(), x: Math.round(i.x + dx), y: Math.round(i.y + dy), z: z + k, by: i.type === 'sticky' ? me.name : i.by }));
     const idMap = new Map(list.map((i, k) => [i.id, clones[k].id]));
     clones.forEach((c) => { if ('sec' in c) { if (c.sec && idMap.has(c.sec)) c.sec = idMap.get(c.sec); else delete c.sec; } }); // a copy joins wherever it lands
+    clones.forEach((c) => { delete c.hid; delete c.own; if ('grid' in c) { if (idMap.has(c.grid)) c.grid = idMap.get(c.grid); else { delete c.grid; delete c.cell; } } });
     clones.forEach((c) => items.set(c.id, c));
+    clones.forEach((c) => { if (isCard(c) && !c.grid) placeInGrid(c, true); });
     commit({}, clones.map((c) => c.id)); setSel(clones.map((c) => c.id)); renderAll();
   }
   function duplicateSelected() { const sel = selItems(); if (sel.length) cloneInto(sel, 28, 28); }
@@ -3332,8 +4066,9 @@ const Route = (() => {
   const isTyping = (t) => t && t.closest && t.closest('input, textarea, [contenteditable="true"], [contenteditable="plaintext-only"]');
   function copySel(e) {
     const sel = selItems();
-    const text = sel.filter((i) => i.type === 'sticky').map((i) => i.text).join('\n') || 'JamBoard';
-    internalClip = { text, items: sel.map((i) => ({ ...clean(i) })) };
+    const vis = sel.filter((i) => !hiddenFor(i));
+    const text = vis.filter((i) => i.type === 'sticky').map((i) => i.text).join('\n') || 'JamBoard';
+    internalClip = { text, items: vis.map((i) => ({ ...clean(i) })) };
     e.clipboardData.setData('text/plain', text); e.preventDefault();
   }
   document.addEventListener('copy', (e) => { if (editingId || isTyping(e.target) || !selected.size) return; copySel(e); toast(selected.size === 1 ? 'Скопійовано' : `Скопійовано: ${selected.size}`); });
@@ -3373,6 +4108,8 @@ const Route = (() => {
     if (bid0) { pasteBoardLink(bid0, p); return; }
     const url = safeHttps(raw.replace(/^http:/i, 'https:'));
     if (!url) { pasteText(raw, p); return; }
+    const src = Plan.source(url); // a Jira, Linear or GitHub issue becomes a task card
+    if (src) { pasteTask(src, p); return; }
     const ym = YT_RE.exec(url), w = ym ? 360 : 320;
     const it = { id: uid(), type: 'web', url, x: Math.round(p.x - w / 2), y: Math.round(p.y - 130), w, h: 260, z: topZ(), by: me.name };
     if (ym) it.yt = ym[1];
@@ -3493,6 +4230,13 @@ const Route = (() => {
         const t = document.createElement('b'); t.textContent = i.title || (i.type === 'board' ? 'Дошка JamBoard' : hostOf(safeHttps(i.url) || '') || 'Посилання'); e.appendChild(t);
         const s = document.createElement('small'); s.textContent = i.type === 'board' ? '◐ Дошка JamBoard' : i.site || hostOf(safeHttps(i.url) || ''); e.appendChild(s);
       }
+      else if (isGrid(i)) {
+        e = box(i, 'pv-grid grid' + (i.kind === 'matrix' ? ' matrix' : '')); e.style.setProperty('--c', T(i.color, 'gray'));
+        const t = document.createElement('div'); t.className = 'pv-st'; t.textContent = i.title || ''; e.appendChild(t);
+        const gi = document.createElement('div'); gi.className = 'g-in'; const gc = document.createElement('div'); gc.className = 'g-cells'; gi.appendChild(gc); e.appendChild(gi);
+        try { const g = full(i.id || 'pv', i); e.style.width = g.w + 'px'; e.style.height = g.h + 'px'; fillGrid(gc, g, Plan.nowAt(g, Date.now())); } catch (er) {}
+      }
+      else if (i.type === 'task') { e = box(i, 'pv-web pv-task'); e.style.height = 'auto'; const s = document.createElement('small'); s.textContent = Plan.STATUS_NAMES[i.status] || Plan.STATUS_NAMES.todo; s.dataset.s = i.status || 'todo'; const t = document.createElement('b'); t.textContent = i.text || 'Задача'; e.append(s, t); }
       else if (i.type === 'stamp') { e = box(i, 'pv-stamp'); e.style.fontSize = Math.round(H(i) * 0.8) + 'px'; e.textContent = typeof i.emoji === 'string' ? i.emoji.slice(0, 16) : '👍'; }
       else if (i.type === 'comment') { e = box(i, 'pv-pin'); const m0 = (i.msgs || [])[0] || {}; e.style.setProperty('--pc', safeColor(m0.c)); e.textContent = typeof m0.e === 'string' && m0.e.length <= 8 ? m0.e : '💬'; e.title = (m0.n ? m0.n + ': ' : '') + String(m0.t || '').slice(0, 120); }
       if (e) w.appendChild(e);
@@ -3611,6 +4355,7 @@ const Route = (() => {
     const size = 200, gap = 24, cols = Math.ceil(Math.sqrt(list.length)), rows = Math.ceil(list.length / cols);
     const ox = p.x - (cols * (size + gap) - gap) / 2 + size / 2, oy = p.y - (rows * (size + gap) - gap) / 2 + size / 2;
     const made = list.map((t, i) => addSticky(ox + (i % cols) * (size + gap), oy + Math.floor(i / cols) * (size + gap), t));
+    if (gridAt(p)) made.forEach((m) => { m.x = Math.round(p.x - m.w / 2); m.y = Math.round(p.y - m.h / 2); placeInGrid(m, true); }); // pasted into a cell: a column of stickies
     commit({}, made.map((m) => m.id)); setSel(made.map((m) => m.id)); renderAll();
     toast(made.length > 1 ? `Додано стікерів: ${made.length}` : 'Текст додано стікером');
   }
@@ -3640,15 +4385,17 @@ const Route = (() => {
     res.items.forEach((it) => { if (!isLink(it)) { it.x += dx; it.y += dy; it.w = Math.round(it.w); it.h = Math.round(it.h); } it.z = z++; items.set(it.id, it); });
     commit({}, res.items.map((i) => i.id));
     setSel(res.items.filter((i) => !isLink(i)).map((i) => i.id)); renderAll();
-    const bb = { x1: b.x1 + dx, y1: b.y1 + dy - 40, x2: b.x2 + dx, y2: b.y2 + dy };
+    showArea({ x1: b.x1 + dx, y1: b.y1 + dy - 40, x2: b.x2 + dx, y2: b.y2 + dy });
+    toast(`Схема: блоків ${res.nodes}, зв’язків ${res.links}` + (res.sections ? `, секцій ${res.sections}` : ''));
+    return null;
+  }
+  function showArea(bb) { // fly the camera so a freshly built area is fully in view
     const vis = toWorld(0, 0), vis2 = toWorld(innerWidth, innerHeight);
     if (bb.x1 < vis.x || bb.y1 < vis.y + 60 / view.z || bb.x2 > vis2.x || bb.y2 > vis2.y - 90 / view.z) {
       const pad = 80, w = bb.x2 - bb.x1, h = bb.y2 - bb.y1;
       const zz = clamp(Math.min((innerWidth - pad * 2) / w, (innerHeight - pad * 2 - 140) / h), 0.15, 1);
       flyTo({ z: zz, x: innerWidth / 2 - (bb.x1 + w / 2) * zz, y: innerHeight / 2 - 10 - (bb.y1 + h / 2) * zz });
     }
-    toast(`Схема: блоків ${res.nodes}, зв’язків ${res.links}` + (res.sections ? `, секцій ${res.sections}` : ''));
-    return null;
   }
   function openMermaid(open) {
     const pop = $('#mmPop');
@@ -3920,16 +4667,17 @@ const Route = (() => {
   addEventListener('keydown', (e) => {
     const mod = e.ctrlKey || e.metaKey;
     if (pk.open) { if (e.key === 'Escape') { e.preventDefault(); closePeek(false); } return; } // the board preview has the keys
+    if (!$('#mdPop').hidden) { if (e.key === 'Escape') { e.preventDefault(); openExport(false); } return; }
     if (e.target === thInput) {
       if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendComment(); }
       else if (e.key === 'Escape') { e.preventDefault(); closeThread(); }
       return;
     }
     if (editingId && mod && e.code === 'KeyB') { e.preventDefault(); toggleBold(); return; }
-    if (editingId) { if (e.key === 'Escape' || (mod && e.key === 'Enter') || (e.key === 'Enter' && items.get(editingId) && isSec(items.get(editingId)))) { e.preventDefault(); els.get(editingId).firstChild.blur(); } return; }
+    if (editingId) { if (e.key === 'Escape' || (mod && e.key === 'Enter') || (e.key === 'Enter' && items.get(editingId) && (titled(items.get(editingId)) || items.get(editingId).type === 'task'))) { e.preventDefault(); els.get(editingId).firstChild.blur(); } return; }
     if (isTyping(e.target)) { if (e.key === 'Enter' || e.key === 'Escape') { if (e.target.classList && e.target.classList.contains('rope-label')) e.preventDefault(); if (e.key === 'Escape' && ropeEditId && e.target.classList.contains('rope-label')) { const l = items.get(ropeEditId); e.target.textContent = (l && l.label) || ''; } e.target.blur(); if (e.target.id === 'nameInput') $('#mePop').hidden = true; } return; }
     const k = e.key.toLowerCase();
-    if (viewOnly() && (mod ? !['=', '+', '-', '0'].includes(k) : !(e.code === 'Space' || e.key === 'Escape' || e.code === 'KeyV' || e.code === 'KeyH' || (e.shiftKey && e.code === 'Digit1')))) {
+    if (viewOnly() && (mod ? !['=', '+', '-', '0'].includes(k) : !(e.code === 'Space' || e.key === 'Escape' || e.code === 'KeyV' || e.code === 'KeyH' || e.code === 'KeyP' || (e.shiftKey && e.code === 'Digit1')))) {
       if (e.key === 'Delete' || e.key === 'Backspace' || (mod && 'zyda'.includes(k))) e.preventDefault();
       return;
     }
@@ -3947,7 +4695,8 @@ const Route = (() => {
     if (e.shiftKey && e.code === 'Digit1') { e.preventDefault(); fitAll(); return; }
     if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteSelected(); return; }
     if (e.key === 'Escape' && !$('#timerPop').hidden) { openTimer(false); return; }
-    if (e.key === 'Escape') { closeThread(); closeBoardUi(); setSel([]); setTool('select'); $('#mePop').hidden = true; openMermaid(false); return; }
+    if (e.key === 'Escape' && (!$('#tlPop').hidden || !$('#taskPop').hidden || !$('#votePop').hidden)) { closeSidePops(); if (!$('#votePop').hidden) openVotePop(false); return; } // close the popover first, keep the selection
+    if (e.key === 'Escape') { closeThread(); closeBoardUi(); setSel([]); setTool('select'); $('#mePop').hidden = true; openMermaid(false); openPlan(false); closeSidePops(); return; }
     if (e.key === 'Enter' && selected.size === 1) {
       e.preventDefault(); const id = [...selected][0], it = items.get(id);
       if (it && it.type === 'comment') openThread(id); else if (it && isLink(it)) editRopeLabel(id); else if (it && it.type === 'web') openWeb(it); else if (it && it.type === 'board') openPeek(it.bid, els.get(id)); else startEdit(id);
@@ -3958,7 +4707,10 @@ const Route = (() => {
       const step = e.shiftKey ? 24 : 2;
       const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
       const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
-      const sel = selItems(); const before = snapIds(sel.map((i) => i.id));
+      const ids = new Set(selItems().map((i) => i.id)); // sections and grids take their cards along
+      selItems().filter(isSec).forEach((sec) => contained(sec).forEach((i) => ids.add(i.id)));
+      [...ids].map((k) => items.get(k)).filter(isGrid).forEach((g) => members(g).forEach((i) => ids.add(i.id)));
+      const sel = [...ids].map((k) => items.get(k)).filter((i) => i && !isLink(i)), before = snapIds(sel.map((i) => i.id));
       sel.forEach((i) => { i.x += dx; i.y += dy; render(i); }); commit(before); updateCtx(); schedule('boxes');
       return;
     }
@@ -3972,6 +4724,7 @@ const Route = (() => {
     else if (e.code === 'KeyL') setTool('link');
     else if (e.code === 'KeyD') setTool('node');
     else if (e.code === 'KeyM') openMermaid(true);
+    else if (e.code === 'KeyP') openPlan(true);
   });
   addEventListener('keyup', (e) => { if (e.code === 'Space') { spaceDown = false; vp.classList.remove('grab'); } });
   addEventListener('blur', () => { spaceDown = false; vp.classList.remove('grab'); });
@@ -4064,6 +4817,8 @@ const Route = (() => {
       else if (t === 'image') s.push(['i', ...p, pics < 8 && src(i.url || i.src) ? (pics++, src(i.url || i.src)) : '']);
       else if (t === 'stamp') s.push(['e', ...p, typeof i.emoji === 'string' ? i.emoji.slice(0, 16) : '👍']);
       else if (t === 'comment') s.push(['c', ...p]);
+      else if (isGrid(i)) { const d = Plan.dims(i); s.push(['G', ...p, col(i.color, 'gray'), d.nc, d.nr, r(d.side), r(Plan.TOP)]); }
+      else if (t === 'task') s.push(['k', ...p, Plan.STATUSES.indexOf(i.status)]);
     }
     const ends = new Map(cards.map((i) => [i.id, i]));
     let ropes = 0;
@@ -4073,7 +4828,7 @@ const Route = (() => {
       const pa = pos(a), pb = pos(b); ropes++;
       s.unshift(['l', pa[0] + pa[2] / 2, pa[1] + pa[3] / 2, pb[0] + pb[2] / 2, pb[1] + pb[3] / 2, ROPE_COLORS.includes(l.color) ? l.color : 'gray']);
     }
-    s.sort((a, b) => (a[0] === 'S' ? 0 : a[0] === 'l' ? 1 : 2) - (b[0] === 'S' ? 0 : b[0] === 'l' ? 1 : 2)); // stable: sections, ropes, then cards in paint order
+    s.sort((a, b) => (a[0] === 'S' || a[0] === 'G' ? 0 : a[0] === 'l' ? 1 : 2) - (b[0] === 'S' || b[0] === 'G' ? 0 : b[0] === 'l' ? 1 : 2)); // stable: sections, ropes, then cards in paint order
     return { v: 1, w: r(x1 - x0), h: r(y1 - y0), n: cards.length, s };
   }
   function cleanCover(d) {
@@ -4125,6 +4880,18 @@ const Route = (() => {
         if (kd === 'w') el('rect', { x: x + w * 0.08, y: y + mh + (h - mh) * 0.3, width: w * 0.6, height: Math.max((h - mh) * 0.18, 0.8 * u), rx: u }, 'fill:var(--text);opacity:.3');
       } else if (kd === 'e') { const t = el('text', { x: x + w / 2, y: y + h * 0.82, 'text-anchor': 'middle', 'font-size': h * 0.8 }); t.textContent = String(sh[5] || '👍'); }
       else if (kd === 'c') el('circle', { cx: x + w / 2, cy: y + h / 2, r: Math.max(w / 2, 2.5 * u) }, 'fill:var(--accent);stroke:var(--surface);stroke-width:' + u);
+      else if (kd === 'G') { // a timeline or table: frame, header band, lines between cells
+        const nc = clamp(num(sh[6]) || 1, 1, 60), nr = clamp(num(sh[7]) || 1, 1, 20), sd = Math.min(num(sh[8]), w * 0.4), tp = Math.min(num(sh[9]), h * 0.4), c0 = T(sh[5], 'gray');
+        el('rect', { x, y, width: w, height: h, rx: Math.max(rx * 0.5, 1.5 * u) }, `fill:color-mix(in srgb, ${c0} 10%, var(--surface));stroke:color-mix(in srgb, ${c0} 60%, var(--line));stroke-width:${u}`);
+        el('rect', { x, y, width: w, height: tp }, `fill:color-mix(in srgb, ${c0} 30%, var(--surface))`);
+        const ln = `stroke:color-mix(in srgb, ${c0} 45%, var(--line));stroke-width:${0.7 * u}`;
+        for (let k = 0; k <= nc - (sd ? 0 : 1); k++) { const lx = x + sd + ((w - sd) / nc) * k; if (k || sd) el('line', { x1: lx, y1: y, x2: lx, y2: y + h }, ln); }
+        for (let k = 1; k < nr; k++) { const ly = y + tp + ((h - tp) / nr) * k; el('line', { x1: x, y1: ly, x2: x + w, y2: ly }, ln); }
+      } else if (kd === 'k') {
+        el('rect', { x, y, width: w, height: h, rx: Math.max(rx, 1.2 * u) }, `fill:var(--surface);stroke:var(--line);stroke-width:${0.8 * u}`);
+        el('rect', { x: x + w * 0.08, y: y + h * 0.16, width: w * 0.34, height: Math.max(h * 0.14, u), rx: h * 0.07 }, `fill:${['var(--t-gray)', 'var(--t-info)', 'var(--t-purple)', 'var(--t-ok)'][num(sh[5])] || 'var(--t-gray)'}`);
+        el('rect', { x: x + w * 0.08, y: y + h * 0.46, width: w * 0.7, height: Math.max(h * 0.1, 0.8 * u), rx: h * 0.05 }, 'fill:var(--text);opacity:.35');
+      }
     }
     return svg;
   }
@@ -4491,6 +5258,394 @@ const Route = (() => {
     renderTimer();
   }
 
+  // ---------- planning & retro: templates, grid controls, task details, dot voting, hidden writing, markdown ----------
+  // Per board: boards/<id>/mode/hide = { on, s, by }, boards/<id>/mode/vote = { st: live|results, s, n, show, by },
+  // and each voter's own doc boards/<id>/votes/<voter id> = { s, v: { itemId: n }, n, e, c, at }, so two people voting at once never overwrite each other.
+  const bdoc = (rest) => (boardId === 'main' ? 'board/' : `boards/${boardId}/`) + rest;
+  const retroKey = () => 'jamboard:retro:' + boardId;
+  function localRetro() { try { return JSON.parse(store.get(retroKey()) || 'null') || {}; } catch (e) { return {}; } }
+  function saveRetro(k, v) { const r = localRetro(); r[k] = v; store.set(retroKey(), JSON.stringify(r)); }
+  const shortStr = (v, n) => (typeof v === 'string' ? v.slice(0, n) : '');
+  function cleanHide(d) { return d && d.on === true && typeof d.s === 'string' ? { on: true, s: d.s.slice(0, 40), by: shortStr(d.by, 40) } : { on: false }; }
+  function cleanVote(d) {
+    if (!d || typeof d.s !== 'string' || !['live', 'results'].includes(d.st)) return { st: 'idle' };
+    return { st: d.st, s: d.s.slice(0, 40), n: clamp(Math.round(+d.n) || 3, 1, 20), show: d.show === true, by: shortStr(d.by, 40) };
+  }
+  function cleanVoter(d) {
+    if (!d || typeof d.s !== 'string' || !d.v || typeof d.v !== 'object') return null;
+    const v = {}; let k = 0;
+    for (const id in d.v) { const n = Math.round(+d.v[id]); if (n > 0 && k++ < 60) v[id] = Math.min(n, 20); }
+    return { s: d.s, v, n: shortStr(d.n, 32) || 'Гість', e: shortStr(d.e, 8), c: /^#[0-9a-f]{6}$/i.test(d.c || '') ? d.c : '#aab1bb', at: +d.at || 0 };
+  }
+  let unsubRetro = [], myVoteAt = 0;
+  function watchRetro() {
+    unsubRetro.forEach((f) => { try { f(); } catch (e) {} }); unsubRetro = [];
+    hideMode = { on: false }; voteMode = { st: 'idle' }; votes.clear(); recalcVotes(); renderRetroChips();
+    if (mode === 'shared') {
+      const b = boardId;
+      unsubRetro.push(db.doc(bdoc('mode/hide')).onSnapshot((s) => { if (b === boardId) applyHide(s.exists ? s.data() : null); }, () => {}));
+      unsubRetro.push(db.doc(bdoc('mode/vote')).onSnapshot((s) => { if (b === boardId) applyVote(s.exists ? s.data() : null); }, () => {}));
+      unsubRetro.push(db.collection(bdoc('votes')).onSnapshot((snap) => {
+        if (b !== boardId) return;
+        for (const ch of snap.docChanges()) {
+          const id = ch.doc.id;
+          if (ch.type === 'removed') { votes.delete(id); continue; }
+          const v = cleanVoter(ch.doc.data());
+          if (id === myVid && v && v.at < myVoteAt) continue; // an echo of an older click of mine
+          if (v) votes.set(id, v); else votes.delete(id);
+        }
+        votesChanged();
+      }, () => {}));
+    } else {
+      const r = localRetro(); applyHide(r.hide, true); applyVote(r.vote, true);
+      const v = cleanVoter(r.mine); if (v) votes.set(myVid, v); votesChanged();
+    }
+  }
+  function applyHide(d, quiet) {
+    const was = hideMode; hideMode = cleanHide(d);
+    if (!quiet && was.on && !hideMode.on) toast('Усі картки відкрито');
+    else if (!quiet && !was.on && hideMode.on && hideMode.by && hideMode.by !== me.name) toast(`${hideMode.by} вмикає приховане писання: чужі картки не видно, доки їх не відкриють`);
+    renderRetroChips(); renderAll();
+  }
+  function setHide(next) {
+    if (viewOnly()) return;
+    const d = { ...next, by: me.name, at: Date.now() };
+    if (mode === 'shared') db.doc(bdoc('mode/hide')).set(d).catch(dbError); else saveRetro('hide', d);
+    applyHide(d, true);
+  }
+  function startHide() { setHide({ on: true, s: uid() }); toast('Приховане писання: нові картки бачите лише ви, доки їх не відкриють'); }
+  function revealAll() { const n = [...items.values()].filter((i) => i.hid && i.hid === hideMode.s).length; setHide({ on: false, s: hideMode.s }); toast(n ? `Відкрито карток: ${n}` : 'Приховане писання вимкнено'); }
+  function applyVote(d, quiet) {
+    const was = voteMode; voteMode = cleanVote(d);
+    if (!quiet && voteMode.by && voteMode.by !== me.name) {
+      if (voteMode.st === 'live' && (was.st !== 'live' || was.s !== voteMode.s)) toast(`${voteMode.by} починає голосування: у кожного ${voteMode.n} ${plural(voteMode.n, 'голос', 'голоси', 'голосів')}`);
+      else if (voteMode.st === 'results' && was.st === 'live') toast('Голосування завершено. Ось підсумки');
+    }
+    votesChanged(); if (!$('#votePop').hidden) renderVotePop();
+  }
+  function setVote(next) {
+    if (viewOnly()) return;
+    const d = { ...next, by: me.name, at: Date.now() };
+    if (mode === 'shared') db.doc(bdoc('mode/vote')).set(d).catch(dbError); else saveRetro('vote', d);
+    applyVote(d, true);
+  }
+  const plural = (n, one, few, many) => { const a = n % 10, b = n % 100; return a === 1 && b !== 11 ? one : a >= 2 && a <= 4 && (b < 12 || b > 14) ? few : many; };
+  function recalcVotes() {
+    tally = new Map(); myTally = new Map(); otherDots = new Map();
+    if (voteMode.st === 'idle') return;
+    for (const [vid, v] of votes) {
+      if (v.s !== voteMode.s) continue;
+      for (const id in v.v) {
+        if (!items.has(id)) continue;
+        const n = v.v[id]; tally.set(id, (tally.get(id) || 0) + n);
+        if (vid === myVid) myTally.set(id, n);
+        else { const a = otherDots.get(id) || []; for (let k = 0; k < n; k++) a.push(['', v.c]); otherDots.set(id, a); }
+      }
+    }
+  }
+  const myUsed = () => { const m = votes.get(myVid); return m && m.s === voteMode.s ? Object.values(m.v).reduce((a, b) => a + b, 0) : 0; };
+  function votesChanged() {
+    recalcVotes(); renderRetroChips();
+    document.body.classList.toggle('voting', voteMode.st === 'live' && !viewOnly());
+    for (const [id, d] of els) { const it = items.get(id); if (it && VOTABLE(it)) paintVotes(d, it); }
+    if (!$('#votePop').hidden) renderVotePop();
+  }
+  function castVote(id, delta) {
+    if (voteMode.st !== 'live' || viewOnly()) return;
+    const it = items.get(id); if (!it || !VOTABLE(it)) return;
+    const mine = votes.get(myVid), cur = mine && mine.s === voteMode.s ? { ...mine.v } : {};
+    const used = Object.values(cur).reduce((a, b) => a + b, 0);
+    if (delta > 0 && used >= voteMode.n) { toast(`Голоси закінчились. Клік на своїй крапці забирає голос`); return; }
+    if (delta < 0 && !cur[id]) return;
+    const n = (cur[id] || 0) + delta; if (n > 0) cur[id] = n; else delete cur[id];
+    const doc = { s: voteMode.s, v: cur, n: me.name, e: me.emoji, c: me.color, at: (myVoteAt = Math.max(Date.now(), myVoteAt + 1)) };
+    votes.set(myVid, cleanVoter(doc)); votesChanged();
+    if (mode === 'shared') db.doc(bdoc('votes/' + myVid)).set(doc).catch(dbError); else saveRetro('mine', doc);
+    if (delta > 0 && used + 1 === voteMode.n) toast('Усі голоси віддано. Передумали? Клік на своїй крапці забирає голос');
+  }
+  function sortByVotes() {
+    const ch = Plan.sortByVotes([...items.values()], Object.fromEntries(tally));
+    if (!ch.length) { toast(tally.size ? 'Картки вже стоять за голосами' : 'Поки немає голосів'); return; }
+    const before = snapIds(ch.map((c) => c.id));
+    ch.forEach((c) => { const it = items.get(c.id); if (!it) return; it.x = c.x; it.y = c.y; const d = els.get(c.id); if (d) { d.classList.add('snapping'); setTimeout(() => d.classList.remove('snapping'), 520); } });
+    commit(before); renderAll(); toast('Найпопулярніші картки тепер угорі своїх колонок і секцій');
+  }
+  function renderRetroChips() {
+    const hc = $('#hideChip'); hc.hidden = !hideMode.on;
+    if (hideMode.on) { const n = [...items.values()].filter((i) => i.hid === hideMode.s && i.own !== myVid).length; hc.querySelector('.st').textContent = n ? `Відкрити всі · ${n}` : 'Відкрити всі'; }
+    const vc = $('#voteChip'), st = voteMode.st; vc.hidden = st === 'idle';
+    if (st === 'live') {
+      const left = Math.max(0, voteMode.n - myUsed()), dots = $('#voteDots');
+      if (dots._k !== left + '/' + voteMode.n) { dots._k = left + '/' + voteMode.n; dots.innerHTML = ''; for (let i = 0; i < Math.min(voteMode.n, 10); i++) { const e = document.createElement('i'); if (i >= left) e.className = 'used'; dots.appendChild(e); } }
+      $('#voteText').textContent = left ? `Ще ${left} з ${voteMode.n}` : 'Усі віддано';
+      vc.setAttribute('aria-label', `Голосування: залишилось ${left} з ${voteMode.n}`); vc.dataset.s = 'live';
+    } else if (st === 'results') { $('#voteDots').innerHTML = ''; $('#voteDots')._k = ''; $('#voteText').textContent = 'Підсумки'; vc.setAttribute('aria-label', 'Підсумки голосування'); vc.dataset.s = 'res'; }
+  }
+  let voteDraft = clamp(parseInt(store.get('jamboard:votes') || '3', 10) || 3, 1, 20);
+  function openVotePop(open) {
+    const pop = $('#votePop'); open = open != null ? open : pop.hidden;
+    pop.hidden = !open; $('#voteChip').setAttribute('aria-expanded', String(open));
+    if (open) { openTimer(false); closeBoardUi(); renderVotePop(); }
+  }
+  function renderVotePop() {
+    const st = voteMode.st;
+    $('#vtIdle').hidden = st !== 'idle'; $('#vtLive').hidden = st !== 'live'; $('#vtRes').hidden = st !== 'results';
+    if (st === 'idle') { $('#vtN').textContent = voteDraft; $('#vtMinus').disabled = voteDraft <= 1; $('#vtPlus').disabled = voteDraft >= 20; }
+    if (st === 'live') {
+      const used = myUsed(), m = $('#vtMine'); m.innerHTML = '';
+      const l = document.createElement('span'); l.className = 'label'; l.textContent = `Ваші голоси: ${voteMode.n - used} з ${voteMode.n}`; m.appendChild(l);
+      const row = document.createElement('span'); row.className = 'vc-dots big';
+      for (let i = 0; i < voteMode.n; i++) { const e = document.createElement('i'); if (i >= voteMode.n - used) e.className = 'used'; row.appendChild(e); }
+      m.appendChild(row);
+      const who = [...votes.values()].filter((v) => v.s === voteMode.s && Object.keys(v.v).length).map((v) => v.n);
+      $('#vtWho').textContent = (who.length ? `Уже голосують: ${who.slice(0, 6).join(', ')}${who.length > 6 ? ' та ще ' + (who.length - 6) : ''}. ` : 'Клік на картці додає голос. ') + (voteMode.show ? '' : 'Чужі голоси з’являться після завершення.');
+    }
+    if (st === 'results') {
+      const top = [...tally.entries()].filter(([id]) => items.has(id)).sort((a, b) => b[1] - a[1]).slice(0, 8), ol = $('#vtTop'); ol.innerHTML = '';
+      if (!top.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'Голосів немає'; ol.appendChild(li); }
+      top.forEach(([id, n]) => {
+        const it = items.get(id), li = document.createElement('li'), b = document.createElement('button');
+        const t = document.createElement('span'); t.textContent = hiddenFor(it) ? 'Прихована картка' : (plainOf(it) || it.title || it.text || ({ image: 'Зображення', web: 'Посилання', board: 'Дошка' }[it.type]) || 'Картка').replace(/\s+/g, ' ').slice(0, 80);
+        const c = document.createElement('b'); c.textContent = n;
+        b.append(c, t); b.addEventListener('click', () => { setSel([id]); const g = geom(it), z = Math.max(view.z, 0.8); flyTo({ z, x: innerWidth / 2 - (g.x + g.w / 2) * z, y: innerHeight / 2 - (g.y + g.h / 2) * z }); });
+        li.appendChild(b); ol.appendChild(li);
+      });
+    }
+  }
+  $('#voteChip').addEventListener('click', () => openVotePop());
+  $('#vtClose').addEventListener('click', () => openVotePop(false));
+  $('#vtMinus').addEventListener('click', () => { voteDraft = Math.max(1, voteDraft - 1); store.set('jamboard:votes', String(voteDraft)); renderVotePop(); });
+  $('#vtPlus').addEventListener('click', () => { voteDraft = Math.min(20, voteDraft + 1); store.set('jamboard:votes', String(voteDraft)); renderVotePop(); });
+  $('#vtGo').addEventListener('click', () => { setVote({ st: 'live', s: uid(), n: voteDraft, show: $('#vtShow').checked }); renderVotePop(); toast(`Голосування почалось: у кожного ${voteDraft} ${plural(voteDraft, 'голос', 'голоси', 'голосів')}. Клік на картці додає голос`); });
+  $('#vtEnd').addEventListener('click', () => setVote({ ...voteMode, st: 'results' }));
+  $('#vtCancel').addEventListener('click', () => { setVote({ st: 'idle' }); openVotePop(false); toast('Голосування скасовано'); });
+  $('#vtSort').addEventListener('click', sortByVotes);
+  $('#vtClear').addEventListener('click', () => { setVote({ st: 'idle' }); openVotePop(false); });
+  $('#hideChip').addEventListener('click', () => { if (!viewOnly()) revealAll(); });
+  addEventListener('pointerdown', (e) => { if (!$('#votePop').hidden && !e.target.closest('#votePop, #voteChip, .item')) openVotePop(false); }, true);
+
+  // the «Планінг і ретро» popover: templates, a task card, and the facilitation tools
+  const PLAN_ICONS = { sprints: '🗓️', weeks: '📆', roadmap: '🛣️', matrix: '🎯', table: '🔲', sprint: '🏃', ssc: '🚦', msg: '🎭', '4l': '🍀', sail: '⛵' };
+  function planTile(box, icon, name, desc, fn, edit) {
+    const b = document.createElement('button'); b.className = 'pl-tile' + (edit ? ' pl-edit' : '');
+    const i = document.createElement('span'); i.className = 'pl-ico'; i.textContent = icon; i.setAttribute('aria-hidden', 'true');
+    const t = document.createElement('span'); t.className = 'pl-t'; const n = document.createElement('b'); n.textContent = name; const d = document.createElement('small'); d.textContent = desc; t.append(n, d);
+    b.append(i, t); b.addEventListener('click', () => { openPlan(false); fn(); }); box.appendChild(b); return b;
+  }
+  Plan.TEMPLATES.forEach(([k, name, desc], i) => planTile(i < 6 ? $('#plPlan') : $('#plRetro'), PLAN_ICONS[k] || '▦', name, desc, () => insertTemplate(k), true));
+  planTile($('#plPlan'), '✅', 'Картка задачі', 'Статус, виконавець, естімейт; з Jira, Linear, GitHub', () => { const it = createTaskAt(center()); pendingEdit = null; startEdit(it.id); }, true);
+  planTile($('#plFac'), '🗳️', 'Голосування крапками', 'Кілька голосів на кожного, потім сортування', () => openVotePop(true), true);
+  const hideTile = planTile($('#plFac'), '🙈', 'Приховане писання', 'Чужі картки не видно, доки їх не відкриють', () => (hideMode.on ? revealAll() : startHide()), true);
+  planTile($('#plFac'), '📝', 'Експорт у Markdown', 'Увесь текст дошки, щоб скопіювати', () => openExport(true), false);
+  function openPlan(open) {
+    const pop = $('#planPop'); open = open != null ? open : pop.hidden;
+    if (open && viewOnly()) { openExport(true); return; } // a view-only board can only be read out
+    pop.hidden = !open; $('#planBtn').setAttribute('aria-expanded', String(open)); $('#planBtn').setAttribute('aria-pressed', String(open));
+    if (open) {
+      openMermaid(false); setTool('select');
+      hideTile.querySelector('b').textContent = hideMode.on ? 'Відкрити приховані картки' : 'Приховане писання';
+      hideTile.querySelector('small').textContent = hideMode.on ? 'Усі побачать, що написали інші' : 'Чужі картки не видно, доки їх не відкриють';
+      requestAnimationFrame(() => { const f = pop.querySelector('.pl-tile:not([hidden])'); const vis = [...pop.querySelectorAll('.pl-tile')].find((b) => b.offsetParent); if (vis || f) (vis || f).focus({ preventScroll: true }); });
+    }
+  }
+  $('#planBtn').addEventListener('click', () => openPlan());
+  $('#plClose').addEventListener('click', () => openPlan(false));
+  $('#planPop').addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); openPlan(false); $('#planBtn').focus(); } });
+  addEventListener('pointerdown', (e) => { if (!$('#planPop').hidden && !e.target.closest('#planPop, #planBtn')) openPlan(false); }, true);
+  const TPL_NAMES = Object.fromEntries(Plan.TEMPLATES.map(([k, n]) => [k, n]));
+  // a spot near c where a box the size of b overlaps nothing: step right past whatever is in the way
+  function freeSpot(b, c) {
+    const w = b.x2 - b.x1, h = b.y2 - b.y1 + 50, gap = 80, boxes = [];
+    items.forEach((it) => { if (it.type !== 'link' && it.w != null) { const g = geom(it); boxes.push([g.x, g.y - (titled(it) ? 50 : 0), g.x + g.w, g.y + g.h]); } });
+    let x = c.x, y = c.y;
+    for (let k = 0; k < 40; k++) {
+      const x1 = x - w / 2 - gap, y1 = y - h / 2 - gap, x2 = x + w / 2 + gap, y2 = y + h / 2 + gap;
+      const hit = boxes.filter((q) => q[0] < x2 && q[2] > x1 && q[1] < y2 && q[3] > y1);
+      if (!hit.length) break;
+      x = Math.max(...hit.map((q) => q[2])) + gap + w / 2;
+    }
+    return { x, y };
+  }
+  function insertTemplate(key) {
+    if (viewOnly()) return;
+    finishEdit();
+    const list = Plan.template(key, 0, 0, uid, me.name, Date.now()), b = bbox(list), c = freeSpot(b, center());
+    const dx = Math.round(c.x - (b.x1 + b.x2) / 2), dy = Math.round(c.y - (b.y1 + b.y2) / 2);
+    let z = topZ();
+    const made = list.map((it) => { it.x += dx; it.y += dy; it.z = z++; const f = full(it.id, it); items.set(it.id, f); return f; });
+    ripArmed = performance.now();
+    commit({}, made.map((i) => i.id)); setSel(made.filter(isGrid).map((i) => i.id)); renderAll();
+    showArea({ x1: b.x1 + dx, y1: b.y1 + dy - 50, x2: b.x2 + dx, y2: b.y2 + dy + 40 });
+    toast('Додано: ' + (TPL_NAMES[key] || 'шаблон') + '. Подвійний клік у клітинці додає стікер');
+  }
+
+  // grid controls in the context bar: one more or one fewer column or lane; cells keep their size, cards their cells
+  function gridOp(fn) {
+    const g = selItems().find(isGrid); if (!g) return;
+    const offs = memberOffsets(g), before = snapIds([g.id, ...offs.map((o) => o.m.id)]), d0 = Plan.dims(g);
+    fn(g, d0);
+    Object.assign(g, Plan.sizeFor(g, d0.cw, d0.lh));
+    resnap(g, offs); commit(before); renderAll();
+    if (!$('#tlPop').hidden) fillTlPop();
+  }
+  $('#gAddCol').addEventListener('click', () => gridOp((g) => { if (g.type === 'timeline') g.n = Math.min(60, g.n + 1); else if (g.cols.length < 20) { g.cols = [...g.cols, 'Колонка ' + (g.cols.length + 1)]; } }));
+  $('#gDelCol').addEventListener('click', () => gridOp((g) => { if (g.type === 'timeline') { g.n = Math.max(1, g.n - 1); g.names = (g.names || []).slice(0, g.n); } else if (g.cols.length > 1) { g.cols = g.cols.slice(0, -1); g.tint = (g.tint || []).slice(0, g.cols.length); g.cells = (g.cells || []).filter((_, k) => k % (g.cols.length + 1) !== g.cols.length); } }));
+  $('#gAddRow').addEventListener('click', () => gridOp((g) => {
+    const key = g.type === 'timeline' ? 'lanes' : 'rows', base = g.type === 'timeline' ? 'Доріжка ' : 'Рядок ', cur = g[key] || [];
+    g[key] = cur.length ? [...cur, base + (cur.length + 1)] : [base + 1, base + 2];
+  }));
+  $('#gDelRow').addEventListener('click', () => gridOp((g) => { const key = g.type === 'timeline' ? 'lanes' : 'rows'; g[key] = (g[key] || []).slice(0, -1); if (g.cells) g.cells = g.cells.slice(0, Plan.dims(g).nr * Plan.dims(g).nc); }));
+
+  // timeline settings: step, start date, sprint length and number, how many columns
+  function openTlPop(open) {
+    const pop = $('#tlPop'); open = open != null ? open : pop.hidden;
+    pop.hidden = !open; $('#gSetBtn').setAttribute('aria-expanded', String(open));
+    if (open) { openTaskPop(false); fillTlPop(); placeSidePop(pop); }
+  }
+  function placeSidePop(pop) { // just under the context bar, kept on screen
+    const r = ctx.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+    let top = r.bottom + 10; if (top + h > innerHeight - 84) top = Math.max(64, r.top - h - 10);
+    pop.style.left = clamp(r.left + r.width / 2 - w / 2, 12, innerWidth - w - 12) + 'px'; pop.style.top = top + 'px';
+  }
+  function fillTlPop() {
+    const g = selItems().find((i) => i.type === 'timeline'); if (!g) { openTlPop(false); return; }
+    $('#tlUnit').querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.u === g.unit)));
+    if (document.activeElement !== $('#tlStart')) $('#tlStart').value = g.start;
+    $('#tlN').textContent = g.n; $('#tlMinus').disabled = g.n <= 1; $('#tlPlus').disabled = g.n >= 60;
+    $('#tlSprintRow').hidden = g.unit !== 'sprint';
+    $('#tlLen').value = String([7, 14, 21, 28].includes(g.len) ? g.len : 14);
+    if (document.activeElement !== $('#tlK')) $('#tlK').value = g.k;
+  }
+  const tlOp = (fn) => gridOp((g) => { if (g.type === 'timeline') fn(g); });
+  $('#gSetBtn').addEventListener('click', () => openTlPop());
+  $('#tlClose').addEventListener('click', () => openTlPop(false));
+  $('#tlUnit').addEventListener('click', (e) => { const b = e.target.closest('[data-u]'); if (b) tlOp((g) => { g.unit = b.dataset.u; if (g.unit === 'sprint' && !g.len) g.len = 14; }); });
+  $('#tlStart').addEventListener('change', (e) => { if (Plan.dayOf(e.target.value) != null) tlOp((g) => { g.start = e.target.value; }); });
+  $('#tlLen').addEventListener('change', (e) => tlOp((g) => { g.len = +e.target.value || 14; }));
+  $('#tlK').addEventListener('change', (e) => tlOp((g) => { g.k = clamp(Math.round(+e.target.value) || 0, 0, 9999); }));
+  $('#tlMinus').addEventListener('click', () => tlOp((g) => { g.n = Math.max(1, g.n - 1); g.names = (g.names || []).slice(0, g.n); }));
+  $('#tlPlus').addEventListener('click', () => tlOp((g) => { g.n = Math.min(60, g.n + 1); }));
+  $('#tlToday').addEventListener('click', () => tlOp((g) => { g.start = Plan.thisMonday(Date.now()); }));
+  ['#tlPop', '#taskPop'].forEach((s) => $(s).addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') { e.preventDefault(); closeSidePops(); } }));
+  function closeSidePops() { if (!$('#tlPop').hidden) openTlPop(false); if (!$('#taskPop').hidden) openTaskPop(false); }
+  addEventListener('pointerdown', (e) => { if (!e.target.closest('#tlPop, #taskPop, #ctx')) closeSidePops(); }, true);
+  // today's line on timelines moves on by itself
+  setInterval(() => { items.forEach((i) => { if (i.type === 'timeline') render(i); }); }, 60000);
+
+  // task cards: status, assignee, estimate, due date, tags, and where the task lives (Jira, Linear, GitHub)
+  Plan.STATUSES.forEach((s) => { const b = document.createElement('button'); b.dataset.s = s; b.setAttribute('role', 'radio'); b.textContent = Plan.STATUS_NAMES[s]; $('#tkStatus').appendChild(b); });
+  const selTask = () => selItems().find((i) => i.type === 'task');
+  function taskOp(fn) { const t = selTask(); if (!t || viewOnly()) return; const before = snapIds([t.id]); fn(t); commit(before); renderAll(); fillTaskPop(); }
+  function cycleStatus(id) {
+    const t = items.get(id); if (!t || t.type !== 'task' || viewOnly()) return;
+    const before = snapIds([id]), i = Plan.STATUSES.indexOf(t.status);
+    t.status = Plan.STATUSES[(i + 1) % Plan.STATUSES.length]; commit(before); render(t); updateCtx(); fillTaskPop();
+  }
+  function openTaskPop(open) {
+    const pop = $('#taskPop'); open = open != null ? open : pop.hidden;
+    pop.hidden = !open; $('#tkBtn').setAttribute('aria-expanded', String(open));
+    if (open) { openTlPop(false); fillTaskPop(); placeSidePop(pop); setTimeout(() => $('#tkWho').focus({ preventScroll: true }), 30); }
+  }
+  function fillTaskPop() {
+    if ($('#taskPop').hidden) return;
+    const t = selTask(); if (!t) { openTaskPop(false); return; }
+    $('#tkStatus').querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.s === t.status)));
+    const set = (id, v) => { const e = $(id); if (document.activeElement !== e) e.value = v; };
+    set('#tkWho', t.who || ''); set('#tkEst', t.est || ''); set('#tkDue', t.due || ''); set('#tkTags', (t.tags || []).join(', ')); set('#tkSrc', (t.src && t.src.url) || '');
+    const src = t.src && Plan.SOURCES[t.src.p];
+    $('#tkSrcNote').textContent = !t.src ? 'Вставте посилання на задачу, і картка знатиме, звідки вона.' : src.read ? `${src.name}: назву, статус, виконавця й мітки підтягуємо з публічного репозиторію.` : `${src.name}: поки що зберігаємо ключ і посилання. Назву й статус підтягне інтеграція з ${src.name}, яку підключимо пізніше.`;
+    $('#tkPull').hidden = !(src && src.read);
+  }
+  $('#tkBtn').addEventListener('click', () => openTaskPop());
+  $('#tkClose').addEventListener('click', () => openTaskPop(false));
+  $('#tkStatus').addEventListener('click', (e) => { const b = e.target.closest('[data-s]'); if (b) taskOp((t) => { t.status = b.dataset.s; }); });
+  const txtField = (id, key, n) => $(id).addEventListener('change', (e) => taskOp((t) => { const v = e.target.value.trim().slice(0, n); if (v) t[key] = v; else delete t[key]; }));
+  txtField('#tkWho', 'who', 40); txtField('#tkEst', 'est', 16);
+  $('#tkDue').addEventListener('change', (e) => taskOp((t) => { if (Plan.dayOf(e.target.value) != null) t.due = e.target.value; else delete t.due; }));
+  $('#tkTags').addEventListener('change', (e) => taskOp((t) => { const tags = e.target.value.split(/[,;#]/).map((x) => x.trim().slice(0, 24)).filter(Boolean).slice(0, 8); if (tags.length) t.tags = tags; else delete t.tags; }));
+  $('#tkSrc').addEventListener('change', (e) => {
+    const v = e.target.value.trim(), m = v && Plan.source(safeHttps(v.replace(/^http:/i, 'https:')) || '');
+    if (v && !m) { $('#tkSrcNote').textContent = 'Це не схоже на посилання на задачу в Jira, Linear чи GitHub'; return; }
+    taskOp((t) => { if (m) t.src = { p: m.p, key: m.key, url: m.url, at: 0 }; else delete t.src; if (m && !t.text) t.text = m.key; });
+    const t = selTask(); if (m && m.api && t) pullTask(t.id);
+  });
+  $('#tkPull').addEventListener('click', () => { const t = selTask(); if (t) pullTask(t.id); });
+  function pasteTask(src, p) {
+    const it = createTaskAt(p, { text: src.key, src: { p: src.p, key: src.key, url: src.url, at: 0 } });
+    toast(`Додано задачу з ${Plan.SOURCES[src.p].name}`);
+    if (Plan.SOURCES[src.p].read) pullTask(it.id);
+  }
+  async function pullTask(id) { // a source that can be read without signing in (public GitHub issues) fills the card
+    const it0 = items.get(id), m = it0 && it0.src && Plan.source(it0.src.url), S = m && Plan.SOURCES[m.p];
+    if (!m || !S.read || !m.api) return;
+    const d = els.get(id); if (d) d.classList.add('loading');
+    const data = S.read(await getJson(m.api));
+    if (d) d.classList.remove('loading');
+    const it = items.get(id); if (!it) return;
+    if (!data) { toast(`Не вдалося прочитати задачу з ${S.name}. Можливо, репозиторій приватний`); return; }
+    const patch = {}; for (const k in data) if (data[k] !== undefined && !(Array.isArray(data[k]) && !data[k].length)) patch[k] = data[k];
+    Object.assign(it, patch); it.src = { ...it.src, at: Date.now() }; write(it);
+    for (const op of undoStack) if (op.after[id]) Object.assign(op.after[id], patch, { src: it.src }); // redo keeps what was pulled
+    renderAll(); fillTaskPop(); toast(`Оновлено з ${S.name}`);
+  }
+
+  // markdown export: everything on the board (or just the selection) as text, in a dialog with a copy button
+  let mdScope = 'all';
+  function exportText() {
+    const all = [...items.values()];
+    let list = all;
+    if (mdScope === 'sel' && selected.size) {
+      const ids = new Set([...selected]);
+      selItems().filter(isSec).forEach((s) => contained(s).forEach((i) => ids.add(i.id)));
+      [...ids].map((k) => items.get(k)).filter(isGrid).forEach((g) => members(g).forEach((i) => ids.add(i.id)));
+      list = all.filter((i) => ids.has(i.id) || (isLink(i) && ids.has(i.a) && ids.has(i.b)));
+    }
+    return Plan.markdown(list, { title: $('#title').value || titleOf(boardId), plain: plainOf, hidden: hiddenFor, votes: voteMode.st !== 'idle' ? Object.fromEntries(tally) : {}, boardUrl: boardHref });
+  }
+  function fillExport() {
+    const text = exportText(), ta = $('#mdText');
+    ta.value = text; ta.scrollTop = 0;
+    $('#mdScope').querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.s === mdScope)));
+    const sb = $('#mdScope').querySelector('[data-s="sel"]'); sb.disabled = !selected.size; sb.textContent = selected.size ? `Виділене · ${selected.size}` : 'Виділене';
+    const lines = text.trim().split('\n').length;
+    $('#mdNote').textContent = `${lines} ${plural(lines, 'рядок', 'рядки', 'рядків')} · ${text.length} ${plural(text.length, 'символ', 'символи', 'символів')}`;
+  }
+  function openExport(open) {
+    const pop = $('#mdPop'), back = $('#mdBack');
+    if (open === false) {
+      if (pop.hidden) return;
+      pop.classList.add('out'); back.classList.add('out');
+      setTimeout(() => { pop.hidden = true; back.hidden = true; pop.classList.remove('out'); back.classList.remove('out'); }, reduceMotion ? 0 : 180);
+      $('#planBtn').focus({ preventScroll: true }); return;
+    }
+    finishEdit(); closeThread(); openPlan(false);
+    mdScope = selected.size > 1 ? 'sel' : 'all';
+    pop.hidden = false; back.hidden = false; pop.classList.remove('out'); back.classList.remove('out');
+    fillExport();
+    requestAnimationFrame(() => $('#mdCopy').focus({ preventScroll: true }));
+  }
+  $('#mdScope').addEventListener('click', (e) => { const b = e.target.closest('[data-s]'); if (b && !b.disabled) { mdScope = b.dataset.s; fillExport(); } });
+  $('#mdClose').addEventListener('click', () => openExport(false));
+  $('#mdBack').addEventListener('pointerdown', () => openExport(false));
+  $('#mdCopy').addEventListener('click', async () => {
+    const ta = $('#mdText'), btn = $('#mdCopy');
+    let ok = false;
+    try { await navigator.clipboard.writeText(ta.value); ok = true; } catch (e) { try { ta.focus(); ta.select(); ok = document.execCommand('copy'); } catch (_) {} }
+    if (!ok) { ta.focus(); ta.select(); toast('Виділено весь текст: скопіюйте його Ctrl/⌘ + C'); return; }
+    btn.textContent = 'Скопійовано ✓'; btn.classList.add('done'); clearTimeout(btn._t);
+    btn._t = setTimeout(() => { btn.textContent = 'Скопіювати'; btn.classList.remove('done'); }, 1600);
+    toast('Markdown скопійовано');
+  });
+  $('#mdPop').addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Escape') { e.preventDefault(); openExport(false); return; }
+    if (e.key === 'Tab') { // keep focus inside the dialog
+      const f = [...$('#mdPop').querySelectorAll('button:not([disabled]), textarea')]; if (!f.length) return;
+      const i = f.indexOf(document.activeElement), n = e.shiftKey ? (i <= 0 ? f.length - 1 : i - 1) : (i + 1) % f.length;
+      e.preventDefault(); f[n].focus();
+    }
+  });
+
   let unsubItems = null;
   let switchToken = 0;
   function openBoard(id) {
@@ -4517,7 +5672,7 @@ const Route = (() => {
     showTitle(); sendPresence({ board: id, sel: [], drag: null, resize: null, editing: null });
     boardSig = ''; renderPeople(); renderCursors(); renderAll();
     if (mode === 'shared') subscribeItems(); else loadLocalBoard();
-    watchTimer();
+    watchTimer(); watchRetro();
   }
   function boardReady() {
     loadingBoard = false;
