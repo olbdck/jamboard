@@ -182,15 +182,15 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
 .port.t { left: 50%; top: 0; } .port.r { left: 100%; top: 50%; } .port.b { left: 50%; top: 100%; } .port.l { left: 0; top: 50%; }
 #viewport.tool-select .item:hover:not(.dragging):not(.editing):not(.resizing) > .port, #viewport.tool-link .item:hover > .port { opacity: 1; scale: 1; pointer-events: auto; }
 .port:hover { scale: 1.3 !important; background: var(--accent); }
+.item > .port.new { opacity: 0 !important; scale: .5 !important; } /* just added under the pointer: start hidden so they still fade in */
 .item.link-target { box-shadow: 0 0 0 calc(2px / var(--z)) var(--accent), 0 0 0 calc(8px / var(--z)) var(--accent-soft) !important; }
 #links { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
-#links g { transition: opacity 200ms var(--ease); }
+#links > g { transition: opacity 200ms var(--ease); }
 #links g.gone { opacity: 0; }
 /* a hovered or selected card: its links stay, the others step back */
 /* (by colour, not opacity: a faded SVG group is drawn off-screen on its own, which costs frames while dragging) */
 #links.focus g:not(.hi):not(.sel):not(.temp) .rope { stroke: color-mix(in srgb, var(--rc) 16%, var(--bg)); }
 #links.focus g:not(.hi):not(.sel):not(.temp) .head { fill: color-mix(in srgb, var(--rc) 16%, var(--bg)); stroke: color-mix(in srgb, var(--rc) 16%, var(--bg)); }
-#links.focus g:not(.hi):not(.sel):not(.temp) .pulse { visibility: hidden; }
 #links .head { transition: fill var(--fast) var(--ease), stroke var(--fast) var(--ease); }
 #ropeLabels.focus .rope-label:not(.hi):not(.sel):not(.editing):not(.gone) { opacity: .18; }
 #links g.fresh .rope, #links g.fresh .head { animation: wireIn 320ms var(--ease) both; } /* per path: cheaper than fading the group */
@@ -206,10 +206,10 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
 #links g.arrow .head { display: inline; }
 #links .rope-hit { fill: none; stroke: transparent; stroke-width: 18px; vector-effect: non-scaling-stroke; pointer-events: stroke; cursor: pointer; }
 #links g.temp .rope-hit { pointer-events: none; }
-/* direction: one soft glowing dot travels from the rope's start to its end */
-#links .pulse { pointer-events: none; opacity: 0; }
-#links .pulse .glow { fill: var(--rc); opacity: .32; }
-#links .pulse .core { fill: color-mix(in srgb, var(--rc) 30%, #fff); stroke: var(--rc); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+/* direction: one soft glowing dot travels from the rope's start to its end. All dots are drawn on one canvas that covers
+   the screen at the ropes' depth, so moving them never touches the DOM (no style, layout or layer work per frame) */
+#pulses { position: absolute; left: 0; top: 0; pointer-events: none; transform-origin: 0 0; will-change: transform; }
+#pulses[hidden] { display: none; }
 /* rope names: a pill in the middle of the rope, in the rope's colour */
 #ropeLabels { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
 .rope-label {
@@ -1424,6 +1424,15 @@ const Route = (() => {
   const stub = (b, s, o) => { const p = sidePt(b, s, o); return { s, o, x: Math.round(p.x + DX[s] * M), y: Math.round(p.y + DY[s] * M) }; };
   const hits = (r, x1, y1, x2, y2) => r.x - M < Math.max(x1, x2) && r.x + r.w + M > Math.min(x1, x2) && r.y - M < Math.max(y1, y2) && r.y + r.h + M > Math.min(y1, y2);
 
+  // Work arrays shared by every search (a drag reroutes wires each frame): grown when needed, never reallocated per
+  // search, and the per-state costs are marked valid by a generation number instead of being refilled each time.
+  let cap = 0, gen = 0, bv, bh, bvv, goal, gc, prv, seen, hs = new Int32Array(1024), hf = new Float64Array(1024);
+  function room(N) {
+    if (N <= cap) return;
+    cap = Math.max(N, cap * 2, 4096);
+    bv = new Uint8Array(cap); bh = new Uint8Array(cap); bvv = new Uint8Array(cap); goal = new Int8Array(cap);
+    gc = new Float64Array(cap * 4); prv = new Int32Array(cap * 4); seen = new Uint32Array(cap * 4); gen = 0;
+  }
   // shortest right-angle path from one of A's ports to one of B's ports, with few bends, on a sparse grid made of
   // the lines around blocks, the lines between them and the ports' own lines
   function search(PA, PB, obs, R) {
@@ -1435,7 +1444,7 @@ const Route = (() => {
     const mids = (v) => { const o = v.slice(); for (let i = 1; i < v.length; i++) if (v[i] - v[i - 1] > 40) o.push((v[i] + v[i - 1]) / 2); return uniq(o); };
     const xs = mids(uniq(xs0)), ys = mids(uniq(ys0)), nx = xs.length, ny = ys.length, N = nx * ny;
     if (N > 160000) return null;
-    const bv = new Uint8Array(N), bh = new Uint8Array(N), bvv = new Uint8Array(N); // blocked vertex, edge (i,j)-(i+1,j), edge (i,j)-(i,j+1)
+    room(N); bv.fill(0, 0, N); bh.fill(0, 0, N); bvv.fill(0, 0, N); // blocked vertex, edge (i,j)-(i+1,j), edge (i,j)-(i,j+1)
     const lo = (v, x) => { let a = 0, b = v.length; while (a < b) { const m = (a + b) >> 1; if (v[m] < x) a = m + 1; else b = m; } return a; };
     for (const o of list) {
       const x1 = o.x - M, x2 = o.x + o.w + M, y1 = o.y - M, y2 = o.y + o.h + M;
@@ -1451,14 +1460,15 @@ const Route = (() => {
     const wX = new Float32Array(ny), wY = new Float32Array(nx); // running along a block's edge costs a little more than down the middle of a gap
     for (let j = 0; j < ny; j++) wX[j] = edgeY.has(ys[j]) ? EDGE_W : 1;
     for (let i = 0; i < nx; i++) wY[i] = edgeX.has(xs[i]) ? EDGE_W : 1;
-    const goal = new Int8Array(N).fill(-1), gl = [];
+    goal.fill(-1, 0, N); const gl = [];
     for (const p of PB) { const v = at(p); if (v >= 0 && !bv[v]) { goal[v] = (p.s + 2) % 4; gl.push(p); } }
     if (!gl.length) return null;
-    const S = N * 4, g = new Float64Array(S).fill(Infinity), prev = new Int32Array(S).fill(-1);
+    if (++gen === 0xffffffff) { seen.fill(0); gen = 1; }
+    const G = gen, cost = (s) => (seen[s] === G ? gc[s] : Infinity), put = (s, c, p) => { seen[s] = G; gc[s] = c; prv[s] = p; };
     // estimate: distance, plus one bend when not lined up; a hair of h breaks ties towards the goal, so flat stretches are not flooded
     const hx = (v) => { const x = xs[v % nx], y = ys[(v / nx) | 0]; let m = Infinity; for (const p of gl) { const dx = Math.abs(p.x - x), dy = Math.abs(p.y - y); m = Math.min(m, dx + dy + (dx > 0.01 && dy > 0.01 ? BEND : 0)); } return m * 1.0001; };
     // binary heap of states by f
-    let hs = new Int32Array(1024), hf = new Float64Array(1024), hn = 0;
+    let hn = 0;
     const push = (s, f) => {
       if (hn === hs.length) { const a = new Int32Array(hn * 2), b = new Float64Array(hn * 2); a.set(hs); b.set(hf); hs = a; hf = b; }
       let i = hn++; while (i) { const p = (i - 1) >> 1; if (hf[p] <= f) break; hs[i] = hs[p]; hf[i] = hf[p]; i = p; } hs[i] = s; hf[i] = f;
@@ -1468,10 +1478,10 @@ const Route = (() => {
       for (;;) { let c = 2 * i + 1; if (c >= hn) break; if (c + 1 < hn && hf[c + 1] < hf[c]) c++; if (hf[c] >= f) break; hs[i] = hs[c]; hf[i] = hf[c]; i = c; }
       hs[i] = s; hf[i] = f; return top;
     };
-    for (const p of PA) { const v = at(p); if (v < 0 || bv[v]) continue; const s = v * 4 + p.s; if (p.pen < g[s]) { g[s] = p.pen || 0; push(s, g[s] + hx(v)); } }
+    for (const p of PA) { const v = at(p); if (v < 0 || bv[v]) continue; const s = v * 4 + p.s; if (p.pen < cost(s)) { put(s, p.pen || 0, -1); push(s, (p.pen || 0) + hx(v)); } }
     let end = -1, guard = 0;
     while (hn && guard++ < 400000) {
-      const s = pop(), v = s >> 2, d = s & 3, gs = g[s];
+      const s = pop(), v = s >> 2, d = s & 3, gs = gc[s];
       if (goal[v] === d) { end = s; break; }
       const i = v % nx, j = (v / nx) | 0;
       // go on in the same direction
@@ -1480,14 +1490,14 @@ const Route = (() => {
         const nv = nj * nx + ni, blocked = bv[nv] || (d === 1 ? bh[v] : d === 3 ? bh[nv] : d === 2 ? bvv[v] : bvv[nv]);
         if (!blocked) {
           const c = gs + (d & 1 ? (xs[ni] - xs[i]) * DX[d] * wX[j] : (ys[nj] - ys[j]) * DY[d] * wY[i]), ns = nv * 4 + d;
-          if (c < g[ns]) { g[ns] = c; prev[ns] = s; push(ns, c + hx(nv)); }
+          if (c < cost(ns)) { put(ns, c, s); push(ns, c + hx(nv)); }
         }
       }
-      for (const t of [(d + 1) & 3, (d + 3) & 3]) { const ns = v * 4 + t, c = gs + BEND; if (c < g[ns]) { g[ns] = c; prev[ns] = s; push(ns, c + hx(v)); } }
+      for (let q = 1; q <= 3; q += 2) { const ns = v * 4 + ((d + q) & 3), c = gs + BEND; if (c < cost(ns)) { put(ns, c, s); push(ns, c + hx(v)); } }
     }
     if (end < 0) return null;
     const pts = []; let s = end, first = end;
-    while (s >= 0) { const v = s >> 2; pts.push({ x: xs[v % nx], y: ys[(v / nx) | 0] }); first = s; s = prev[s]; }
+    while (s >= 0) { const v = s >> 2; pts.push({ x: xs[v % nx], y: ys[(v / nx) | 0] }); first = s; s = prv[s]; }
     pts.reverse();
     return { pts: simplify(pts), sa: first & 3, sb: ((end & 3) + 2) & 3 }; // a start state faces out of its side; the goal faces into its side
   }
@@ -1563,7 +1573,7 @@ const Route = (() => {
       boxes.forEach((b, id) => { const p = prevBox.get(id); if (!p || key(p) !== key(b)) changed.push({ id, o: p, n: b }); });
       prevBox.forEach((p, id) => { if (!boxes.has(id)) changed.push({ id, o: p, n: null }); });
       const moved = new Set(changed.map((c) => c.id));
-      prevBox = new Map([...boxes].map(([k, b]) => [k, { ...b }]));
+      for (const c of changed) if (c.n) prevBox.set(c.id, { ...c.n }); else prevBox.delete(c.id); // only what changed is copied
       const obs = [...boxes.values()];
       const live = new Set();
       const crosses = (c, r) => { if (!r) return false; for (let i = 1; i < c.pts.length; i++) { const a = c.pts[i - 1], b = c.pts[i]; if (hits(r, a.x, a.y, b.x, b.y)) return true; } return false; };
@@ -2146,10 +2156,16 @@ const Plan = (() => {
   // ---------- view ----------
   const gridEl = $('#grid');
   let paintedZ = 0, gridCell = 24;
+  // Lines that keep their on-screen width at any zoom divide by --z. Setting it on the whole board made every one of its
+  // elements restyle on each zoom frame; instead a tiny style sheet gives it only to what uses it right now
+  // (selected, edited, hovered cards, sections, link and task cards, tables, pins, others' frames). The rest keeps 1.
+  // The hovered card is marked by .hov from script: a `.item:hover` rule here would restyle every card on each zoom step.
+  const zoomCss = document.createElement('style'); document.head.appendChild(zoomCss);
+  const Z_USERS = ['.sel', '.editing', '.link-target', '.drop-target', '.mine-hidden', '.hov', '.section', '.comment', '.web', '.board', '.grid', '.task', '.vb', '.peer-box', '#ghostSection'].map((q) => '#world ' + q).join(', ');
   function paintView() {
     world.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.z})`;
     if (view.z !== paintedZ) { // zoom-dependent work only when the zoom changed, not on every pan frame
-      paintedZ = view.z; world.style.setProperty('--z', view.z);
+      paintedZ = view.z; zoomCss.textContent = Z_USERS + ' { --z: ' + view.z + '; }';
       let step = 24; while (step * view.z < 12) step *= 4;
       const g = step * view.z;
       if (g !== gridCell || !gridEl.style.backgroundSize) { gridCell = g; gridEl.style.backgroundSize = `${g}px ${g}px`; }
@@ -2312,6 +2328,14 @@ const Plan = (() => {
   }
 
   // ---------- rendering ----------
+  // A card's four link ports are added the first time the pointer comes over it, not for every card up front:
+  // on a big board that is most of the board's elements, and their memory, styles and hit tests, saved.
+  const PORT_TYPES = new Set(['sticky', 'text', 'board', 'web', 'node', 'task', 'image']);
+  function ensurePorts(d) {
+    if (d._ports || !PORT_TYPES.has(d._type)) return; d._ports = true;
+    d.insertAdjacentHTML('beforeend', '<i class="port t new"></i><i class="port r new"></i><i class="port b new"></i><i class="port l new"></i>');
+    const ps = d.querySelectorAll(':scope > .port.new'); getComputedStyle(ps[0]).opacity; ps.forEach((p) => p.classList.remove('new'));
+  }
   function elFor(it) {
     let d = els.get(it.id);
     if (d && d._type === it.type) return d;
@@ -2319,14 +2343,13 @@ const Plan = (() => {
     d = document.createElement('div');
     d.className = 'item ' + it.type; d.dataset.id = it.id; d._type = it.type;
     const id = it.id;
-    const PORTS = '<i class="port t"></i><i class="port r"></i><i class="port b"></i><i class="port l"></i>';
     if (it.type === 'text') {
-      d.innerHTML = '<div class="txt"></div><div class="handle" title="Змінити ширину"></div>' + PORTS;
+      d.innerHTML = '<div class="txt"></div><div class="handle" title="Змінити ширину"></div>';
       const t = d.firstChild;
       t.addEventListener('input', () => { liveText(id); const cur = items.get(id); if (cur) { cur.h = d.offsetHeight; schedule('links'); updateCtx(); } });
       t.addEventListener('blur', () => { if (editingId === id) finishEdit(); });
     } else if (it.type === 'sticky') {
-      d.innerHTML = '<div class="txt"></div><div class="by"></div><div class="handle" title="Змінити розмір"></div>' + PORTS;
+      d.innerHTML = '<div class="txt"></div><div class="by"></div><div class="handle" title="Змінити розмір"></div>';
       const t = d.firstChild;
       t.addEventListener('input', () => { fit(d, id); liveText(id); });
       t.addEventListener('blur', () => { if (editingId === id) finishEdit(); });
@@ -2338,7 +2361,7 @@ const Plan = (() => {
     } else if (it.type === 'board') {
       d.innerHTML = '<div class="bd-in"><div class="bd-media"><button class="bd-peek" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></svg><span>Переглянути</span></button></div>'
         + '<div class="bd-body"><div class="bd-title"></div><a class="web-go bd-open" target="_blank" rel="noopener"><span class="bd-logo" aria-hidden="true">◐</span><span class="bd-kind">Дошка JamBoard</span><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2.5h5.5V8M9.5 2.5L3 9"/></svg></a></div></div>'
-        + '<div class="handle" title="Змінити ширину"></div>' + PORTS;
+        + '<div class="handle" title="Змінити ширину"></div>';
       d.querySelector('.bd-peek').addEventListener('click', (e) => { e.stopPropagation(); const cur = items.get(id); if (cur) openPeek(cur.bid, d.querySelector('.bd-media')); });
     } else if (it.type === 'web') {
       const ARR = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2.5h5.5V8M9.5 2.5L3 9"/></svg>';
@@ -2346,7 +2369,7 @@ const Plan = (() => {
         + '<a class="web-go web-play" target="_blank" rel="noopener noreferrer" aria-label="Дивитися на YouTube"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z"/></svg></a></div>'
         + '<div class="web-body"><div class="web-title"></div><div class="web-desc"></div>'
         + '<a class="web-go site" target="_blank" rel="noopener noreferrer"><img class="web-ico" alt="" draggable="false" referrerpolicy="no-referrer"><span></span>' + ARR + '</a></div></div>'
-        + '<div class="handle" title="Змінити ширину"></div>' + PORTS;
+        + '<div class="handle" title="Змінити ширину"></div>';
       const img = d.querySelector('.web-img'), ico = d.querySelector('.web-ico');
       const again = () => { const cur = items.get(id); if (cur) { render(cur); updateCtx(); } };
       img.addEventListener('load', () => { img.classList.add('on'); d.classList.remove('noimg'); again(); });
@@ -2354,7 +2377,7 @@ const Plan = (() => {
       ico.addEventListener('error', () => ico.classList.add('off'));
       ico.addEventListener('load', () => ico.classList.remove('off'));
     } else if (it.type === 'node') {
-      d.innerHTML = '<div class="txt"></div><span class="nico"></span><svg class="nbg" aria-hidden="true"></svg><div class="handle" title="Змінити розмір"></div>' + PORTS;
+      d.innerHTML = '<div class="txt"></div><span class="nico"></span><svg class="nbg" aria-hidden="true"></svg><div class="handle" title="Змінити розмір"></div>';
       const t = d.firstChild;
       t.addEventListener('input', () => liveText(id));
       t.addEventListener('blur', () => { if (editingId === id) finishEdit(); });
@@ -2365,7 +2388,7 @@ const Plan = (() => {
       t.addEventListener('blur', () => { if (editingId === id) finishEdit(); });
       t.addEventListener('input', () => liveText(id));
     } else if (it.type === 'task') {
-      d.innerHTML = '<div class="txt"></div><div class="tk-top"><button class="tk-st" type="button"></button><a class="tk-key" target="_blank" rel="noopener noreferrer"></a></div><div class="tk-tags"></div><div class="tk-foot"><span class="tk-who"></span><span class="tk-est"></span><span class="tk-due"></span></div><div class="handle" title="Змінити ширину"></div>' + PORTS;
+      d.innerHTML = '<div class="txt"></div><div class="tk-top"><button class="tk-st" type="button"></button><a class="tk-key" target="_blank" rel="noopener noreferrer"></a></div><div class="tk-tags"></div><div class="tk-foot"><span class="tk-who"></span><span class="tk-est"></span><span class="tk-due"></span></div><div class="handle" title="Змінити ширину"></div>';
       const t = d.firstChild;
       t.addEventListener('input', () => { liveText(id); const cur = items.get(id); if (cur) { cur.h = d.offsetHeight; schedule('links'); updateCtx(); } });
       t.addEventListener('blur', () => { if (editingId === id) finishEdit(); });
@@ -2374,7 +2397,7 @@ const Plan = (() => {
     } else if (it.type === 'comment') {
       d.innerHTML = '<div class="pin"><span class="pe"></span><b></b></div>';
     } else {
-      d.innerHTML = '<img alt="Зображення на дошці" draggable="false"><div class="handle" title="Змінити розмір"></div>' + PORTS;
+      d.innerHTML = '<img alt="Зображення на дошці" draggable="false"><div class="handle" title="Змінити розмір"></div>';
     }
     if (booted && !quiet.delete(id)) {
       const cls = it.type === 'stamp' ? 'thump' : 'pop';
@@ -2413,22 +2436,29 @@ const Plan = (() => {
     if (t.scrollWidth > t.clientWidth + 1) t.style.overflowWrap = 'anywhere';
   }
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { els.forEach((d) => { d._fit = null; }); renderAll(); });
+  // Style and data writes that skip what is already there: a full redraw of a big board then touches almost nothing,
+  // so the browser has no styles to redo and no layout to run for cards that did not change.
+  const AUTO_H = new Set(['text', 'board', 'web', 'task']); // cards whose height follows their content
+  function setSt(el, k, v) { const c = el._st || (el._st = {}); if (c[k] !== v) { c[k] = v; el.style[k] = v; } }
+  function setData(el, k, v) { if (el.dataset[k] !== v) el.dataset[k] = v; }
+  function setVar(el, k, v) { const c = el._st || (el._st = {}); if (c[k] !== v) { c[k] = v; el.style.setProperty(k, v); } }
+  function setText(el, v) { if (el.textContent !== v) el.textContent = v; } // the same text set again still re-lays the card out
   function render(it, index) {
     const d = elFor(it), g = geom(it);
     schedule('links');
-    d.style.translate = `${g.x}px ${g.y}px`; d.style.width = g.w + 'px'; d.style.height = g.h + 'px';
-    if (index != null) d.style.zIndex = index + 1;
+    setSt(d, 'translate', `${g.x}px ${g.y}px`); setSt(d, 'width', g.w + 'px'); setSt(d, 'height', AUTO_H.has(it.type) ? 'auto' : g.h + 'px');
+    if (index != null) setSt(d, 'zIndex', String(index + 1));
     if (it.type === 'section') {
-      d.style.setProperty('--c', `var(--t-${COLORS.includes(it.color) ? it.color : 'gray'})`);
+      setVar(d, '--c', `var(--t-${COLORS.includes(it.color) ? it.color : 'gray'})`);
       const t = d.firstChild;
       if (editingId !== it.id && t.textContent !== (it.title || '')) t.textContent = it.title || '';
-      d.title = '';
+      if (d.title) d.title = '';
     } else if (it.type === 'sticky') {
-      d.style.setProperty('--c', `var(--t-${COLORS.includes(it.color) ? it.color : 'caution'})`);
+      setVar(d, '--c', `var(--t-${COLORS.includes(it.color) ? it.color : 'caution'})`);
       const t = d.firstChild, masked = maskFor(d, it);
       if (masked) { if (t._k !== 'masked') { t._k = 'masked'; t.textContent = ''; d._fit = null; } }
       else if (editingId !== it.id) setRich(t, it);
-      d.children[1].textContent = masked ? it.by + ' пише…' : mineHidden(it) ? '🙈 Бачите лише ви' + (it.by ? ' · ' + it.by : '') : it.by || '';
+      setText(d.children[1], masked ? it.by + ' пише…' : mineHidden(it) ? '🙈 Бачите лише ви' + (it.by ? ' · ' + it.by : '') : it.by || '');
       t.style.fontWeight = it.b || it.ts === 'h1' ? '700' : it.ts === 'h2' ? '600' : '';
       t.style.textAlign = it.al || '';
       t.style.lineHeight = it.ts === 'p' || it.ts === 's' ? '1.4' : '';
@@ -2437,17 +2467,14 @@ const Plan = (() => {
       const t = d.firstChild, masked = maskFor(d, it);
       if (masked) { if (t._k !== 'masked') { t._k = 'masked'; t.textContent = '🙈 ' + (it.by || 'Хтось') + ' пише…'; } }
       else if (editingId !== it.id) setRich(t, it);
-      d.dataset.ts = TEXT_TS.includes(it.ts) ? it.ts : 'p';
+      setData(d, 'ts', TEXT_TS.includes(it.ts) ? it.ts : 'p');
       t.style.fontWeight = it.b ? '700' : ''; t.style.textAlign = it.al || '';
-      d.style.height = 'auto';
       const hh = d.offsetHeight; if (hh && Math.abs(hh - (it.h || 0)) > 0.5) it.h = hh;
     } else if (it.type === 'board') {
       renderBoardCard(d, it);
-      d.style.height = 'auto';
       const hh = d.offsetHeight; if (hh && Math.abs(hh - (it.h || 0)) > 0.5) it.h = hh;
     } else if (it.type === 'web') {
       renderWeb(d, it);
-      d.style.height = 'auto';
       const hh = d.offsetHeight; if (hh && Math.abs(hh - (it.h || 0)) > 0.5) it.h = hh;
     } else if (it.type === 'node') {
       renderNode(d, it, g);
@@ -2455,7 +2482,6 @@ const Plan = (() => {
       renderGrid(d, it, g);
     } else if (it.type === 'task') {
       renderTask(d, it);
-      d.style.height = 'auto';
       const hh = d.offsetHeight; if (hh && Math.abs(hh - (it.h || 0)) > 0.5) it.h = hh;
     } else if (it.type === 'stamp') {
       const e = d.firstChild; if (e.textContent !== it.emoji) e.textContent = it.emoji;
@@ -2464,8 +2490,8 @@ const Plan = (() => {
     } else if (it.type === 'comment') {
       const pin = d.firstChild, msgs = it.msgs || [], m0 = msgs[0] || {};
       pin.style.setProperty('--pc', safeColor(m0.c));
-      pin.firstChild.textContent = m0.e || '💬';
-      pin.lastChild.textContent = msgs.length > 1 ? msgs.length : '';
+      setText(pin.firstChild, m0.e || '💬');
+      setText(pin.lastChild, msgs.length > 1 ? String(msgs.length) : '');
       pin.title = (m0.n ? m0.n + ': ' : '') + (m0.t || '').slice(0, 90);
       d.classList.toggle('open', threadId === it.id);
     } else {
@@ -2478,12 +2504,12 @@ const Plan = (() => {
     if (!d.classList.contains('dragging')) d.classList.toggle('lifted', !active.has(it.id) && remotePos.has(it.id) && !isSec(it));
   }
   function renderNode(d, it, g) {
-    d.style.setProperty('--c', `var(--t-${COLORS.includes(it.color) ? it.color : 'gray'})`);
+    setVar(d, '--c', `var(--t-${COLORS.includes(it.color) ? it.color : 'gray'})`);
     const shape = it.shape || 'rect', w = Math.round(g.w), h = Math.round(g.h), icon = it.icon || 'none';
     const col = shape === 'circle' || shape === 'diamond' || (icon !== 'none' && w < h * 1.7);
-    d.dataset.lay = col ? 'col' : 'row'; d.dataset.shape = shape;
+    setData(d, 'lay', col ? 'col' : 'row'); setData(d, 'shape', shape);
     const pad = { diamond: [w * 0.2, h * 0.17, h * 0.17], hex: [Math.min(h / 2, w * 0.18) + 6, 10, 10], circle: [w * 0.16, h * 0.14, h * 0.14], cyl: [16, Math.min(13, h * 0.14) * 2 + 6, 10], pill: [h / 2.6, 8, 8] }[shape] || [16, 10, 10];
-    d.style.setProperty('--px', Math.round(pad[0]) + 'px'); d.style.setProperty('--pt', Math.round(pad[1]) + 'px'); d.style.setProperty('--pb', Math.round(pad[2]) + 'px');
+    setVar(d, '--px', Math.round(pad[0]) + 'px'); setVar(d, '--pt', Math.round(pad[1]) + 'px'); setVar(d, '--pb', Math.round(pad[2]) + 'px');
     const key = shape + w + 'x' + h;
     if (d._shape !== key) {
       d._shape = key; const svg = d.querySelector('.nbg'), ps = shapePath(shape, w, h);
@@ -2495,7 +2521,7 @@ const Plan = (() => {
     const t = d.firstChild;
     if (editingId !== it.id && t.textContent !== (it.text || '')) t.textContent = it.text || '';
     t.style.fontSize = (it.text || '').length > 60 || h < 60 ? '13px' : '';
-    d.title = '';
+    if (d.title) d.title = '';
   }
   const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } };
   function renderWeb(d, it) {
@@ -2522,7 +2548,7 @@ const Plan = (() => {
     const ico = site.querySelector('.web-ico');
     const icoSrc = it.yt ? 'https://www.youtube.com/favicon.ico' : it.icon || (host ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64` : '');
     if ((ico.getAttribute('src') || '') !== icoSrc) { if (icoSrc) ico.src = icoSrc; else { ico.removeAttribute('src'); ico.classList.add('off'); } }
-    d.title = '';
+    if (d.title) d.title = '';
   }
   // timelines and tables: a CSS grid of header, lane names and cells, rebuilt only when its structure or labels change
   const tintOf = (it, i) => { const c = (it.tint || [])[i]; return `var(--t-${COLORS.includes(c) ? c : COLORS.includes(it.color) ? it.color : 'gray'})`; };
@@ -2547,7 +2573,7 @@ const Plan = (() => {
   let headEdit = null; // a column, lane or cell name being typed in
   function renderGrid(d, it, g) {
     const box = { ...it, ...g }, dm = Plan.dims(box);
-    d.style.setProperty('--c', `var(--t-${COLORS.includes(it.color) ? it.color : 'gray'})`);
+    setVar(d, '--c', `var(--t-${COLORS.includes(it.color) ? it.color : 'gray'})`);
     d.classList.toggle('matrix', it.kind === 'matrix');
     const t = d.firstChild;
     if (editingId !== it.id && t.textContent !== (it.title || '')) t.textContent = it.title || '';
@@ -2558,16 +2584,16 @@ const Plan = (() => {
     nl.hidden = !now;
     if (now) nl.style.left = `calc(${dm.side}px + (100% - ${dm.side}px) * ${((now.i + now.f) / dm.nc).toFixed(4)})`;
     const ax = it.kind === 'matrix' ? it.ax || [] : [], [axX, axY] = [d.querySelector('.g-ax.x'), d.querySelector('.g-ax.y')];
-    axX.textContent = ax[0] ? ax[0] + ' →' : ''; axY.textContent = ax[1] ? ax[1] + ' →' : '';
-    axY.style.top = (Plan.TOP + (g.h - Plan.TOP) / 2) + 'px'; axX.style.left = (dm.side + (g.w - dm.side) / 2) + 'px';
-    d.title = '';
+    setText(axX, ax[0] ? ax[0] + ' →' : ''); setText(axY, ax[1] ? ax[1] + ' →' : '');
+    setSt(axY, 'top', (Plan.TOP + (g.h - Plan.TOP) / 2) + 'px'); setSt(axX, 'left', (dm.side + (g.w - dm.side) / 2) + 'px');
+    if (d.title) d.title = '';
   }
   const dueText = (s) => { const n = Plan.dayOf(s); return n == null ? '' : new Date(n * 864e5).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short', timeZone: 'UTC' }); };
   function renderTask(d, it) {
     const t = d.firstChild, masked = maskFor(d, it);
     if (masked) { if (t._k !== 'masked') { t._k = 'masked'; t.textContent = '🙈 ' + (it.by || 'Хтось') + ' пише…'; } }
     else if (editingId !== it.id && t._k !== 'T' + it.text) { t._k = 'T' + it.text; t.textContent = it.text || ''; }
-    d.dataset.s = it.status || 'todo';
+    setData(d, 's', it.status || 'todo');
     const st = d.querySelector('.tk-st'), sn = Plan.STATUS_NAMES[it.status] || Plan.STATUS_NAMES.todo;
     if (st.textContent !== sn) st.textContent = sn;
     st.title = viewOnly() ? 'Статус: ' + sn : 'Статус: ' + sn + '. Клік змінює статус';
@@ -2582,7 +2608,7 @@ const Plan = (() => {
     const due = set('.tk-due', !masked && it.due ? 'до ' + dueText(it.due) : '');
     due.classList.toggle('late', !!it.due && it.status !== 'done' && Plan.dayOf(it.due) < Plan.localDay(Date.now()));
     d.querySelector('.tk-foot').hidden = masked || !(it.who || it.est || it.due);
-    d.title = '';
+    if (d.title) d.title = '';
   }
   // hidden writing: someone else's card from this session shows only who is writing it, never the text
   const hiddenFor = (it) => !!(hideMode.on && it.hid && it.hid === hideMode.s && it.own !== myVid);
@@ -2623,9 +2649,14 @@ const Plan = (() => {
     // sections paint first, the rope layer sits just above them, then cards, stamps and pins
     const list = sorted(); let secs = 0;
     list.forEach((it, i) => { const back = rank(it) < 1; if (back) secs++; render(it, back ? i : i + 1); });
-    linksSvg.style.zIndex = secs + 1; ropeLabels.style.zIndex = secs + 1;
+    linksSvg.style.zIndex = secs + 1; pulseCv.style.zIndex = secs + 1; ropeLabels.style.zIndex = secs + 1;
     $('#empty').hidden = mode === 'connecting' || loadingBoard || items.size > 0;
     updateCtx(); schedule('boxes'); refreshThread();
+  }
+  function renderIds(ids) { // redraw only these cards (their paint order is unchanged)
+    let thread = false;
+    for (const id of ids) { const it = items.get(id); if (!it) continue; if (isLink(it)) schedule('links'); else render(it); if (id === threadId) thread = true; }
+    updateCtx(); schedule('boxes'); if (thread) refreshThread();
   }
   function setSel(ids) {
     selected = new Set(ids);
@@ -3394,6 +3425,7 @@ const Plan = (() => {
   // ---------- links: a rope between two cards, with a little physics so it sags and sways ----------
   const NS = 'http://www.w3.org/2000/svg';
   const linksSvg = document.createElementNS(NS, 'svg'); linksSvg.id = 'links'; linksSvg.setAttribute('aria-hidden', 'true'); world.appendChild(linksSvg);
+  const pulseCv = document.createElement('canvas'); pulseCv.id = 'pulses'; pulseCv.setAttribute('aria-hidden', 'true'); pulseCv.hidden = true; world.appendChild(pulseCv);
   const ropeLabels = document.createElement('div'); ropeLabels.id = 'ropeLabels'; world.appendChild(ropeLabels);
   let ropeEditId = null, pulseRaf = 0, pulseLast = 0;
   const ropes = new Map(); // id -> rope state and its SVG
@@ -3427,10 +3459,7 @@ const Plan = (() => {
     const g = document.createElementNS(NS, 'g');
     if (!temp) g.dataset.link = id;
     const mk = (tag, cls) => { const e = document.createElementNS(NS, tag); e.setAttribute('class', cls); g.appendChild(e); return e; };
-    const r = { g, halo: mk('path', 'halo'), hit: mk('path', 'rope-hit'), path: mk('path', 'rope'), head: mk('path', 'head'), pulse: mk('g', 'pulse'), lab: null, ph: Math.random(), flowOn: false };
-    const c1 = document.createElementNS(NS, 'circle'); c1.setAttribute('class', 'glow'); c1.setAttribute('r', 9);
-    const c2 = document.createElementNS(NS, 'circle'); c2.setAttribute('class', 'core'); c2.setAttribute('r', 4.2);
-    r.pulse.append(c1, c2);
+    const r = { g, halo: mk('path', 'halo'), hit: mk('path', 'rope-hit'), path: mk('path', 'rope'), head: mk('path', 'head'), lab: null, ph: Math.random(), flowOn: false, dim: false };
     const t = ropeTarget(ends[0], ends[1]);
     // new ropes drop in from above and swing; ropes already there when the board opens just sit still
     if (temp) { r.cx = ends[0].x; r.cy = ends[0].y; } else if (booted) { r.cx = t.x; r.cy = t.y - 120; } else { r.cx = t.x; r.cy = t.y; }
@@ -3477,11 +3506,11 @@ const Plan = (() => {
       r.g.classList.toggle('sel', selected.has(l.id));
       const hi = dimOn && (focus.has(l.a) || focus.has(l.b));
       r.g.classList.toggle('hi', hi); if (r.lab) r.lab.classList.toggle('hi', hi);
+      r.dim = dimOn && !hi && !l.temp && !selected.has(l.id); // a stepped-back rope shows no dot
       r.g.classList.toggle('temp', !!l.temp);
       const rc = l.temp ? 'var(--accent)' : ropeColor(l);
       if (r.rc !== rc) { r.rc = rc; r.g.style.setProperty('--rc', rc); if (r.lab) r.lab.style.setProperty('--rc', rc); }
       r.flowOn = !l.temp && l.flow !== false && !reduceMotion;
-      if (!r.flowOn) r.pulse.style.opacity = 0;
       if (!l.temp) syncLabel(r, l);
     }
     for (const [id, r] of ropes) if (!seen.has(id)) {
@@ -3492,14 +3521,20 @@ const Plan = (() => {
     if (!ropeRaf) { ropeLast = performance.now(); ropeRaf = requestAnimationFrame(ropeStep); }
     pulseKick();
   }
+  let hovEl = null;
+  function unhover() { // a little later, so the ports keep their size while they fade out
+    const was = hovEl; if (was) setTimeout(() => { if (was !== hovEl) was.classList.remove('hov'); }, 260);
+  }
   vp.addEventListener('pointerover', (e) => { // hovering a card lights up its links
+    const ie = e.target.closest && e.target.closest('.item');
+    if (ie !== hovEl) { unhover(); hovEl = ie; if (ie) { ie.classList.add('hov'); ensurePorts(ie); } } // its ports and handle get --z
     if (e.pointerType && e.pointerType !== 'mouse') return;
-    const ie = e.target.closest && e.target.closest('.item'), it = ie && items.get(ie.dataset.id);
+    const it = ie && items.get(ie.dataset.id);
     const h = it && isCard(it) ? it.id : null;
     clearTimeout(hoverT); // a short wait, so sweeping the mouse across the board does not flicker the wires
     if (h !== hoverId) hoverT = setTimeout(() => { hoverId = h; schedule('links'); }, h ? 140 : 90);
   });
-  vp.addEventListener('pointerleave', () => { clearTimeout(hoverT); if (hoverId) { hoverId = null; schedule('links'); } });
+  vp.addEventListener('pointerleave', () => { unhover(); hovEl = null; clearTimeout(hoverT); if (hoverId) { hoverId = null; schedule('links'); } });
   const ropeAt = (r, s) => {
     if (r.pts) { // along the polyline, by length
       const want = s * r.len, c = r.cum; let i = 1; while (i < c.length - 1 && c[i] < want) i++;
@@ -3552,18 +3587,53 @@ const Plan = (() => {
     schedule('links'); updateCtx();
   }
   function pulseKick() { if (!pulseRaf && !reduceMotion) { pulseLast = performance.now(); pulseRaf = requestAnimationFrame(pulseStep); } }
+  // The rope colours as real colours for the canvas (they are CSS variables): resolved once per colour and theme.
+  const pulseInk = new Map(), inkProbe = document.createElement('i');
+  inkProbe.style.cssText = 'position:absolute;width:0;height:0;visibility:hidden;pointer-events:none';
+  function inkOf(rc) {
+    let k = pulseInk.get(rc);
+    if (!k) {
+      if (!inkProbe.isConnected) document.body.appendChild(inkProbe);
+      inkProbe.style.color = rc; const c = getComputedStyle(inkProbe).color;
+      inkProbe.style.color = `color-mix(in srgb, ${rc} 30%, #fff)`; const core = getComputedStyle(inkProbe).color;
+      k = { c, core }; pulseInk.set(rc, k);
+    }
+    return k;
+  }
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => pulseInk.clear());
+  const pcx = pulseCv.getContext('2d');
+  let pulsePlaced = '', pulseDrawn = false;
   function pulseStep(t) { // one glowing dot per rope, gliding from its start (a) to its end (b), then a short rest
     const dt = Math.min(50, Math.max(0, t - pulseLast)); pulseLast = t;
+    // the canvas always covers exactly the screen, at the ropes' depth in the board (under the cards)
+    const z = view.z, W = innerWidth, H = innerHeight, dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const cw = Math.round(W * dpr), ch = Math.round(H * dpr);
+    if (pulseCv.width !== cw || pulseCv.height !== ch) { pulseCv.width = cw; pulseCv.height = ch; pulseCv.style.width = W + 'px'; pulseCv.style.height = H + 'px'; pulsePlaced = ''; }
+    const place = view.x + ',' + view.y + ',' + z;
+    if (place !== pulsePlaced) { pulsePlaced = place; pulseCv.style.transform = `translate(${-view.x / z}px, ${-view.y / z}px) scale(${1 / z})`; }
+    const c = pcx; c.setTransform(1, 0, 0, 1, 0, 0);
+    if (pulseDrawn) { c.clearRect(0, 0, cw, ch); pulseDrawn = false; }
+    c.setTransform(dpr * z, 0, 0, dpr * z, dpr * view.x, dpr * view.y); // draw in board units
+    const x1 = -view.x / z - 12, y1 = -view.y / z - 12, x2 = (W - view.x) / z + 12, y2 = (H - view.y) / z + 12;
+    const lw = 1.5 / z;
     let any = false;
     for (const r of ropes.values()) {
       if (!r.flowOn || !r.p0) continue; any = true;
       const len = r.pts ? r.len : (Math.hypot(r.cx - r.p0.x, r.cy - r.p0.y) + Math.hypot(r.p1.x - r.cx, r.p1.y - r.cy) + Math.hypot(r.p1.x - r.p0.x, r.p1.y - r.p0.y)) / 2;
       r.ph = ((r.ph || 0) + dt / Math.max(1400, len / 0.16)) % 1.3;
-      if (r.ph >= 1) { if (r.pulseVis) { r.pulse.style.opacity = 0; r.pulseVis = false; } continue; }
+      if (r.ph >= 1 || r.dim) continue;
       const u = r.ph, s = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2, p = ropeAt(r, s);
-      r.pulse.setAttribute('transform', `translate(${p.x.toFixed(1)},${p.y.toFixed(1)})`);
-      r.pulse.style.opacity = Math.min(1, Math.sin(Math.PI * u) * 1.6).toFixed(3); r.pulseVis = true;
+      if (p.x < x1 || p.x > x2 || p.y < y1 || p.y > y2) continue; // off screen: keeps its rhythm, costs nothing
+      const a = Math.min(1, Math.sin(Math.PI * u) * 1.6); if (a < 0.004) continue;
+      const k = inkOf(r.rc || 'var(--rope)');
+      c.globalAlpha = a * 0.32; c.fillStyle = k.c; c.beginPath(); c.arc(p.x, p.y, 9, 0, 6.2832); c.fill();
+      c.globalAlpha = a; c.fillStyle = k.core; c.strokeStyle = k.c; c.lineWidth = lw;
+      c.beginPath(); c.arc(p.x, p.y, 4.2, 0, 6.2832); c.fill(); c.stroke();
+      pulseDrawn = true;
     }
+    c.globalAlpha = 1;
+    if (pulseCv.hidden !== !any) pulseCv.hidden = !any;
+    if (!any) { pulseCv.width = pulseCv.height = 0; pulseDrawn = false; } // no flowing ropes: give the canvas memory back
     pulseRaf = any ? requestAnimationFrame(pulseStep) : 0;
   }
   function elbowPath(p, f) { // straight runs joined by small rounded corners
@@ -4183,7 +4253,7 @@ const Plan = (() => {
       else if (c) { const e = document.createElement('div'); e.className = 'bd-empty'; e.textContent = 'Порожня дошка'; media.prepend(e); }
     }
     media.classList.toggle('wait', !c && peeking.has(bid));
-    d.title = '';
+    if (d.title) d.title = '';
   }
 
   // the preview: the other board drawn read-only in a centred dialog; drag to look around, wheel or pinch to zoom
@@ -4542,12 +4612,11 @@ const Plan = (() => {
     dragBase = nextBase;
     // Cursor moves arrive many times a second: redraw only what changed. A peer's drag touches just the items it holds.
     const sig = JSON.stringify(others().map((p) => { const pr = p.presence || {}; return [p.peer, pr.sel || null, pr.editing || null, pr.color || null, pr.name || null]; }));
-    if (sig !== boardSig) { boardSig = sig; renderAll(); }
-    else {
-      const touched = new Set([...prevPos.keys(), ...remotePos.keys(), ...prevSize, ...remoteSize.keys()]);
-      touched.forEach((id) => { const it = items.get(id); if (it) render(it); });
-      if (touched.size) { schedule('boxes'); updateCtx(); }
-    }
+    // (others' selections only draw their frames, so a changed selection no longer redraws every card)
+    const touched = new Set([...prevPos.keys(), ...remotePos.keys(), ...prevSize, ...remoteSize.keys()]);
+    touched.forEach((id) => { const it = items.get(id); if (it) render(it); });
+    if (sig !== boardSig) { boardSig = sig; schedule('boxes'); updateCtx(); }
+    else if (touched.size) { schedule('boxes'); updateCtx(); }
     renderPeople(); renderCursors(); if (!$('#boardMenu').hidden) renderBoardMenu();
   }
   let peopleSig = '';
@@ -4774,7 +4843,7 @@ const Plan = (() => {
   }
   $('#themeBtn').addEventListener('click', () => {
     themePref = { auto: 'light', light: 'dark', dark: 'auto' }[themePref];
-    store.set('jamboard:theme', themePref); applyTheme(); toast('Тема: ' + THEMES[themePref][0]);
+    store.set('jamboard:theme', themePref); applyTheme(); pulseInk.clear(); toast('Тема: ' + THEMES[themePref][0]);
   });
   applyTheme();
 
@@ -5721,6 +5790,9 @@ const Plan = (() => {
     }, () => {});
     const unsubList = db.collection(itemsPath()).onSnapshot((snap) => {
       if (myBoard !== boardId) return;
+      // An edit from someone else usually touches one card: redraw just that card. Anything that changes the paint
+      // order or the set of cards (a new or deleted card, a new z or type) still redraws the whole board.
+      const touched = new Set(); let whole = first;
       for (const ch of snap.docChanges()) {
         const id = ch.doc.id;
         const data = ch.type === 'removed' ? null : ch.doc.data();
@@ -5729,15 +5801,19 @@ const Plan = (() => {
           if (data.rev < seen) continue; // an older state arriving late: keep the newer one
           revs.set(id, data.rev);
         }
-        if (ch.type === 'removed') { items.delete(id); continue; }
+        if (ch.type === 'removed') { if (items.delete(id)) whole = true; continue; }
         ghost.delete(id);
         if (active.has(id)) continue;
         if (!data || typeof data !== 'object') continue;
         if (!TYPES_OK.includes(data.type)) continue;
-        putItem(id, full(id, data));
+        const was = items.get(id), next = full(id, data);
+        if (!was || was.type !== next.type || (was.z || 0) !== (next.z || 0)) whole = true;
+        putItem(id, next); touched.add(id);
       }
-      selected = new Set([...selected].filter((id) => items.has(id)));
-      if (first) { first = false; boardReady(); } else { renderAll(); coverSoon(false); }
+      if (whole) selected = new Set([...selected].filter((id) => items.has(id)));
+      if (first) { first = false; boardReady(); }
+      else if (whole) { renderAll(); coverSoon(false); }
+      else if (touched.size) { renderIds(touched); coverSoon(false); }
     }, (e) => {
       dbDown = true; dbError(e); setStatus('bad', 'Немає зв’язку');
       const m = (e && e.message) || '';
