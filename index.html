@@ -851,6 +851,50 @@ select.field.sm { padding-right: 8px; }
 .md-actions { display: flex; align-items: center; gap: 8px; }
 .md-actions .mm-note { margin-right: auto; font-size: 12px; color: var(--muted); }
 #mdCopy { min-width: 132px; }
+/* settings dialog: Claude (MCP) connection and other MCP servers */
+.gal-head .gal-set { flex: none; width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--chip); color: var(--text); cursor: pointer; transition: background-color var(--fast) var(--ease), scale var(--fast) var(--ease-spring); }
+.gal-head .gal-set:hover { background: color-mix(in srgb, var(--text) 12%, transparent); }
+.gal-head .gal-set:active { scale: .94; }
+.gal-head .gal-set svg { width: 20px; height: 20px; }
+.panel.set-pop { height: auto; max-height: min(720px, calc(100vh - 48px)); width: min(640px, calc(100vw - 32px)); padding: 0; gap: 0; overflow: hidden; }
+.set-pop .md-head { padding: 18px 18px 12px 24px; align-items: center; }
+.set-tabs { display: flex; gap: 4px; padding: 0 24px 12px; border-bottom: 1px solid var(--line); }
+.set-tabs .seg { width: 100%; }
+.set-tabs .seg button[aria-selected="true"], .set-tabs .seg button[aria-selected="true"]:hover { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.set-body { flex: 1; min-height: 0; overflow: auto; padding: 18px 24px 22px; display: grid; gap: 18px; align-content: start; overscroll-behavior: contain; }
+.set-body h3 { margin: 0; font: 600 15px/1.3 var(--f-text); }
+.set-body p { margin: 0; font-size: 14px; line-height: 1.45; color: var(--muted); }
+.set-body p b { color: var(--text); font-weight: 600; }
+.set-card { display: grid; gap: 10px; padding: 16px; border-radius: var(--r-lg); background: var(--bg); }
+.set-url { display: flex; gap: 8px; align-items: center; }
+.set-url .field { flex: 1; min-width: 0; height: 40px; font: 400 13px/1 ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing: 0; color: var(--text); }
+.set-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.set-meta i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.set-meta[data-s="ok"] i { background: var(--ok); }
+.set-meta .txt-btn { padding: 5px 10px; font-size: 13px; }
+.set-meta #setUsed { margin-right: auto; }
+.set-meta .txt-btn.bad { color: var(--bad); }
+.set-steps { margin: 0; padding: 0 0 0 20px; display: grid; gap: 6px; font-size: 14px; line-height: 1.45; color: var(--text); }
+.set-steps code, .set-ex code { font: 500 12.5px ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing: 0; padding: 1px 6px; border-radius: 6px; background: var(--chip); }
+.set-boards { display: grid; gap: 2px; max-height: 220px; overflow: auto; margin: 0 -6px; padding: 0; list-style: none; }
+.set-boards label, .set-auto { display: flex; align-items: center; gap: 10px; padding: 7px 6px; border-radius: var(--r-sm); cursor: pointer; font-size: 14px; color: var(--text); transition: background-color var(--fast) var(--ease); }
+.set-boards label:hover { background: var(--chip); }
+.set-boards .nm { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.set-boards small { flex: none; font-size: 12px; color: var(--muted); }
+.set-pop input[type="checkbox"] { flex: none; width: 18px; height: 18px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.set-pop input[type="checkbox"]:focus-visible, .gal-set:focus-visible, .set-pop .txt-btn:focus-visible, .set-pop .primary:focus-visible, .set-pop a:focus-visible { outline: none; box-shadow: var(--focus); }
+.set-auto { padding: 2px 0; font-size: 13px; color: var(--muted); }
+.set-warn { display: flex; gap: 10px; padding: 12px 14px; border-radius: var(--r-md); background: var(--accent-soft); font-size: 13px; line-height: 1.45; color: var(--text); }
+.set-warn span[aria-hidden] { flex: none; }
+.set-mcp { display: grid; grid-template-columns: 40px 1fr; gap: 4px 12px; padding: 14px 16px; border-radius: var(--r-lg); background: var(--bg); }
+.set-mcp .ic { grid-row: span 2; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font: 700 17px var(--f-display); color: #fff; }
+.set-mcp h3 { display: flex; align-items: baseline; gap: 8px; }
+.set-mcp h3 a { font: 500 13px var(--f-text); color: var(--accent); text-decoration: none; border-radius: 4px; }
+.set-mcp h3 a:hover { text-decoration: underline; }
+.set-ex { grid-column: 2; display: flex; gap: 8px; align-items: flex-start; margin-top: 6px; padding: 10px 12px; border-radius: var(--r-md); background: var(--surface); font-size: 13px; line-height: 1.45; color: var(--text); }
+.set-ex q { flex: 1; quotes: "«" "»"; }
+.set-ex .txt-btn { flex: none; padding: 3px 9px; font-size: 13px; margin: -3px -6px 0 0; }
+@media (max-width: 560px) { .set-pop .md-head, .set-tabs, .set-body { padding-left: 16px; padding-right: 16px; } .set-url { flex-wrap: wrap; } .set-url .primary { width: 100%; } }
 @media (max-width: 560px) { .md-head { flex-wrap: wrap; } .md-head .seg { width: 100%; } .fl2 { grid-template-columns: 1fr; } }
 @media (max-width: 1320px) {
   .hints { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
@@ -885,6 +929,7 @@ select.field.sm { padding-right: 8px; }
 <div class="panel gallery" id="boardMenu" role="dialog" aria-label="Мої дошки" hidden>
   <div class="gal-head">
     <div class="gal-hd"><h2 class="gal-title">Мої дошки <span id="boardCount"></span></h2><p class="gal-note" id="boardNote" hidden>Тут лише дошки, які ви створили або відкривали за посиланням. Інші люди цього списку не бачать.</p></div>
+    <button class="gal-set icon-btn" id="setBtn" aria-label="Налаштування" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg><span class="tip">Налаштування · Claude і MCP</span></button>
     <button class="primary sm" id="newBoardBtn"><span aria-hidden="true">＋</span> Нова дошка</button>
   </div>
   <div class="gal-grid" id="boardList" role="list"></div>
@@ -1097,6 +1142,62 @@ select.field.sm { padding-right: 8px; }
   </div>
   <textarea class="field md-text" id="mdText" readonly spellcheck="false" aria-label="Markdown дошки"></textarea>
   <div class="md-actions"><span class="mm-note" id="mdNote"></span><button class="txt-btn" id="mdClose">Закрити</button><button class="primary sm" id="mdCopy">Скопіювати</button></div>
+</div>
+<div class="peek-back" id="setBack" hidden></div>
+<div class="panel md-pop set-pop" id="setPop" role="dialog" aria-modal="true" aria-labelledby="setTitle" hidden>
+  <div class="md-head">
+    <div class="peek-hd"><h2 id="setTitle">Налаштування</h2><p>Для цього браузера. Входити не потрібно.</p></div>
+    <button class="txt-btn" id="setClose">Готово</button>
+  </div>
+  <div class="set-tabs"><div class="seg" id="setTabs" role="tablist" aria-label="Розділи"><button role="tab" data-t="claude" id="setTabClaude" aria-controls="setClaude">Claude · MCP</button><button role="tab" data-t="more" id="setTabMore" aria-controls="setMore">Інші MCP</button></div></div>
+  <div class="set-body" id="setClaude" role="tabpanel" aria-labelledby="setTabClaude">
+    <p>Підключіть JamBoard до <b>свого</b> Claude: він читатиме обрані дошки, розкладатиме стікери, будуватиме схеми, таймлайни й діаграми Ганта, додаватиме картинки.</p>
+    <div class="set-card" id="setOff">
+      <h3>Особисте посилання для Claude</h3>
+      <p id="setOffText">Посилання відкриває Claude лише ті дошки, які ви оберете. Його можна будь-коли відкликати.</p>
+      <div><button class="primary sm" id="setMake">Отримати посилання</button></div>
+    </div>
+    <div class="set-card" id="setOn" hidden>
+      <h3>Особисте посилання для Claude</h3>
+      <div class="set-url"><input class="field" id="setUrl" readonly aria-label="Посилання для конектора Claude" spellcheck="false"><button class="primary sm" id="setCopy">Скопіювати</button></div>
+      <div class="set-meta" id="setMeta" data-s="idle"><i aria-hidden="true"></i><span id="setUsed">Claude ще не підключався</span><button class="txt-btn" id="setRenew">Нове посилання</button><button class="txt-btn bad" id="setRevoke">Відкликати</button></div>
+      <div class="set-warn"><span aria-hidden="true">🔑</span><span>Посилання діє як пароль: хто його має, той бачить і змінює обрані дошки. Не публікуйте його. Якщо ним 90 днів не користуватися, воно перестане діяти.</span></div>
+    </div>
+    <div class="set-card">
+      <h3>Як підключити</h3>
+      <ol class="set-steps">
+        <li>У Claude відкрийте <b>Settings → Connectors</b> і натисніть <b>Add custom connector</b>.</li>
+        <li>Назва <code>JamBoard</code>, у поле URL вставте посилання звідси, <b>Add</b>.</li>
+        <li>У чаті увімкніть конектор і попросіть, наприклад: <q>прочитай дошку «<span id="setBoardName">Нова дошка</span>» і згрупуй стікери за темами</q>.</li>
+      </ol>
+    </div>
+    <div class="set-card" id="setScope" hidden>
+      <h3 id="setScopeTitle">Дошки, які бачить Claude</h3>
+      <ul class="set-boards" id="setBoards" aria-labelledby="setScopeTitle"></ul>
+      <label class="set-auto"><input type="checkbox" id="setAuto" checked>Нові дошки, які я створюю чи відкриваю, додавати автоматично</label>
+    </div>
+  </div>
+  <div class="set-body" id="setMore" role="tabpanel" aria-labelledby="setTabMore" hidden>
+    <p>Claude може брати дані з інших сервісів і класти їх на дошку. Підключіть потрібний сервіс у Claude <b>поруч із JamBoard</b> (Settings → Connectors) і просіть одним реченням. Ключі від цих сервісів лишаються у вашому Claude, JamBoard їх не бачить.</p>
+    <div class="set-mcp">
+      <span class="ic" style="background:#1d1d1f" aria-hidden="true">R</span>
+      <h3>Refero <a href="https://doc.refero.design/mcp/getting-started" target="_blank" rel="noopener">Як підключити ↗</a></h3>
+      <p>Бібліотека референсів: екрани й флоу реальних застосунків і сайтів. Claude знайде приклади й покладе їх на дошку картинками.</p>
+      <div class="set-ex"><q data-ex="refero">Знайди в Refero 8 екранів онбордингу фінтех-застосунків і поклади їх на дошку «<span class="bn"></span>» у секцію «Референси»</q><button class="txt-btn" data-copy="refero">Скопіювати</button></div>
+    </div>
+    <div class="set-mcp">
+      <span class="ic" style="background:#a8124d" aria-hidden="true">F</span>
+      <h3>Figma</h3>
+      <p>Макети й FigJam: структура екранів, коментарі, тексти. Є в каталозі конекторів Claude.</p>
+      <div class="set-ex"><q data-ex="figma">Візьми фрейми з цього файлу Figma і зроби на дошці «<span class="bn"></span>» схему флоу з блоками й стрілками</q><button class="txt-btn" data-copy="figma">Скопіювати</button></div>
+    </div>
+    <div class="set-mcp">
+      <span class="ic" style="background:#5e5ce6" aria-hidden="true">L</span>
+      <h3>Linear, Jira, GitHub</h3>
+      <p>Задачі стають картками з посиланням, статусом і виконавцем; Claude оновлює їх командою «синхронізуй задачі».</p>
+      <div class="set-ex"><q data-ex="tasks">Додай на таймлайн дошки «<span class="bn"></span>» задачі поточного спринту з Linear по командах</q><button class="txt-btn" data-copy="tasks">Скопіювати</button></div>
+    </div>
+  </div>
 </div>
 <div class="peek-back" id="peekBack" hidden></div>
 <div class="panel peek" id="peek" role="dialog" aria-modal="true" aria-labelledby="peekTitle" hidden>
@@ -5185,6 +5286,7 @@ const Plan = (() => {
     const mod = e.ctrlKey || e.metaKey;
     if (pk.open) { if (e.key === 'Escape') { e.preventDefault(); closePeek(false); } return; } // the board preview has the keys
     if (!$('#mdPop').hidden) { if (e.key === 'Escape') { e.preventDefault(); openExport(false); } return; }
+    if (!$('#setPop').hidden) { if (e.key === 'Escape') { e.preventDefault(); openSettings(false); } return; }
     if (e.target === thInput) {
       if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendComment(); }
       else if (e.key === 'Escape') { e.preventDefault(); closeThread(); }
@@ -5661,10 +5763,157 @@ const Plan = (() => {
   });
   const STALE_LINK = 'Це старе посилання. Попросіть нове: тепер кожна дошка відкривається лише за власним посиланням';
   const boardsKey = () => (privateLinks ? 'jamboard:myboards' : 'jamboard:boards');
-  function saveLocalBoards() { store.set(boardsKey(), JSON.stringify([...boards.entries()].map(([id, b]) => ({ id, ...b })))); }
+  function saveLocalBoards() { store.set(boardsKey(), JSON.stringify([...boards.entries()].map(([id, b]) => ({ id, ...b })))); mcpSoon(); }
   function loadLocalBoards() {
     try { (JSON.parse(store.get(boardsKey()) || '[]') || []).forEach((b) => { if (b && boardOk(b.id)) boards.set(b.id, { title: String(b.title || 'Нова дошка').slice(0, 120), at: +b.at || 0, by: typeof b.by === 'string' ? b.by : '', seen: +b.seen || 0 }); }); } catch (e) {}
   }
+
+  // ---------- settings: a personal link that connects this browser's boards to the visitor's own Claude ----------
+  // The browser makes a random token (jbt_ + 40 chars) and registers it with jb_mcp_token_put (supabase/mcp-tokens.sql),
+  // which keeps only its SHA-256 and the list of boards it may open. The MCP server (…/jamboard-mcp?token=) then
+  // reaches only those boards. The token is stored here (localStorage jamboard:mcp) and in the visitor's Claude, nowhere else.
+  // auto: new boards join the list; off: boards unticked by hand; on: the ticked ones when auto is off.
+  const MCP_LS = 'jamboard:mcp';
+  const mcpSt = { cfg: null, t: '', auto: true, off: [], on: [], sig: '', synced: 0, used: null, busy: false, timer: 0, tab: 'claude' };
+  try { const d = JSON.parse(store.get(MCP_LS) || 'null'); if (d && /^jbt_[A-Za-z0-9]{40}$/.test(d.t)) Object.assign(mcpSt, { t: d.t, auto: d.auto !== false, off: Array.isArray(d.off) ? d.off.filter(secretBoard) : [], on: Array.isArray(d.on) ? d.on.filter(secretBoard) : [], sig: String(d.sig || ''), synced: +d.synced || 0, used: d.used || null }); } catch (e) {}
+  const mcpSave = () => store.set(MCP_LS, JSON.stringify(mcpSt.t ? { t: mcpSt.t, auto: mcpSt.auto, off: mcpSt.off, on: mcpSt.on, sig: mcpSt.sig, synced: mcpSt.synced, used: mcpSt.used } : null));
+  const mcpReady = () => mode === 'shared' && privateLinks && !!(db && db.rpc) && !!(window.JAMBOARD_CONFIG && window.JAMBOARD_CONFIG.supabaseUrl);
+  const mcpUrl = () => window.JAMBOARD_CONFIG.supabaseUrl.replace(/\/+$/, '') + '/functions/v1/jamboard-mcp?token=' + mcpSt.t;
+  const mcpAll = () => boardIds().filter(secretBoard);
+  const mcpBoards = () => (mcpSt.auto ? mcpAll().filter((id) => !mcpSt.off.includes(id)) : mcpSt.on.filter((id) => boards.has(id) || isDemo(id)));
+  function newToken() {
+    const abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', out = [];
+    while (out.length < 40) for (const x of crypto.getRandomValues(new Uint8Array(64))) { if (x < 248 && out.length < 40) out.push(abc[x % 62]); }
+    return 'jbt_' + out.join('');
+  }
+  const mcpFail = (e) => (e && (e.code === 'PGRST202' || /jb_mcp_token|function/i.test(e.message || '')) ? 'Сервер ще не вміє видавати посилання: власник JamBoard має виконати supabase/mcp-tokens.sql' : 'Не вдалося зв’язатися з сервером. Спробуйте ще раз');
+  async function mcpPush(force) { // send the board list; also keeps the token alive (it expires after 90 idle days)
+    if (!mcpSt.t || !mcpReady() || mcpSt.busy) return;
+    const list = mcpBoards(), sig = list.join(',');
+    if (!force && sig === mcpSt.sig && Date.now() - mcpSt.synced < 864e5) return;
+    mcpSt.busy = true;
+    try {
+      const r = await db.rpc('jb_mcp_token_put', { p_token: mcpSt.t, p_boards: list, p_name: me && me.name || null });
+      mcpSt.sig = sig; mcpSt.synced = Date.now(); mcpSt.used = r && r.used_at || null; mcpSave();
+    } catch (e) { if (force) throw e; } finally { mcpSt.busy = false; }
+    if (!$('#setPop').hidden) setRender();
+  }
+  function mcpSoon() { if (!mcpSt.t) return; clearTimeout(mcpSt.timer); mcpSt.timer = setTimeout(() => mcpPush(false), 900); }
+  const ago = (iso) => {
+    const t = Date.parse(iso || ''); if (!t) return '';
+    const m = Math.round((Date.now() - t) / 60000);
+    if (m < 2) return 'щойно'; if (m < 60) return m + ' хв тому';
+    const h = Math.round(m / 60); if (h < 24) return h + ' год тому';
+    const d = Math.round(h / 24); return d + ' ' + plural(d, 'день', 'дні', 'днів') + ' тому';
+  };
+  function setRender() {
+    const ready = mcpReady(), on = !!mcpSt.t && ready;
+    $('#setOff').hidden = on; $('#setOn').hidden = !on; $('#setScope').hidden = !on;
+    $('#setMake').hidden = !ready;
+    $('#setOffText').textContent = ready ? 'Посилання відкриває Claude лише ті дошки, які ви оберете. Його можна будь-коли відкликати.' : 'Підключення до Claude працює лише з хмарними дошками JamBoard.';
+    const bn = titleOf(boardId);
+    $('#setBoardName').textContent = bn; document.querySelectorAll('#setMore .bn').forEach((e) => { e.textContent = bn; });
+    if (!on) return;
+    const u = $('#setUrl'), url = mcpUrl(); if (u.value !== url) u.value = url;
+    $('#setMeta').dataset.s = mcpSt.used ? 'ok' : 'idle';
+    $('#setUsed').textContent = mcpSt.used ? 'Claude підключено · останній раз ' + ago(mcpSt.used) : 'Claude ще не підключався';
+    $('#setAuto').checked = mcpSt.auto;
+    const want = new Set(mcpBoards()), box = $('#setBoards'), ids = mcpAll();
+    box.textContent = '';
+    for (const id of ids) {
+      const li = document.createElement('li'), lb = document.createElement('label'), cb = document.createElement('input'), nm = document.createElement('span');
+      cb.type = 'checkbox'; cb.checked = want.has(id); cb.dataset.id = id;
+      nm.className = 'nm'; nm.textContent = titleOf(id);
+      lb.append(cb, nm);
+      if (viewOnly(id)) { const s = document.createElement('small'); s.textContent = 'лише перегляд'; lb.appendChild(s); }
+      else if (id === boardId) { const s = document.createElement('small'); s.textContent = 'ця дошка'; lb.appendChild(s); }
+      li.appendChild(lb); box.appendChild(li);
+    }
+  }
+  function openSettings(open) {
+    const pop = $('#setPop'), back = $('#setBack');
+    if (open === false) {
+      if (pop.hidden) return;
+      pop.classList.add('out'); back.classList.add('out');
+      setTimeout(() => { pop.hidden = true; back.hidden = true; pop.classList.remove('out'); back.classList.remove('out'); }, reduceMotion ? 0 : 180);
+      $('#boardsBtn').focus({ preventScroll: true }); return;
+    }
+    closeBoardUi(); finishEdit(); closeThread();
+    pop.hidden = false; back.hidden = false; pop.classList.remove('out'); back.classList.remove('out');
+    setTab(mcpSt.tab); setRender(); mcpPush(false);
+    requestAnimationFrame(() => (mcpSt.t && mcpReady() ? $('#setCopy') : $('#setMake').hidden ? $('#setClose') : $('#setMake')).focus({ preventScroll: true }));
+  }
+  function setTab(t) {
+    mcpSt.tab = t;
+    $('#setTabs').querySelectorAll('[data-t]').forEach((b) => { const sel = b.dataset.t === t; b.setAttribute('aria-selected', String(sel)); b.tabIndex = sel ? 0 : -1; });
+    $('#setClaude').hidden = t !== 'claude'; $('#setMore').hidden = t !== 'more';
+  }
+  async function copyText(text, btn, okMsg) {
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; } catch (e) {
+      const t = document.createElement('textarea'); t.value = text; t.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(t); t.select();
+      try { ok = document.execCommand('copy'); } catch (e2) {} t.remove();
+    }
+    if (!ok) { toast('Не вдалося скопіювати: виділіть текст і натисніть Ctrl/⌘ + C'); return; }
+    const was = btn.dataset.label || btn.textContent; btn.dataset.label = was; btn.textContent = 'Скопійовано ✓'; clearTimeout(btn._t);
+    btn._t = setTimeout(() => { btn.textContent = was; }, 1600);
+    toast(okMsg);
+  }
+  async function mcpMake(renew) {
+    const btn = renew ? $('#setRenew') : $('#setMake'); if (btn.disabled) return; btn.disabled = true;
+    const old = mcpSt.t, t = newToken();
+    try {
+      mcpSt.t = t; mcpSt.sig = ''; mcpSt.used = null;
+      await mcpPush(true);
+      if (old && renew) db.rpc('jb_mcp_token_del', { p_token: old }).catch(() => {});
+      mcpSave(); setRender();
+      toast(renew ? 'Нове посилання готове, старе більше не діє. Оновіть його в Claude' : 'Посилання готове: скопіюйте його в Claude');
+      requestAnimationFrame(() => $('#setCopy').focus({ preventScroll: true }));
+    } catch (e) { mcpSt.t = old; toast(mcpFail(e)); }
+    btn.disabled = false;
+  }
+  async function mcpRevoke() {
+    const btn = $('#setRevoke'); if (!mcpSt.t || btn.disabled) return; btn.disabled = true;
+    try {
+      await db.rpc('jb_mcp_token_del', { p_token: mcpSt.t });
+      Object.assign(mcpSt, { t: '', sig: '', synced: 0, used: null }); mcpSave(); setRender();
+      toast('Посилання відкликано: Claude більше не бачить ваших дошок');
+      requestAnimationFrame(() => $('#setMake').focus({ preventScroll: true }));
+    } catch (e) { toast(mcpFail(e)); }
+    btn.disabled = false;
+  }
+  $('#setBtn').addEventListener('click', () => openSettings(true));
+  $('#setClose').addEventListener('click', () => openSettings(false));
+  $('#setBack').addEventListener('pointerdown', () => openSettings(false));
+  $('#setTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-t]'); if (b) setTab(b.dataset.t); });
+  $('#setMake').addEventListener('click', () => mcpMake(false));
+  $('#setRenew').addEventListener('click', () => mcpMake(true));
+  $('#setRevoke').addEventListener('click', mcpRevoke);
+  $('#setCopy').addEventListener('click', (e) => copyText(mcpUrl(), e.currentTarget, 'Посилання для Claude скопійовано'));
+  $('#setUrl').addEventListener('focus', (e) => e.target.select());
+  $('#setMore').addEventListener('click', (e) => { const b = e.target.closest('[data-copy]'); if (b) copyText($('#setMore [data-ex="' + b.dataset.copy + '"]').textContent, b, 'Запит скопійовано: вставте його в чат із Claude'); });
+  $('#setAuto').addEventListener('change', (e) => {
+    const list = mcpBoards(); mcpSt.auto = e.target.checked;
+    if (mcpSt.auto) mcpSt.off = mcpAll().filter((id) => !list.includes(id)); else mcpSt.on = list; // the ticks stay as they are
+    mcpSave(); mcpSoon();
+  });
+  $('#setBoards').addEventListener('change', (e) => {
+    const id = e.target.dataset && e.target.dataset.id; if (!id) return;
+    const on = e.target.checked, drop = (a) => a.filter((x) => x !== id);
+    if (mcpSt.auto) mcpSt.off = on ? drop(mcpSt.off) : [...drop(mcpSt.off), id];
+    else mcpSt.on = on ? [...drop(mcpSt.on), id] : drop(mcpSt.on);
+    mcpSave(); mcpSoon();
+  });
+  $('#setPop').addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Escape') { e.preventDefault(); openSettings(false); return; }
+    if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && e.target.closest('#setTabs')) { e.preventDefault(); const t = mcpSt.tab === 'claude' ? 'more' : 'claude'; setTab(t); $('#setTabs [data-t="' + t + '"]').focus(); return; }
+    if (e.key === 'Tab') { // keep focus inside the dialog
+      const f = [...$('#setPop').querySelectorAll('button:not([disabled]), input, a[href]')].filter((x) => x.offsetParent && x.tabIndex >= 0); if (!f.length) return;
+      const i = f.indexOf(document.activeElement), n = e.shiftKey ? (i <= 0 ? f.length - 1 : i - 1) : (i + 1) % f.length;
+      e.preventDefault(); f[n].focus();
+    }
+  });
 
   // ---------- shared timer: one per board, everyone sees the same countdown ----------
   // state: { dur, run: true, end } running · { dur, run: false, left } paused · { dur } ready. Times are epoch ms.
@@ -6502,6 +6751,7 @@ const Plan = (() => {
     const sdb = {
       // one-off reads for the boards gallery (no live updates)
       peek: (path) => sdb.doc(path).peek(),
+      rpc: (fn, args) => sb.rpc(fn, args).then(({ data, error }) => { if (error) throw fail(error); return data; }), // settings: personal MCP tokens
       peekList: (coll) => listRows(coll).then(({ data, error }) => { if (error) throw fail(error); return data || []; }),
       doc(path) {
         return {
