@@ -794,10 +794,41 @@ body.voting #viewport.tool-select .item:is(.sticky, .text, .image, .web, .node, 
 .vc-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); transition: background-color var(--base) var(--ease), scale var(--base) var(--ease-spring); }
 .vc-dots i.used { background: color-mix(in srgb, var(--accent) 24%, transparent); scale: .75; }
 .vc-dots.big { gap: 6px; } .vc-dots.big i { width: 16px; height: 16px; }
-/* the «Планінг і ретро» popover: tiles for templates and facilitation tools */
-.panel.popover.plan-pop { top: auto; right: auto; left: 50%; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); translate: -50% 0; width: 660px; max-width: calc(100vw - 24px); max-height: calc(100vh - 160px); overflow: auto; overscroll-behavior: contain; box-sizing: border-box; transform-origin: 50% 100%; display: flex; flex-direction: column; gap: 14px; padding: 16px 16px 18px; }
-.plan-pop .tm-head { display: flex; align-items: center; justify-content: space-between; }
-.pl-sec h3 { margin: 0 0 8px; font: 600 12px var(--f-text); color: var(--muted); letter-spacing: -0.01em; }
+/* the templates library (P): preview cards by group, search, and the facilitation tools */
+.panel.popover.plan-pop { top: auto; right: auto; left: 50%; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); translate: -50% 0; width: 900px; max-width: calc(100vw - 24px); height: min(680px, calc(100vh - 150px)); overflow: hidden; box-sizing: border-box; transform-origin: 50% 100%; display: flex; flex-direction: column; gap: 12px; padding: 16px 0 0; }
+.tp-head { display: flex; align-items: center; gap: 12px; padding: 0 16px; }
+.tp-head .label { flex: none; font-size: 15px; font-weight: 600; color: var(--text); }
+.tp-search { position: relative; flex: 1; min-width: 0; max-width: 320px; margin-left: auto; }
+.tp-search svg { position: absolute; left: 11px; top: 50%; width: 16px; height: 16px; translate: 0 -50%; color: var(--muted); pointer-events: none; }
+.tp-search .field.sm { padding-left: 34px; border-radius: var(--r-pill); background: var(--chip); border-color: transparent; }
+.tp-search .field:focus { background: var(--surface); border-color: var(--accent); }
+.tp-search .field::-webkit-search-cancel-button { cursor: pointer; }
+.tp-cats { display: flex; gap: 6px; padding: 0 16px; overflow-x: auto; scrollbar-width: none; flex: none; }
+.tp-cats::-webkit-scrollbar { display: none; }
+.tp-cats button { flex: none; border: 0; background: var(--chip); color: var(--text); font: 500 13px var(--f-text); padding: 7px 13px; border-radius: var(--r-pill); cursor: pointer; white-space: nowrap; transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease), scale var(--fast) var(--ease-spring); }
+.tp-cats button:hover:not([aria-checked="true"]) { background: color-mix(in srgb, var(--accent) 12%, var(--chip)); }
+.tp-cats button:active { scale: .96; }
+.tp-cats button[aria-checked="true"] { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.tp-cats button small { font-size: 12px; margin-left: 5px; opacity: .72; font-variant-numeric: tabular-nums; }
+.tp-body { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 4px 16px 18px; display: flex; flex-direction: column; gap: 18px; scrollbar-width: thin; }
+.tp-group + .tp-group { margin-top: 18px; }
+.tp-group h3, .pl-sec h3 { margin: 0 0 8px; font: 600 12px var(--f-text); color: var(--muted); letter-spacing: -0.01em; }
+.tp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(196px, calc(50% - 5px)), 1fr)); gap: 10px; }
+.tp-card { display: flex; flex-direction: column; text-align: left; border: 0; padding: 0; background: var(--chip); border-radius: 16px; cursor: pointer; color: var(--text); min-width: 0; overflow: hidden; box-shadow: 0 0 0 0 transparent; transition: box-shadow var(--fast) var(--ease), translate var(--base) var(--ease-em), scale var(--fast) var(--ease-spring); }
+.tp-card:hover { translate: 0 -2px; box-shadow: 0 0 0 2px var(--accent), 0 8px 22px rgba(0, 0, 0, .12); }
+.tp-card:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--accent), var(--focus); }
+.tp-card:active { scale: .97; }
+.tp-prev { aspect-ratio: 16 / 10; background: color-mix(in srgb, var(--text) 4%, var(--surface)); border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent); overflow: hidden; contain: strict; }
+.tp-prev svg { display: block; width: 100%; height: 100%; transition: scale var(--slow, .4s) var(--ease-em); }
+.tp-card:hover .tp-prev svg { scale: 1.05; }
+.tp-meta { display: grid; gap: 2px; padding: 9px 12px 11px; min-width: 0; }
+.tp-meta b { font-weight: 600; font-size: 14px; line-height: 1.25; overflow-wrap: anywhere; }
+.tp-meta b i { font-style: normal; margin-right: 5px; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+.tp-meta small { font-size: 12px; line-height: 1.3; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tp-card[hidden], .tp-group[hidden] { display: none; }
+.tp-none { margin: 30px 0; text-align: center; color: var(--muted); font-size: 14px; }
+@media (max-width: 560px) { .tp-head { flex-wrap: wrap; } .tp-search { order: 3; max-width: none; flex-basis: 100%; } }
+body.view-only .plan-pop { height: auto; }
 .pl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 6px; }
 .pl-tile { display: flex; align-items: center; gap: 10px; text-align: left; border: 0; background: var(--chip); padding: 9px 12px 9px 9px; border-radius: 14px; cursor: pointer; color: var(--text); min-width: 0; transition: background-color var(--fast) var(--ease), scale var(--fast) var(--ease-spring), translate var(--base) var(--ease-em); }
 .pl-tile:hover { background: color-mix(in srgb, var(--accent) 12%, var(--chip)); translate: 0 -1px; }
@@ -951,7 +982,7 @@ select.field.sm { padding-right: 8px; }
   <button class="icon-btn" data-tool="section" aria-label="Секція"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M4 7.5h4"/><rect x="3.5" y="10" width="17" height="10" rx="2.5"/><path d="M3.5 4.5h7"/></svg><span class="tip">Секція<kbd>F</kbd></span></button>
   <button class="icon-btn" data-tool="node" aria-label="Блок схеми"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="8" height="6" rx="1.6"/><ellipse cx="17" cy="16" rx="4" ry="1.6"/><path d="M13 16v3.4c0 .9 1.8 1.6 4 1.6s4-.7 4-1.6V16M7 9.5v3.5a2 2 0 002 2h4"/></svg><span class="tip">Блок схеми: сервіс, база, черга…<kbd>D</kbd></span></button>
   <button class="icon-btn" id="mermaidBtn" aria-label="Схема з Mermaid" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7.5L4 12l4 4.5M16 7.5l4 4.5-4 4.5"/><path d="M10.5 12h.01M13.5 12h.01" stroke-width="2.6"/></svg><span class="tip">Схема з тексту Mermaid<kbd>M</kbd></span></button>
-  <button class="icon-btn" id="planBtn" aria-label="Планінг і ретро" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v3M16 3v3"/><rect x="6.5" y="12.5" width="6" height="2.6" rx="1.3" fill="currentColor" stroke="none"/><rect x="10.5" y="16" width="7" height="2.6" rx="1.3" fill="currentColor" stroke="none" opacity=".55"/></svg><span class="tip">Планінг і ретро: таймлайн, матриця, шаблони<kbd>P</kbd></span></button>
+  <button class="icon-btn" id="planBtn" aria-label="Шаблони" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v3M16 3v3"/><rect x="6.5" y="12.5" width="6" height="2.6" rx="1.3" fill="currentColor" stroke="none"/><rect x="10.5" y="16" width="7" height="2.6" rx="1.3" fill="currentColor" stroke="none" opacity=".55"/></svg><span class="tip">Шаблони: планінг, ретро, UX, стратегія<kbd>P</kbd></span></button>
   <button class="icon-btn" id="imageBtn" aria-label="Зображення"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M20.5 16l-5-5-9 8.5"/></svg><span class="tip">Зображення<kbd>Ctrl+V</kbd></span></button>
   <div class="rule"></div>
   <button class="icon-btn" id="undoBtn" aria-label="Скасувати"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L4.5 11.5 9 16"/><path d="M5 11.5h9a5 5 0 010 10h-2"/></svg><span class="tip">Скасувати<kbd>Ctrl+Z</kbd></span></button>
@@ -964,11 +995,18 @@ select.field.sm { padding-right: 8px; }
   <p class="mm-err" id="mmErr" role="alert"></p>
   <div class="mm-actions"><button class="primary sm" id="mmGo">Побудувати</button><button class="txt-btn" id="mmExample">Вставити приклад</button><span class="mm-note">Ctrl+Enter · або просто вставте текст на дошку</span></div>
 </div>
-<div class="panel popover plan-pop" id="planPop" role="dialog" aria-label="Планінг і ретро" hidden>
-  <div class="tm-head"><span class="label">Планінг і ретро</span><button class="close" id="plClose" aria-label="Закрити">×</button></div>
-  <div class="pl-sec pl-edit"><h3>Планування</h3><div class="pl-grid" id="plPlan"></div></div>
-  <div class="pl-sec pl-edit"><h3>Ретро</h3><div class="pl-grid" id="plRetro"></div></div>
-  <div class="pl-sec"><h3>Фасилітація</h3><div class="pl-grid" id="plFac"></div></div>
+<div class="panel popover plan-pop" id="planPop" role="dialog" aria-label="Шаблони" hidden>
+  <div class="tp-head">
+    <span class="label">Шаблони</span>
+    <label class="tp-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg><input class="field sm pl-edit" id="tpQ" type="search" autocomplete="off" spellcheck="false" placeholder="Знайти шаблон" aria-label="Знайти шаблон"></label>
+    <button class="close" id="plClose" aria-label="Закрити">×</button>
+  </div>
+  <div class="tp-cats pl-edit" id="tpCats" role="radiogroup" aria-label="Категорія"></div>
+  <div class="tp-body" id="tpBody">
+    <div class="pl-edit" id="tpList"></div>
+    <p class="tp-none" id="tpNone" hidden>Такого шаблону немає. Спробуйте інше слово</p>
+    <div class="pl-sec"><h3>Інструменти</h3><div class="pl-grid" id="plFac"></div></div>
+  </div>
 </div>
 <div class="panel popover side-pop" id="tlPop" role="dialog" aria-label="Дати й крок таймлайну" hidden>
   <div class="tm-head"><span class="label">Таймлайн</span><button class="close" id="tlClose" aria-label="Закрити">×</button></div>
@@ -1888,24 +1926,107 @@ const Plan = (() => {
     msg: ['Ретро · Mad / Sad / Glad', [['😠 Злить', 'warn'], ['😢 Засмучує', 'purple'], ['😊 Радує', 'ok']]],
     '4l': ['Ретро · 4L', [['💚 Сподобалось', 'ok'], ['📚 Навчились', 'info'], ['🕳️ Бракувало', 'warn'], ['✨ Хотілося б', 'purple']]],
     sail: ['Ретро · Вітрильник', [['🌬️ Вітер: що нас рухає', 'teal'], ['⚓ Якір: що гальмує', 'gray'], ['🪨 Скелі: ризики попереду', 'warn'], ['🏝️ Острів: наша мета', 'ok']]],
+    kalm: ['Ретро · Keep / Add / Less / More', [['✅ Залишити', 'ok'], ['➕ Додати', 'info'], ['➖ Менше', 'warn'], ['⬆️ Більше', 'purple']]],
+    wwa: ['Ретро · Що вдалось / Що покращити / Дії', [['🎉 Що вдалось', 'ok'], ['🔧 Що покращити', 'warn'], ['🚀 Дії: хто й до коли', 'info']]],
+    kanban: ['Канбан', [['📥 Беклог', 'gray'], ['📝 До роботи', 'info'], ['🚧 У роботі', 'warn'], ['👀 На перевірці', 'purple'], ['✅ Готово', 'ok']]],
+    moscow: ['Пріоритети · MoSCoW', [['🔴 Must · без цього ніяк', 'pink'], ['🟠 Should · дуже варто', 'warn'], ['🔵 Could · якщо встигнемо', 'info'], ['⚪ Won’t · не цього разу', 'gray']]],
+    pros: ['Плюси й мінуси', [['👍 За', 'ok'], ['👎 Проти', 'pink'], ['❓ Що ще треба з’ясувати', 'info']]],
   };
+  // canvases made of sections: [title, color, col, row, colSpan, rowSpan, hint] on a grid of cells cw×ch
+  const CANVAS = {
+    lean: ['Lean Canvas', 5, 3, 300, 300, [
+      ['1 · Проблема', 'pink', 0, 0, 1, 2, 'Три головні проблеми клієнта. Як їх вирішують зараз?'],
+      ['4 · Рішення', 'info', 1, 0, 1, 1, 'Найпростіше рішення кожної з проблем'],
+      ['8 · Ключові метрики', 'teal', 1, 1, 1, 1, 'Які цифри покажуть, що все працює?'],
+      ['3 · Унікальна цінність', 'purple', 2, 0, 1, 2, 'Одне речення: чому ви, а не інші'],
+      ['9 · Нечесна перевага', 'warn', 3, 0, 1, 1, 'Що не можна просто скопіювати чи купити?'],
+      ['5 · Канали', 'caution', 3, 1, 1, 1, 'Як клієнти про вас дізнаються'],
+      ['2 · Сегменти клієнтів', 'ok', 4, 0, 1, 2, 'Для кого це? Хто ранні користувачі?'],
+      ['7 · Структура витрат', 'gray', 0, 2, 2.5, 1, 'На що підуть гроші: люди, сервери, маркетинг'],
+      ['6 · Потоки доходу', 'ok', 2.5, 2, 2.5, 1, 'Як і скільки платять клієнти'],
+    ]],
+    bmc: ['Бізнес-модель (Business Model Canvas)', 5, 3, 300, 300, [
+      ['🤝 Ключові партнери', 'purple', 0, 0, 1, 2, 'Хто допомагає нам працювати?'],
+      ['⚙️ Ключові дії', 'info', 1, 0, 1, 1, 'Що ми мусимо робити щодня?'],
+      ['🧱 Ключові ресурси', 'teal', 1, 1, 1, 1, 'Люди, технології, гроші, бренд'],
+      ['💎 Ціннісні пропозиції', 'pink', 2, 0, 1, 2, 'Яку проблему клієнта ми вирішуємо?'],
+      ['💬 Відносини з клієнтами', 'caution', 3, 0, 1, 1, 'Як ми спілкуємося з клієнтами?'],
+      ['📣 Канали', 'warn', 3, 1, 1, 1, 'Як ми до них дістаємось?'],
+      ['👥 Сегменти клієнтів', 'ok', 4, 0, 1, 2, 'Для кого ми створюємо цінність?'],
+      ['💸 Структура витрат', 'gray', 0, 2, 2.5, 1, 'Найбільші витрати'],
+      ['💰 Потоки доходу', 'ok', 2.5, 2, 2.5, 1, 'За що й як платять клієнти'],
+    ]],
+    empathy: ['Карта емпатії', 2, 3, 460, 300, [
+      ['💬 Каже', 'info', 0, 0, 1, 1, 'Цитати з інтерв’ю'],
+      ['💭 Думає', 'purple', 1, 0, 1, 1, 'Що в голові, але вголос не каже?'],
+      ['🛠️ Робить', 'teal', 0, 1, 1, 1, 'Дії й поведінка'],
+      ['❤️ Відчуває', 'pink', 1, 1, 1, 1, 'Що тривожить і що надихає?'],
+      ['😣 Болі', 'warn', 0, 2, 1, 1, 'Страхи, перешкоди, розчарування'],
+      ['🌟 Здобутки', 'ok', 1, 2, 1, 1, 'Чого хоче досягти, що для нього успіх'],
+    ]],
+    persona: ['Персона', 3, 2, 400, 320, [
+      ['👤 Хто це', 'caution', 0, 0, 1, 2, 'Ім’я, вік, роль, де працює. Додайте фото'],
+      ['🎯 Цілі', 'ok', 1, 0, 1, 1, 'Чого хоче досягти?'],
+      ['😣 Болі', 'pink', 2, 0, 1, 1, 'Що заважає?'],
+      ['🧭 Поведінка й звички', 'info', 1, 1, 1, 1, 'Які сервіси використовує, як ухвалює рішення'],
+      ['💬 Цитата', 'purple', 2, 1, 1, 1, '«Те, що вона могла б сказати про себе»'],
+    ]],
+    crazy8: ['Crazy 8s · вісім ідей за вісім хвилин', 4, 2, 300, 300, [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ['Ідея ' + n, 'gray', (n - 1) % 4, (n / 4.01) | 0, 1, 1, n === 1 ? 'Хвилина на ідею: малюйте швидко, без деталей' : ''])],
+    mood: ['Мудборд', 3, 3, 400, 280, [
+      ['🖼️ Референси', 'gray', 0, 0, 2, 2, 'Перетягніть сюди картинки або вставте посилання'],
+      ['🎨 Кольори', 'pink', 2, 0, 1, 1, 'Палітра: основний, акцент, фон'],
+      ['🔤 Типографіка', 'info', 2, 1, 1, 1, 'Шрифти заголовків і тексту'],
+      ['✨ Настрій і ключові слова', 'purple', 0, 2, 2, 1, 'Три-п’ять слів про відчуття від продукту'],
+      ['🧵 Текстури й фото', 'caution', 2, 2, 1, 1, ''],
+    ]],
+    brain: ['Мозковий штурм', 3, 2, 400, 320, [
+      ['❓ Питання', 'info', 0, 0, 1, 2, 'Як ми могли б…?'],
+      ['💡 Ідеї', 'caution', 1, 0, 2, 1, 'Кількість важливіша за якість. Без критики'],
+      ['⭐ Найкращі', 'ok', 1, 1, 1, 1, 'Перенесіть сюди ідеї з найбільшою кількістю голосів'],
+      ['🧪 Що перевіримо', 'purple', 2, 1, 1, 1, 'Перший маленький експеримент'],
+    ]],
+  };
+  // [key, name, description, group]
+  const GROUPS = [['plan', 'Планування'], ['prio', 'Пріоритети'], ['product', 'Продукт і стратегія'], ['ux', 'UX і дизайн'], ['retro', 'Ретро']];
   const TEMPLATES = [
-    ['sprints', 'Таймлайн спринтів', 'Спринти по 2 тижні з доріжками команд'],
-    ['weeks', 'Таймлайн тижнів', 'Шість тижнів від поточного'],
-    ['gantt', 'Діаграма Ганта', 'Задачі-смуги з прогресом і залежностями'],
-    ['roadmap', 'Роадмап', 'Зараз · Далі · Потім'],
-    ['matrix', 'Матриця Impact / Effort', 'Пріоритети: вплив проти зусиль'],
-    ['table', 'Таблиця', 'Колонки й рядки, картки прилипають до клітинок'],
-    ['sprint', 'Спринт-планінг', 'Ціль, беклог і що беремо в спринт'],
-    ['ssc', 'Start / Stop / Continue', 'Ретро на три колонки'],
-    ['msg', 'Mad / Sad / Glad', 'Ретро про емоції команди'],
-    ['4l', '4L', 'Liked · Learned · Lacked · Longed for'],
-    ['sail', 'Вітрильник', 'Вітер, якір, скелі й острів'],
+    ['sprints', 'Таймлайн спринтів', 'Спринти по 2 тижні з доріжками команд', 'plan'],
+    ['weeks', 'Таймлайн тижнів', 'Шість тижнів від поточного', 'plan'],
+    ['gantt', 'Діаграма Ганта', 'Задачі-смуги з прогресом і залежностями', 'plan'],
+    ['roadmap', 'Роадмап', 'Зараз · Далі · Потім', 'plan'],
+    ['matrix', 'Матриця Impact / Effort', 'Пріоритети: вплив проти зусиль', 'prio'],
+    ['table', 'Таблиця', 'Колонки й рядки, картки прилипають до клітинок', 'plan'],
+    ['sprint', 'Спринт-планінг', 'Ціль, беклог і що беремо в спринт', 'plan'],
+    ['ssc', 'Start / Stop / Continue', 'Ретро на три колонки', 'retro'],
+    ['msg', 'Mad / Sad / Glad', 'Ретро про емоції команди', 'retro'],
+    ['4l', '4L', 'Liked · Learned · Lacked · Longed for', 'retro'],
+    ['sail', 'Вітрильник', 'Вітер, якір, скелі й острів', 'retro'],
+    ['kanban', 'Канбан', 'Беклог → у роботі → готово', 'plan'],
+    ['storymap', 'Story map', 'Кроки користувача й релізи під ними', 'plan'],
+    ['okr', 'OKR', 'Цілі, ключові результати й ініціативи', 'plan'],
+    ['standup', 'Дейлі', 'Вчора · сьогодні · блокери для кожного', 'plan'],
+    ['rice', 'RICE', 'Reach × Impact × Confidence ÷ Effort', 'prio'],
+    ['ice', 'ICE', 'Impact · Confidence · Ease, швидка оцінка', 'prio'],
+    ['moscow', 'MoSCoW', 'Must · Should · Could · Won’t', 'prio'],
+    ['eisen', 'Матриця Ейзенхауера', 'Термінове проти важливого', 'prio'],
+    ['lean', 'Lean Canvas', 'Модель стартапу на одному аркуші', 'product'],
+    ['bmc', 'Business Model Canvas', 'Дев’ять блоків бізнес-моделі', 'product'],
+    ['swot', 'SWOT', 'Сильні, слабкі сторони, можливості, загрози', 'product'],
+    ['pros', 'Плюси й мінуси', 'Зважити рішення разом', 'product'],
+    ['cjm', 'Карта шляху клієнта', 'Етапи, дії, емоції, болі й можливості', 'ux'],
+    ['empathy', 'Карта емпатії', 'Каже · думає · робить · відчуває', 'ux'],
+    ['persona', 'Персона', 'Хто наш користувач, його цілі й болі', 'ux'],
+    ['crazy8', 'Crazy 8s', 'Вісім ескізів за вісім хвилин', 'ux'],
+    ['mood', 'Мудборд', 'Референси, кольори, типографіка, настрій', 'ux'],
+    ['brain', 'Мозковий штурм', 'Питання, ідеї, найкращі й перший крок', 'ux'],
+    ['kalm', 'Keep / Add / Less / More', 'Ретро про те, що змінити в процесі', 'retro'],
+    ['wwa', 'Що вдалось · що покращити', 'Ретро з діями: хто й до коли', 'retro'],
   ];
   function template(key, ox, oy, makeId, by, nowMs) {
     const out = [], mk = (o) => { const it = { id: makeId(), by, ...o }; out.push(it); return it; };
     const table = (o, cw, lh) => { const t = { type: 'table', x: ox, y: oy, color: 'gray', ...o }; Object.assign(t, sizeFor({ ...t, w: 0, h: 0 }, cw, lh)); return mk(t); };
     const tl = (o, cw, lh) => { const t = { type: 'timeline', x: ox, y: oy, color: 'gray', start: thisMonday(nowMs || Date.now()), ...o }; Object.assign(t, sizeFor({ ...t, w: 0, h: 0 }, cw, lh)); return mk(t); };
+    const cols = (title, cs, cw, lh, rows) => table({ title, cols: cs.map((c) => c[0]), rows: rows || [], tint: cs.map((c) => c[1]) }, cw, lh);
+    const hint = (t, x, y, w, color, extra) => mk({ type: 'sticky', x, y, w, h: 120, color, text: t, ...extra });
     if (key === 'sprints') tl({ title: 'Спринти', unit: 'sprint', len: 14, k: 1, n: 4, lanes: ['Дизайн', 'Фронтенд', 'Бекенд'] }, 340, 250);
     else if (key === 'weeks') tl({ title: 'План на шість тижнів', unit: 'week', n: 6, lanes: [] }, 300, 420);
     else if (key === 'gantt') {
@@ -1921,14 +2042,34 @@ const Plan = (() => {
     }
     else if (key === 'roadmap') table({ title: 'Роадмап', cols: ['Зараз', 'Далі', 'Потім'], rows: ['Продукт', 'Дизайн', 'Розробка'], tint: ['ok', 'info', 'purple'] }, 380, 260);
     else if (key === 'matrix') table({ title: 'Пріоритети · Impact / Effort', kind: 'matrix', cols: ['Мало зусиль', 'Багато зусиль'], rows: ['Великий вплив', 'Малий вплив'], cells: ['Швидкі перемоги', 'Великі проєкти', 'Дрібниці', 'Не варто зусиль'], ax: ['Зусилля', 'Вплив'], tint: ['ok', 'warn'] }, 480, 380);
+    else if (key === 'eisen') table({ title: 'Матриця Ейзенхауера', kind: 'matrix', cols: ['Термінове', 'Не термінове'], rows: ['Важливе', 'Неважливе'], cells: ['🔥 Зробити зараз', '📅 Запланувати', '🤝 Делегувати', '🗑️ Прибрати'], ax: ['Терміновість', 'Важливість'], tint: ['warn', 'info'] }, 480, 380);
+    else if (key === 'swot') table({ title: 'SWOT', kind: 'matrix', cols: ['Допомагає', 'Заважає'], rows: ['Всередині', 'Ззовні'], cells: ['💪 Сильні сторони', '⚠️ Слабкі сторони', '🚀 Можливості', '🌩️ Загрози'], ax: ['Вплив', 'Джерело'], tint: ['ok', 'pink'] }, 480, 380);
     else if (key === 'table') table({ title: 'Таблиця', cols: ['Колонка 1', 'Колонка 2', 'Колонка 3'], rows: ['Рядок 1', 'Рядок 2'] }, 320, 260);
     else if (key === 'sprint') {
       mk({ type: 'sticky', x: ox, y: oy, w: 300, h: 220, color: 'pink', text: '🎯 Ціль спринту\n\nЗа що ми хочемо, щоб нас похвалили наприкінці?' });
       mk({ type: 'sticky', x: ox, y: oy + 250, w: 300, h: 160, color: 'caution', text: '👥 Ємність команди\n\n… сторіпоінтів' });
       table({ title: 'Спринт-планінг', x: ox + 340, cols: ['📥 Беклог', '✅ Беремо в спринт', '🚧 Ризики й залежності'], rows: [], tint: ['gray', 'ok', 'warn'] }, 360, 640);
-    } else if (RETRO[key]) {
-      const [title, cols] = RETRO[key];
-      table({ title, cols: cols.map((c) => c[0]), rows: [], tint: cols.map((c) => c[1]) }, cols.length > 3 ? 330 : 380, 620);
+    }
+    else if (key === 'storymap') table({ title: 'Story map', cols: ['🔍 Знайти', '🛒 Вибрати', '💳 Оплатити', '📦 Отримати', '🔁 Повернутися'], rows: ['🧭 Що робить користувач', '🚀 Реліз 1 · MVP', '📦 Реліз 2', '✨ Колись потім'], tint: ['info', 'teal', 'ok', 'caution', 'purple'] }, 300, 220);
+    else if (key === 'okr') table({ title: 'OKR на квартал', cols: ['📈 Ключовий результат 1', '📈 Ключовий результат 2', '📈 Ключовий результат 3', '🧩 Ініціативи'], rows: ['🎯 Ціль 1', '🎯 Ціль 2', '🎯 Ціль 3'], tint: ['ok', 'ok', 'ok', 'info'] }, 300, 220);
+    else if (key === 'standup') table({ title: 'Дейлі', cols: ['✅ Вчора', '🛠️ Сьогодні', '🚧 Блокери'], rows: ['Учасник 1', 'Учасник 2', 'Учасник 3', 'Учасник 4'], tint: ['ok', 'info', 'pink'] }, 320, 170);
+    else if (key === 'cjm') table({ title: 'Карта шляху клієнта', cols: ['👀 Дізнається', '🤔 Обирає', '🛒 Купує', '📱 Користується', '💬 Рекомендує'], rows: ['🎬 Дії', '📍 Точки контакту', '💭 Думки', '😊 Емоції', '😣 Болі', '💡 Можливості'], tint: ['info', 'teal', 'ok', 'caution', 'purple'] }, 300, 170);
+    else if (key === 'rice' || key === 'ice') {
+      const rice = key === 'rice';
+      const t = table({ title: rice ? 'Пріоритети · RICE' : 'Пріоритети · ICE', cols: rice ? ['👥 Reach', '💥 Impact', '🎯 Confidence', '⏱️ Effort', '🏆 RICE'] : ['💥 Impact', '🎯 Confidence', '🪶 Ease', '🏆 ICE'], rows: ['Ідея 1', 'Ідея 2', 'Ідея 3', 'Ідея 4', 'Ідея 5'], tint: rice ? ['info', 'pink', 'purple', 'warn', 'ok'] : ['pink', 'purple', 'teal', 'ok'] }, 200, 130);
+      hint(rice ? '🧮 RICE = Reach × Impact × Confidence ÷ Effort\n\nReach: скільки людей за квартал\nImpact: 3 · 2 · 1 · 0,5 · 0,25\nConfidence: 100 · 80 · 50 %\nEffort: людино-тижні' : '🧮 ICE = Impact × Confidence × Ease\n\nКожне від 1 до 10. Назви ідей пишіть у рядках зліва', ox + t.w + 40, oy, 300, 'caution', { h: rice ? 250 : 190 });
+    }
+    else if (RETRO[key]) {
+      const [title, cs] = RETRO[key];
+      cols(title, cs, cs.length > 4 ? 300 : cs.length > 3 ? 330 : 380, 620);
+    } else if (CANVAS[key]) {
+      const [title, nc, nr, cw, ch, parts] = CANVAS[key], gx = 24, gy = 64, top = 90;
+      mk({ type: 'text', x: ox, y: oy, w: Math.min(900, nc * cw), h: 48, ts: 'h1', text: title });
+      for (const [name, color, c, r, cs, rs, tip] of parts) {
+        const x = ox + c * (cw + gx), y = oy + top + r * (ch + gy), w = cs * cw + (cs - 1) * gx, h = rs * ch + (rs - 1) * gy;
+        const s = mk({ type: 'section', x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h), title: name, color, autofit: false });
+        if (tip) hint(tip, s.x + 24, s.y + 24, Math.min(240, s.w - 48), color, { h: 110, sec: s.id });
+      }
     } else throw new Error('Unknown template: ' + key);
     return out;
   }
@@ -2086,7 +2227,7 @@ const Plan = (() => {
   };
   const source = (u) => { for (const k in SOURCES) { const m = SOURCES[k].match(String(u || '')); if (m) return m; } return null; };
 
-  return { TOP, SIDE, PAD, GAP, BAR_H, TRACK, UNITS, STATUSES, STATUS_NAMES, TEMPLATES, SOURCES, isGrid, isBar, dayOf, isoOf, localDay, thisMonday, fmtD, range, dims, sizeFor, column, nowAt, rowName, cellRect, cellAt, cellOf, snap, slotIn, readOrder, flow, cellTop, reflow, xOfDay, dayAtX, barSpan, barBox, barDates, laneY, trackOf, barY, nextTrack, colOfDay, placeBar, workdays, template, sortByVotes, markdown, source };
+  return { TOP, SIDE, PAD, GAP, BAR_H, TRACK, UNITS, STATUSES, STATUS_NAMES, TEMPLATES, GROUPS, SOURCES, isGrid, isBar, dayOf, isoOf, localDay, thisMonday, fmtD, range, dims, sizeFor, column, nowAt, rowName, cellRect, cellAt, cellOf, snap, slotIn, readOrder, flow, cellTop, reflow, xOfDay, dayAtX, barSpan, barBox, barDates, laneY, trackOf, barY, nextTrack, colOfDay, placeBar, workdays, template, sortByVotes, markdown, source };
 })();
 // </plan>
   const isSec = (i) => i.type === 'section';
@@ -5942,16 +6083,100 @@ const Plan = (() => {
   $('#hideChip').addEventListener('click', () => { if (!viewOnly()) revealAll(); });
   addEventListener('pointerdown', (e) => { if (!$('#votePop').hidden && !e.target.closest('#votePop, #voteChip, .item')) openVotePop(false); }, true);
 
-  // the «Планінг і ретро» popover: templates, a task card, and the facilitation tools
-  const PLAN_ICONS = { sprints: '🗓️', weeks: '📆', gantt: '📊', roadmap: '🛣️', matrix: '🎯', table: '🔲', sprint: '🏃', ssc: '🚦', msg: '🎭', '4l': '🍀', sail: '⛵' };
+  // the templates library (P): a preview card for every template, by group, with search; below, the facilitation tools
+  const PLAN_ICONS = { sprints: '🗓️', weeks: '📆', gantt: '📊', roadmap: '🛣️', matrix: '🎯', table: '🔲', sprint: '🏃', ssc: '🚦', msg: '🎭', '4l': '🍀', sail: '⛵', kanban: '🗂️', storymap: '🗺️', okr: '📈', standup: '☕', rice: '🧮', ice: '🧊', moscow: '🏷️', eisen: '⏳', lean: '🚀', bmc: '🏢', swot: '🧭', pros: '⚖️', cjm: '🛤️', empathy: '💗', persona: '👤', crazy8: '✏️', mood: '🎨', brain: '💡', kalm: '🔄', wwa: '🎉' };
   function planTile(box, icon, name, desc, fn, edit) {
     const b = document.createElement('button'); b.className = 'pl-tile' + (edit ? ' pl-edit' : '');
     const i = document.createElement('span'); i.className = 'pl-ico'; i.textContent = icon; i.setAttribute('aria-hidden', 'true');
     const t = document.createElement('span'); t.className = 'pl-t'; const n = document.createElement('b'); n.textContent = name; const d = document.createElement('small'); d.textContent = desc; t.append(n, d);
     b.append(i, t); b.addEventListener('click', () => { openPlan(false); fn(); }); box.appendChild(b); return b;
   }
-  Plan.TEMPLATES.forEach(([k, name, desc], i) => planTile(i < 7 ? $('#plPlan') : $('#plRetro'), PLAN_ICONS[k] || '▦', name, desc, () => insertTemplate(k), true));
-  planTile($('#plPlan'), '✅', 'Картка задачі', 'Статус, виконавець, естімейт; з Jira, Linear, GitHub', () => { const it = createTaskAt(center()); pendingEdit = null; startEdit(it.id); }, true);
+  const tpl = { cat: 'all', built: false, cards: [], groups: new Map() };
+  function buildLibrary() { // once, on first open: the previews are drawn from the templates themselves
+    if (tpl.built) return; tpl.built = true;
+    const list = $('#tpList'), cats = $('#tpCats');
+    const chip = (k, name, count) => { const b = document.createElement('button'); b.setAttribute('role', 'radio'); b.dataset.cat = k; b.textContent = name; const c = document.createElement('small'); c.textContent = count; b.appendChild(c); b.addEventListener('click', () => { tpl.cat = k; $('#tpQ').value = ''; filterLibrary(true); }); cats.appendChild(b); };
+    chip('all', 'Усі', Plan.TEMPLATES.length);
+    for (const [g, gname] of Plan.GROUPS) {
+      const own = Plan.TEMPLATES.filter((t) => t[3] === g); if (!own.length) continue;
+      chip(g, gname, own.length);
+      const sec = document.createElement('section'); sec.className = 'tp-group'; const h = document.createElement('h3'); h.textContent = gname; const grid = document.createElement('div'); grid.className = 'tp-grid'; sec.append(h, grid); list.appendChild(sec); tpl.groups.set(g, sec);
+      for (const [k, name, desc] of own) {
+        const b = document.createElement('button'); b.className = 'tp-card'; b.dataset.k = k;
+        const pv = document.createElement('div'); pv.className = 'tp-prev';
+        try { let q = 0; pv.appendChild(tplPreview(k, Plan.template(k, 0, 0, () => 'p' + q++, '', Date.now()))); } catch (e) {}
+        const m = document.createElement('div'); m.className = 'tp-meta'; const t = document.createElement('b'); const ic = document.createElement('i'); ic.textContent = PLAN_ICONS[k] || '▦'; ic.setAttribute('aria-hidden', 'true'); t.append(ic, name); const d = document.createElement('small'); d.textContent = desc; m.append(t, d);
+        b.append(pv, m); b.setAttribute('aria-label', name + '. ' + desc);
+        b.addEventListener('click', () => { openPlan(false); insertTemplate(k); });
+        grid.appendChild(b); tpl.cards.push({ b, g, text: (name + ' ' + desc + ' ' + k + ' ' + gname).toLocaleLowerCase('uk') });
+      }
+    }
+  }
+  // a template's thumbnail: tinted headers, sections and a few sample cards, so each one reads at a glance
+  function tplPreview(key, list) {
+    const svg = document.createElementNS(SVGNS, 'svg'); svg.setAttribute('aria-hidden', 'true');
+    const T = (c, d) => `var(--t-${COLORS.includes(c) ? c : d})`, mix = (c, p, b) => `color-mix(in srgb, ${c} ${p}%, ${b || 'var(--surface)'})`;
+    const cards = list.filter((i) => !isLink(i)), byId = new Map(cards.map((i) => [i.id, i]));
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const i of cards) { const t = titled(i) ? 44 : 0; x0 = Math.min(x0, i.x); y0 = Math.min(y0, i.y - t); x1 = Math.max(x1, i.x + i.w); y1 = Math.max(y1, i.y + (i.h || 48)); }
+    const pad = Math.max(x1 - x0, y1 - y0) * 0.07, vw = x1 - x0 + pad * 2, vh = y1 - y0 + pad * 2;
+    let bw = vw, bh = vh; if (bw / bh > 1.6) bh = bw / 1.6; else bw = bh * 1.6;
+    svg.setAttribute('viewBox', `${x0 - pad - (bw - vw) / 2} ${y0 - pad - (bh - vh) / 2} ${bw} ${bh}`);
+    const u = bw / 200;
+    const el = (tag, at, style) => { const e = document.createElementNS(SVGNS, tag); for (const k in at) e.setAttribute(k, at[k]); if (style) e.setAttribute('style', style); svg.appendChild(e); return e; };
+    const bar = (x, y, w, h, op) => el('rect', { x, y, width: Math.max(w, 0), height: h, rx: h / 2 }, `fill:var(--text);opacity:${op || .5}`);
+    const note = (x, y, w, h, c) => { el('rect', { x, y, width: w, height: h, rx: Math.min(w, h) * 0.08 }, `fill:${T(c, 'caution')}`); bar(x + w * 0.14, y + h * 0.3, w * 0.62, Math.max(h * 0.09, u), .2); bar(x + w * 0.14, y + h * 0.52, w * 0.4, Math.max(h * 0.09, u), .2); };
+    let seed = [...key].reduce((a, ch) => a * 31 + ch.charCodeAt(0), 7) >>> 0; const rnd = () => ((seed = (seed * 1103515245 + 12345) >>> 0) / 4294967296);
+    for (const l of list) if (isLink(l)) { const a = byId.get(l.a), b = byId.get(l.b); if (a && b) el('path', { d: `M${a.x + a.w} ${a.y + a.h / 2}H${(a.x + a.w + b.x) / 2}V${b.y + b.h / 2}H${b.x}`, fill: 'none' }, `stroke:var(--muted);stroke-width:${0.8 * u};opacity:.7`); }
+    for (const i of cards.sort((a, b) => rank(a) - rank(b))) {
+      if (titled(i) && i.title) bar(i.x, i.y - 30, Math.min(i.w * 0.6, i.title.length * 11), 16, .62);
+      if (i.type === 'section') { el('rect', { x: i.x, y: i.y, width: i.w, height: i.h, rx: 18 }, `fill:${mix(T(i.color, 'gray'), 24)};stroke:${mix(T(i.color, 'gray'), 70, 'var(--line)')};stroke-width:${u}`); continue; }
+      if (i.type === 'text') { bar(i.x, i.y + 8, Math.min(i.w, (i.text || '').length * 20), 32, .7); continue; }
+      if (i.type === 'sticky') { note(i.x, i.y, i.w, i.h, i.color); continue; }
+      if (i.type === 'bar') { if (i.ms) el('polygon', { points: `${i.x + i.w / 2},${i.y} ${i.x + i.w},${i.y + i.h / 2} ${i.x + i.w / 2},${i.y + i.h} ${i.x},${i.y + i.h / 2}` }, `fill:${T(i.color, 'pink')}`); else { el('rect', { x: i.x, y: i.y, width: i.w, height: i.h, rx: i.h / 2 }, `fill:${mix(T(i.color, 'pink'), 45)}`); el('rect', { x: i.x, y: i.y, width: i.w * (i.pct || 0) / 100, height: i.h, rx: i.h / 2 }, `fill:${T(i.color, 'pink')}`); } continue; }
+      if (!isGrid(i)) continue;
+      const d = Plan.dims(i), c0 = T(i.color, 'gray'), mx = i.kind === 'matrix', tl = i.type === 'timeline', ln = `stroke:${mix(c0, 45, 'var(--line)')};stroke-width:${0.7 * u}`;
+      el('rect', { x: i.x, y: i.y, width: i.w, height: i.h, rx: 14 }, `fill:var(--surface);stroke:${mix(c0, 60, 'var(--line)')};stroke-width:${u}`);
+      for (let c = 0; c < d.nc; c++) {
+        const cx = i.x + d.side + c * d.cw, tc = tl ? c0 : tintOf(i, c);
+        el('rect', { x: cx + 6, y: i.y + 6, width: d.cw - 12, height: d.top - 12, rx: 10 }, `fill:${mix(tc, tl ? 22 : 42)}`);
+        bar(cx + 18, i.y + d.top / 2 - 7, Math.min(d.cw * 0.55, 120), 14, .55);
+        for (let r = 0; r < d.nr; r++) {
+          const cell = Plan.cellRect(i, c, r);
+          if (mx) { el('rect', { x: cell.x, y: cell.y, width: cell.w, height: cell.h }, `fill:${mix(tintOf(i, c), r ? 10 : 18)}`); bar(cell.x + 20, cell.y + 20, Math.min(cell.w * 0.5, 160), 16, .4); }
+          else if (!tl && !list.some((m) => m.grid === i.id)) { // sample cards, more in the first columns
+            const n = Math.floor(rnd() * (d.nr > 2 ? 2.2 : 3.4) * (1 - c / (d.nc + 1)) + (r === 0 && c < 2 ? 1 : 0));
+            const cwid = Math.min(cell.w - 28, 150), chh = Math.min(cwid * 0.62, (cell.h - 28) / Math.max(n, 1) - 12);
+            for (let k = 0; k < n && chh > 20; k++) note(cell.x + 14 + (cell.w - 28 - cwid) / 2, cell.y + 16 + k * (chh + 12), cwid, chh, tintOf(i, c).match(/--t-(\w+)/)[1]);
+          }
+        }
+      }
+      for (let r = 0; r < d.nr; r++) if (d.side) { const y = i.y + d.top + r * d.lh; el('rect', { x: i.x, y, width: d.side, height: d.lh }, `fill:${mix(c0, 12)}`); bar(i.x + 18, y + 18, Math.min(d.side - 36, 110), 13, .45); }
+      for (let c = 1; c < d.nc + (d.side ? 1 : 0); c++) { const lx = i.x + d.side + (c - (d.side ? 1 : 0)) * d.cw; el('line', { x1: lx, y1: i.y + (mx ? d.top : 0), x2: lx, y2: i.y + i.h }, ln); }
+      for (let r = 0; r < d.nr; r++) { const ly = i.y + d.top + r * d.lh; el('line', { x1: i.x, y1: ly, x2: i.x + i.w, y2: ly }, ln); }
+    }
+    return svg;
+  }
+  function filterLibrary(anim) {
+    const q = $('#tpQ').value.trim().toLocaleLowerCase('uk'), cat = q ? 'all' : tpl.cat, words = q.split(/\s+/).filter(Boolean);
+    $('#tpCats').querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.cat === cat)));
+    const shown = new Set(); let any = 0;
+    for (const c of tpl.cards) { const on = (cat === 'all' || c.g === cat) && words.every((w) => c.text.includes(w)); if (c.b.hidden === on) c.b.hidden = !on; if (on) { shown.add(c.g); any++; } }
+    tpl.groups.forEach((sec, g) => { sec.hidden = !shown.has(g); sec.firstChild.hidden = cat !== 'all'; });
+    $('#tpNone').hidden = !!any;
+    if (anim && !reduceMotion) { $('#tpBody').scrollTop = 0; let i = 0; for (const c of tpl.cards) if (!c.b.hidden && i < 12) c.b.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 220, delay: i++ * 18, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' }); }
+  }
+  $('#tpQ').addEventListener('input', () => filterLibrary(false));
+  $('#tpQ').addEventListener('keydown', (e) => { if (e.key === 'Enter') { const c = tpl.cards.find((c) => !c.b.hidden); if (c) { e.preventDefault(); c.b.click(); } } else if (e.key === 'ArrowDown') { const c = tpl.cards.find((c) => !c.b.hidden); if (c) { e.preventDefault(); c.b.focus(); } } });
+  $('#tpList').addEventListener('keydown', (e) => { // arrows move between cards, row by row
+    const k = e.key; if (!/^Arrow(Left|Right|Up|Down)$/.test(k) || !e.target.classList.contains('tp-card')) return;
+    const vis = tpl.cards.filter((c) => !c.b.hidden).map((c) => c.b), i = vis.indexOf(e.target); if (i < 0) return;
+    const r0 = e.target.getBoundingClientRect(); let next = null;
+    if (k === 'ArrowLeft') next = vis[i - 1]; else if (k === 'ArrowRight') next = vis[i + 1];
+    else { const down = k === 'ArrowDown', cands = vis.filter((b) => { const r = b.getBoundingClientRect(); return down ? r.top > r0.top + 4 : r.top < r0.top - 4; }); let best = Infinity; for (const b of cands) { const r = b.getBoundingClientRect(), d = Math.abs(r.top - r0.top) * 4 + Math.abs(r.left - r0.left); if (d < best) { best = d; next = b; } } if (!next && !down) { e.preventDefault(); $('#tpQ').focus(); return; } }
+    if (next) { e.preventDefault(); next.focus(); next.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' }); }
+  });
+  planTile($('#plFac'), '✅', 'Картка задачі', 'Статус, виконавець, естімейт; з Jira, Linear, GitHub', () => { const it = createTaskAt(center()); pendingEdit = null; startEdit(it.id); }, true);
   planTile($('#plFac'), '🗳️', 'Голосування крапками', 'Кілька голосів на кожного, потім сортування', () => openVotePop(true), true);
   const hideTile = planTile($('#plFac'), '🙈', 'Приховане писання', 'Чужі картки не видно, доки їх не відкриють', () => (hideMode.on ? revealAll() : startHide()), true);
   planTile($('#plFac'), '📝', 'Експорт у Markdown', 'Увесь текст дошки, щоб скопіювати', () => openExport(true), false);
@@ -5961,15 +6186,12 @@ const Plan = (() => {
     pop.hidden = !open; $('#planBtn').setAttribute('aria-expanded', String(open)); $('#planBtn').setAttribute('aria-pressed', String(open));
     if (open) {
       openMermaid(false); setTool('select');
+      buildLibrary(); $('#tpQ').value = ''; filterLibrary(true);
       hideTile.querySelector('b').textContent = hideMode.on ? 'Відкрити приховані картки' : 'Приховане писання';
       hideTile.querySelector('small').textContent = hideMode.on ? 'Усі побачать, що написали інші' : 'Чужі картки не видно, доки їх не відкриють';
-      requestAnimationFrame(() => { const f = pop.querySelector('.pl-tile:not([hidden])'); const vis = [...pop.querySelectorAll('.pl-tile')].find((b) => b.offsetParent); if (vis || f) (vis || f).focus({ preventScroll: true }); });
+      requestAnimationFrame(() => { const q = $('#tpQ'); if (q.offsetParent) q.focus({ preventScroll: true }); });
     }
   }
-  $('#planBtn').addEventListener('click', () => openPlan());
-  $('#plClose').addEventListener('click', () => openPlan(false));
-  $('#planPop').addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); openPlan(false); $('#planBtn').focus(); } });
-  addEventListener('pointerdown', (e) => { if (!$('#planPop').hidden && !e.target.closest('#planPop, #planBtn')) openPlan(false); }, true);
   const TPL_NAMES = Object.fromEntries(Plan.TEMPLATES.map(([k, n]) => [k, n]));
   // a spot near c where a box the size of b overlaps nothing: step right past whatever is in the way
   function freeSpot(b, c) {
@@ -5994,7 +6216,7 @@ const Plan = (() => {
     ripArmed = performance.now();
     commit({}, made.map((i) => i.id)); setSel(made.filter(isGrid).map((i) => i.id)); renderAll();
     showArea({ x1: b.x1 + dx, y1: b.y1 + dy - 50, x2: b.x2 + dx, y2: b.y2 + dy + 40 });
-    toast('Додано: ' + (TPL_NAMES[key] || 'шаблон') + (key === 'gantt' ? '. Тягніть смугу або її краї, щоб змінити дати' : '. Подвійний клік у клітинці додає стікер'));
+    toast('Додано: ' + (TPL_NAMES[key] || 'шаблон') + (key === 'gantt' ? '. Тягніть смугу або її краї, щоб змінити дати' : made.some(isGrid) ? '. Подвійний клік у клітинці додає стікер' : '. Підказки на стікерах можна переписати або видалити'));
   }
 
   // grid controls in the context bar: one more or one fewer column or lane; cells keep their size, cards their cells
