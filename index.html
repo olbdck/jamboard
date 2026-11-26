@@ -642,6 +642,36 @@ body.view-only .ro-note { display: flex; animation: palIn var(--base) var(--ease
   pointer-events: none; max-width: calc(100vw - 32px); text-align: center; z-index: 9; border: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
 }
 #toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+/* follow & present: a pill at the top centre says who leads; a frame in their colour rims the screen while you follow */
+.pres-bar { position: fixed; left: 50%; top: calc(66px + env(safe-area-inset-top, 0px)); width: max-content; z-index: 6; display: flex; align-items: center; gap: 8px; height: 44px; box-sizing: border-box; padding: 4px 4px 4px 8px; border-radius: var(--r-pill); translate: -50% 0; font: 500 14px var(--f-text); color: var(--text); white-space: nowrap; max-width: calc(100vw - 24px);
+  transition: opacity var(--base) var(--ease-em), transform var(--base) var(--ease-spring); }
+.pres-bar[hidden] { display: flex !important; opacity: 0; transform: translateY(-10px) scale(.96); pointer-events: none; visibility: hidden; transition: opacity var(--fast) var(--ease), transform var(--fast) var(--ease), visibility 0s linear var(--fast); }
+.pres-bar .av { width: 28px; height: 28px; font-size: 15px; margin: 0; border: 0; box-shadow: 0 0 0 2px var(--pc); animation: none; flex: none; }
+.pres-bar .pb-live { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); margin: 0 4px 0 6px; flex: none; box-shadow: 0 0 0 0 var(--accent-soft); animation: pbLive 1.8s var(--ease) infinite; }
+@keyframes pbLive { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent); } 70%, 100% { box-shadow: 0 0 0 8px transparent; } }
+.pres-bar .pb-text { overflow: hidden; text-overflow: ellipsis; min-width: 0; padding-right: 2px; }
+.pres-bar .pb-text b { font-weight: 600; }
+.pres-bar .pb-sub { color: var(--muted); }
+.pres-bar .pb-nav { display: flex; align-items: center; gap: 0; padding: 0 2px; border-radius: var(--r-pill); background: var(--chip); }
+.pres-bar .pb-nav[hidden] { display: none; }
+.pres-bar .pb-nav .icon-btn { width: 32px; height: 32px; }
+.pres-bar .pb-nav .icon-btn svg { width: 18px; height: 18px; }
+.pres-bar .pb-count { min-width: 44px; text-align: center; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text); padding: 0 4px; }
+.pres-bar .pb-act { height: 36px; padding: 0 14px; font-size: 14px; }
+.pres-bar .pb-act.ghost { background: var(--chip); color: var(--text); }
+.pres-bar .pb-act.ghost:hover { background: color-mix(in srgb, var(--text) 12%, var(--surface)); }
+#folFrame { position: fixed; inset: 0; z-index: 4; pointer-events: none; border: 3px solid var(--pc, var(--accent)); border-radius: 14px; opacity: 0; transition: opacity var(--base) var(--ease-em), border-color var(--base) var(--ease); }
+#folFrame.on { opacity: 1; }
+#folFrame.mine { border-width: 2px; border-color: color-mix(in srgb, var(--accent) 70%, transparent); }
+.avatars button.av { cursor: pointer; transition: scale var(--fast) var(--ease-spring), box-shadow var(--fast) var(--ease); }
+.avatars button.av:not(.me):hover { scale: 1.12; z-index: 2; }
+.avatars .av.fol { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--pc); z-index: 1; }
+.avatars .av .pin { position: absolute; right: -3px; bottom: -3px; width: 13px; height: 13px; border-radius: 50%; background: var(--accent); color: var(--accent-fg); display: grid; place-items: center; box-shadow: 0 0 0 2px var(--surface); }
+.avatars .av .pin svg { width: 8px; height: 8px; }
+.people-list .txt-btn { margin-left: auto; padding: 4px 10px; font-size: 13px; }
+#presentBtn[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+@media (max-width: 520px) { .pres-bar .pb-sub { display: none; } }
+@media (prefers-reduced-motion: reduce) { .pres-bar .pb-live { animation: none !important; } }
 #dropzone { position: fixed; inset: 10px; border: 2px dashed var(--accent); border-radius: var(--r-xl); background: var(--accent-soft); pointer-events: none; display: grid; place-items: center; font: 600 21px var(--f-display); color: var(--accent); }
 :focus-visible { outline: none; box-shadow: var(--focus); }
 /* timelines and tables: a frame with a header band, lane names and cells; cards dropped in stick to a cell */
@@ -895,6 +925,13 @@ select.field.sm { padding-right: 8px; }
   <p class="hint">Дошку бачать лише ті, у кого є це посилання, і вони можуть її редагувати.</p>
 </div>
 
+<div class="panel pres-bar" id="presBar" role="status" aria-live="polite" hidden>
+  <span class="pb-live" id="presLive"></span><span class="av" id="presAv" hidden></span>
+  <span class="pb-text" id="presText"></span>
+  <span class="pb-nav" id="presNav" hidden><button class="icon-btn" id="presPrev" aria-label="Попередня секція"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6l-6 6 6 6"/></svg><span class="tip">Попередня секція<kbd>←</kbd></span></button><span class="pb-count" id="presCount"></span><button class="icon-btn" id="presNext" aria-label="Наступна секція"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6l6 6-6 6"/></svg><span class="tip">Наступна секція<kbd>→</kbd></span></button></span>
+  <button class="primary pb-act" id="presAct"></button>
+</div>
+<div id="folFrame" aria-hidden="true"></div>
 <div class="top-right">
   <div class="panel people">
     <div class="status" id="status" data-s="warn"><i></i><span>Підключення…</span></div>
@@ -904,6 +941,7 @@ select.field.sm { padding-right: 8px; }
     <button class="chip" id="hideChip" hidden title="Приховане писання: чужі картки не видно. Натисніть, щоб відкрити всі"><span aria-hidden="true">🙈</span><span class="st">Відкрити всі</span></button>
     <button class="chip" id="voteChip" hidden aria-haspopup="dialog" aria-expanded="false"><span aria-hidden="true">🗳️</span><span class="vc-dots" id="voteDots"></span><span class="st" id="voteText"></span></button>
     <button id="timerPill" data-s="idle" aria-label="Таймер для всіх" aria-haspopup="dialog" aria-expanded="false" title="Таймер для всіх"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7"/><path d="M12 10v3.8l2.4 1.6M9.5 3.5h5M18.6 6.4l1.2-1.2"/></svg><span class="ring"></span><span class="tm digits" id="tmText">00:00</span><span class="st" id="tmState"></span></button>
+    <button class="icon-btn" id="presentBtn" aria-label="Презентувати" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12.5" rx="2"/><path d="M12 16.5V20M8.5 20.5h7"/><path d="M10.4 7.9v5l4.1-2.5z" fill="currentColor"/></svg><span class="tip" id="presentTip">Презентувати: усі бачать те, що й ви<kbd>Shift+P</kbd></span></button>
     <button class="primary" id="shareBtn" title="Скопіювати посилання на цю дошку"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg><span>Поділитися</span></button>
   </div>
 </div>
@@ -1134,6 +1172,8 @@ select.field.sm { padding-right: 8px; }
     <li>Таймлайн, матриця, ретро <b>P</b></li>
     <li>Перейменувати колонку <b>Подвійний клік на назві</b></li>
     <li>Змінити своє ім’я <b>Клік на аватарці</b></li>
+    <li>Стежити за кимось <b>Клік на його аватарці</b></li>
+    <li>Презентувати секції по черзі <b>Shift + P · ← →</b></li>
   </ul>
 </div>
 <div id="toast" role="status"></div>
@@ -2383,6 +2423,7 @@ const Plan = (() => {
     const g = gridCell, mx = (((view.x + 100) % g) + g) % g, my = (((view.y + 100) % g) + g) % g;
     gridEl.style.transform = `translate3d(${mx}px, ${my}px, 0)`;
     if (rip) ripPlace();
+    shareVp();
     clearTimeout(paintView.t); const vk = viewKey(); paintView.t = setTimeout(() => store.set(vk, JSON.stringify(view)), 400);
   }
   function applyView() { schedule('view'); }
@@ -2473,7 +2514,7 @@ const Plan = (() => {
   let zTarget = null, zAnchor = null, zRaf = 0, zLast = 0;
   function smoothZoom(sx, sy, factor) { smoothZoomTo(sx, sy, (zTarget || view.z) * factor); }
   function smoothZoomTo(sx, sy, z) {
-    stopGlide(); cancelFly();
+    breakFollow(); stopGlide(); cancelFly();
     zTarget = clamp(z, 0.1, 4); zAnchor = { sx, sy };
     if (reduceMotion) { zoomAt(sx, sy, zTarget / view.z); zTarget = null; return; }
     if (!zRaf) { zLast = performance.now(); zRaf = requestAnimationFrame(zoomStep); }
@@ -2491,7 +2532,7 @@ const Plan = (() => {
   let flyRaf = 0;
   function cancelFly() { if (flyRaf) cancelAnimationFrame(flyRaf); flyRaf = 0; }
   function flyTo(t, dur = 420) {
-    stopZoom(); stopGlide(); cancelFly();
+    breakFollow(); stopZoom(); stopGlide(); cancelFly(); announceFly(t, reduceMotion ? 0 : dur);
     if (reduceMotion) { Object.assign(view, t); applyView(); return; }
     const W = innerWidth / 2, H = innerHeight / 2;
     const c0 = toWorld(W, H), z0 = view.z, c1 = { x: (W - t.x) / t.z, y: (H - t.y) / t.z }, t0 = performance.now();
@@ -5066,19 +5107,28 @@ const Plan = (() => {
     if (sig !== boardSig) { boardSig = sig; schedule('boxes'); updateCtx(); }
     else if (touched.size) { schedule('boxes'); updateCtx(); }
     renderPeople(); renderCursors(); if (!$('#boardMenu').hidden) renderBoardMenu();
+    folPeers();
   }
   let peopleSig = '';
   function renderPeople() {
-    const list = [{ me: true, color: me.color, name: me.name, emoji: me.emoji }].concat(others().map((p) => ({ color: peerColor(p), name: peerName(p), emoji: peerEmoji(p), other: p.isMe })));
+    const list = [{ me: true, color: me.color, name: me.name, emoji: me.emoji }].concat(others().map((p) => ({ color: peerColor(p), name: peerName(p), emoji: peerEmoji(p), other: p.isMe, peer: p.peer, f: fol.peer === p.peer })));
     const sig = JSON.stringify(list);
     if (sig === peopleSig) return;
     peopleSig = sig;
     const box = $('#avatars'); box.innerHTML = '';
-    list.slice(0, 5).forEach((u) => {
-      const b = document.createElement(u.me ? 'button' : 'div');
-      b.className = 'av' + (u.me ? ' me' : ''); b.style.setProperty('--pc', u.color);
-      b.textContent = u.emoji; b.title = u.me ? `${u.name} (ви) · змінити ім’я` : u.name + (u.other ? ' (ваша інша вкладка)' : '');
-      if (u.me) { b.setAttribute('aria-label', 'Змінити ім’я'); b.addEventListener('click', openMe); }
+    // the one I follow comes right after me, so it is never hidden behind «+N»
+    const shown = list.slice(0, 1).concat(list.slice(1).sort((a, b) => b.f - a.f)).slice(0, 5);
+    shown.forEach((u) => {
+      const b = document.createElement('button');
+      b.className = 'av' + (u.me ? ' me' : '') + (u.f ? ' fol' : ''); b.style.setProperty('--pc', u.color);
+      b.textContent = u.emoji;
+      if (u.me) { b.title = `${u.name} (ви) · змінити ім’я`; b.setAttribute('aria-label', 'Змінити ім’я'); b.addEventListener('click', openMe); }
+      else {
+        b.title = (u.f ? 'Перестати стежити за ' : 'Стежити за ') + u.name + (u.other ? ' (ваша інша вкладка)' : '');
+        b.setAttribute('aria-label', b.title); b.setAttribute('aria-pressed', String(u.f));
+        b.addEventListener('click', () => toggleFollow(u.peer));
+        if (u.f) b.insertAdjacentHTML('beforeend', '<span class="pin" aria-hidden="true"><svg viewBox="0 0 12 12" fill="currentColor"><path d="M1 6s2-3.6 5-3.6S11 6 11 6 9 9.6 6 9.6 1 6 1 6z"/></svg></span>');
+      }
       box.appendChild(b);
     });
     if (list.length > 5) { const m = document.createElement('div'); m.className = 'av more'; m.textContent = '+' + (list.length - 5); m.title = 'Ще ' + (list.length - 5); box.appendChild(m); }
@@ -5090,6 +5140,7 @@ const Plan = (() => {
       const nm = document.createElement('span'); nm.textContent = u.name;
       row.append(av, nm);
       if (u.me || u.other) { const em = document.createElement('em'); em.textContent = u.me ? 'ви' : 'ваша інша вкладка'; row.append(em); }
+      if (!u.me) { const fb = document.createElement('button'); fb.className = 'txt-btn'; fb.textContent = u.f ? 'Не стежити' : 'Стежити'; fb.addEventListener('click', () => toggleFollow(u.peer)); row.append(fb); }
       pl.appendChild(row);
     });
     $('#peopleLabel').textContent = `Зараз на дошці · ${list.length}`;
@@ -5157,6 +5208,209 @@ const Plan = (() => {
     }
     for (const [k, b] of peerBoxEls) if (!seen.has(k)) { b.remove(); peerBoxEls.delete(k); }
   }
+  // ---------- follow & present: watch someone's view, or lead everyone through the board, section by section ----------
+  // Everyone shares the area they see (vp: world centre x, y and visible w, h). A follower fits that area into their own
+  // screen, and the camera eases towards it every frame, so ~14 updates a second still glide at 60+. A camera flight
+  // (a slide, «Показати все») is announced up front as `go`, so followers fly the same curve instead of chasing samples.
+  // Any touch of the canvas breaks away. Presenting (pres {at, i, n}) makes everyone follow; the newest presenter leads.
+  const fol = { peer: null, why: '', name: '', color: '', emoji: '', t: null, fly: null, go: 0, raf: 0, last: 0 };
+  const pres = { on: false, at: 0, i: -1, n: 0 };
+  let presSeen = '', presAway = null, vpSent = '', goSeq = 0;
+  const r1 = (v) => Math.round(v * 10) / 10;
+  function vpOf(v) { return [r1((innerWidth / 2 - v.x) / v.z), r1((innerHeight / 2 - v.y) / v.z), r1(innerWidth / v.z), r1(innerHeight / v.z)]; }
+  function shareVp() {
+    if (!room) return;
+    const v = vpOf(view), k = v.join(); if (k === vpSent) return;
+    vpSent = k; sendPresence({ vp: v });
+  }
+  // a flight about to start: followers get its end and length now
+  function announceFly(t, dur) { if (room && !fol.peer) sendPresence({ go: [...vpOf(t), dur, Date.now() * 1000 + (++goSeq % 1000)] }); }
+  const okVp = (v) => Array.isArray(v) && v.length >= 4 && v.slice(0, 4).every((n) => isFinite(n)) && v[2] > 1 && v[3] > 1;
+  function fitTarget(v) { // their visible area fitted into mine
+    const z = clamp(Math.min(innerWidth / v[2], innerHeight / v[3]), 0.1, 4);
+    return { cx: +v[0], cy: +v[1], z };
+  }
+  const myId = () => { const p = peers.find((q) => q.sameTab); return p ? p.peer : null; };
+  function startFollow(peer, why) {
+    const p = others().find((q) => q.peer === peer); if (!p) return;
+    if (pres.on) stopPresent();
+    stopZoom(); stopGlide(); cancelFly();
+    fol.peer = peer; fol.why = why; fol.t = null; fol.fly = null; fol.k = '';
+    const g = p.presence && p.presence.go; fol.go = Array.isArray(g) ? g[5] : 0; // an earlier flight is not replayed
+    folUpdate(p, true);
+    sendPresence({ fol: peer });
+    renderPeople(); renderPresBar();
+  }
+  function toggleFollow(peer) {
+    if (fol.peer === peer) { breakFollow(); return; }
+    const p = others().find((q) => q.peer === peer); if (!p) return;
+    startFollow(peer, p.presence && p.presence.pres && presSeen.startsWith(peer + '@') ? 'pres' : 'pick');
+    toast('Ви стежите за ' + peerName(p) + '. Торкніться дошки, щоб піти своїм шляхом');
+  }
+  function endFollow() {
+    if (!fol.peer) return;
+    if (fol.raf) cancelAnimationFrame(fol.raf);
+    fol.peer = null; fol.why = ''; fol.t = null; fol.fly = null; fol.raf = 0;
+    sendPresence({ fol: null }); renderPeople(); renderPresBar();
+  }
+  // the follower touched the canvas, zoomed or flew somewhere: stop following (a presentation can be rejoined from the bar)
+  function breakFollow() {
+    if (!fol.peer) return;
+    const n = fol.name, why = fol.why;
+    if (why === 'pres') presAway = fol.peer;
+    endFollow();
+    if (why !== 'pres') toast('Ви більше не стежите за ' + n);
+  }
+  function folUpdate(p, first) {
+    const pr = p.presence || {};
+    fol.name = peerName(p); fol.color = peerColor(p); fol.emoji = peerEmoji(p);
+    const g = pr.go, now = performance.now();
+    if (!first && Array.isArray(g) && g.length >= 6 && g[5] !== fol.go && okVp(g)) { // they started a flight: fly the same one
+      fol.go = g[5];
+      const d = clamp(+g[4] || 420, 120, 1500);
+      fol.fly = { t0: now, dur: d, from: camNow(), to: fitTarget(g) };
+    }
+    if (okVp(pr.vp)) {
+      const t = fitTarget(pr.vp), c = camNow();
+      fol.t = t;
+      // a far jump with no flight announced (or the first look): fly there instead of snapping
+      const far = Math.hypot(t.cx - c.cx, t.cy - c.cy) * c.z > Math.max(innerWidth, innerHeight) * 0.9 || Math.abs(Math.log(t.z / c.z)) > 0.9;
+      if (!fol.fly && (first || far)) fol.fly = { t0: now, dur: first ? 520 : 420, from: c, to: null };
+    }
+    const k = fol.t ? fol.t.cx + ',' + fol.t.cy + ',' + fol.t.z : '';
+    if (!fol.raf && (fol.fly || (fol.t && k !== fol.k))) { fol.last = now; fol.raf = requestAnimationFrame(folStep); }
+    fol.k = k;
+  }
+  function camNow() { return { cx: (innerWidth / 2 - view.x) / view.z, cy: (innerHeight / 2 - view.y) / view.z, z: view.z }; }
+  function setCam(cx, cy, z) { view.z = z; view.x = innerWidth / 2 - cx * z; view.y = innerHeight / 2 - cy * z; applyView(); }
+  function folStep(t) {
+    fol.raf = 0; if (!fol.peer) return;
+    const dt = Math.min(50, Math.max(1, t - fol.last)); fol.last = t;
+    if (fol.fly) { // an eased flight, zoom even in log space (like flyTo); its end follows the latest target
+      const F = fol.fly, to = F.to || fol.t;
+      const k = reduceMotion ? 1 : Math.min(1, (t - F.t0) / F.dur), e = 1 - Math.pow(1 - k, 3);
+      if (to) setCam(F.from.cx + (to.cx - F.from.cx) * e, F.from.cy + (to.cy - F.from.cy) * e, F.from.z * Math.pow(to.z / F.from.z, e));
+      if (k >= 1) fol.fly = null;
+      fol.raf = requestAnimationFrame(folStep); return;
+    }
+    const T = fol.t; if (!T) return;
+    const f = reduceMotion ? 1 : 1 - Math.exp(-dt / 90), c = camNow();
+    const z = Math.exp(Math.log(c.z) + (Math.log(T.z) - Math.log(c.z)) * f), x = c.cx + (T.cx - c.cx) * f, y = c.cy + (T.cy - c.cy) * f;
+    const done = Math.abs(T.cx - x) * z < 0.25 && Math.abs(T.cy - y) * z < 0.25 && Math.abs(Math.log(T.z / z)) < 0.0015;
+    if (done) setCam(T.cx, T.cy, T.z); else setCam(x, y, z);
+    if (!done) fol.raf = requestAnimationFrame(folStep);
+  }
+  // who leads: called on every presence change, so it only touches the DOM when something it shows changed
+  function folPeers() {
+    const list = others();
+    let lead = null;
+    for (const p of list) { const q = p.presence && p.presence.pres; if (q && isFinite(q.at) && (!lead || q.at > lead.presence.pres.at)) lead = p; }
+    if (lead && pres.on && lead.presence.pres.at > pres.at) { stopPresent(); toast(peerName(lead) + ' тепер презентує'); }
+    if (pres.on) lead = null;
+    const key = lead ? lead.peer + '@' + lead.presence.pres.at : '';
+    if (key !== presSeen) {
+      const was = presSeen; presSeen = key; presAway = null;
+      if (lead) startFollow(lead.peer, 'pres');
+      else if (was && fol.why === 'pres') { endFollow(); toast('Презентацію завершено'); }
+      else if (was) toast('Презентацію завершено');
+    }
+    if (fol.peer) {
+      const p = list.find((q) => q.peer === fol.peer);
+      if (p) folUpdate(p, false); else { const n = fol.name; endFollow(); toast(n + ' вийшов з дошки'); }
+    }
+    renderPresBar();
+  }
+  // ---- presenting: sections are the slides, in reading order (rows top to bottom, then left to right) ----
+  function slides() {
+    const secs = [...items.values()].filter(isSec);
+    const inside = (s, o) => o !== s && o.x <= s.x && o.y <= s.y && o.x + o.w >= s.x + s.w && o.y + o.h >= s.y + s.h && o.w * o.h > s.w * s.h;
+    const top = secs.filter((s) => !secs.some((o) => inside(s, o))).sort((a, b) => a.y - b.y || a.x - b.x);
+    const rows = [];
+    for (const s of top) { const r = rows[rows.length - 1]; if (r && s.y < r.y + r.h * 0.5) { r.list.push(s); r.h = Math.min(r.h, s.h); } else rows.push({ y: s.y, h: s.h, list: [s] }); }
+    return rows.flatMap((r) => r.list.sort((a, b) => a.x - b.x));
+  }
+  function startPresent() {
+    if (fol.peer) endFollow();
+    presAway = null;
+    pres.on = true; pres.at = Date.now(); pres.i = -1; pres.n = slides().length;
+    if (pres.n) goSlide(0); else publishPres();
+    renderPresBar();
+  }
+  function stopPresent() {
+    if (!pres.on) return;
+    pres.on = false; publishPres(); renderPresBar();
+  }
+  function publishPres() { sendPresence({ pres: pres.on ? { at: pres.at, i: pres.i, n: pres.n } : null }); }
+  function goSlide(i) {
+    const sl = slides(); pres.n = sl.length;
+    if (!sl.length) { pres.i = -1; publishPres(); renderPresBar(); return; }
+    pres.i = clamp(i, 0, sl.length - 1);
+    const s = sl[pres.i], pad = Math.min(96, innerWidth * 0.05 + 16), top = 116, bottom = 84; // clear of the top panels, this bar and the toolbar
+    const z = clamp(Math.min((innerWidth - pad * 2) / s.w, (innerHeight - top - bottom - pad) / s.h), 0.1, 2);
+    flyTo({ z, x: innerWidth / 2 - (s.x + s.w / 2) * z, y: (top + innerHeight - bottom) / 2 - (s.y + s.h / 2) * z }, 560);
+    publishPres(); renderPresBar();
+  }
+  function stepSlide(d) { if (!pres.on) return; const n = slides().length; if (!n) return; goSlide(pres.i < 0 ? (d > 0 ? 0 : n - 1) : pres.i + d); }
+  // the keys a presenter (or follower) needs; true when the key was taken
+  function presKey(e) {
+    if (e.shiftKey && e.code === 'KeyP') { e.preventDefault(); pres.on ? stopPresent() : startPresent(); return true; }
+    if (pres.on) {
+      const next = e.key === 'PageDown' || (!selected.size && (e.key === 'ArrowRight' || e.key === 'ArrowDown'));
+      const prev = e.key === 'PageUp' || (!selected.size && (e.key === 'ArrowLeft' || e.key === 'ArrowUp'));
+      if (next || prev) { e.preventDefault(); stepSlide(next ? 1 : -1); return true; }
+      if (e.key === 'Escape' && !selected.size && !document.querySelector('.popover:not([hidden]), #planPop:not([hidden]), #timerPop:not([hidden])')) { e.preventDefault(); stopPresent(); return true; }
+    }
+    if (fol.peer && e.key === 'Escape') { e.preventDefault(); breakFollow(); return true; }
+    return false;
+  }
+  let presSig = '';
+  function renderPresBar() {
+    const lead = presSeen ? others().find((p) => p.peer === presSeen.slice(0, presSeen.indexOf('@'))) : null;
+    const lp = lead && lead.presence.pres;
+    const me_ = myId(), watchers = pres.on && me_ ? others().filter((p) => p.presence && p.presence.fol === me_).length : 0;
+    let st = null;
+    if (pres.on) st = { k: 'me', n: watchers, i: pres.i, c: pres.n };
+    else if (fol.peer && fol.why === 'pres' && lead) st = { k: 'lead', who: fol.name, col: fol.color, em: fol.emoji, i: lp.i, c: lp.n };
+    else if (lead && presAway === lead.peer) st = { k: 'away', who: peerName(lead), col: peerColor(lead), em: peerEmoji(lead), i: lp.i, c: lp.n };
+    else if (fol.peer) st = { k: 'pick', who: fol.name, col: fol.color, em: fol.emoji };
+    const sig = JSON.stringify(st);
+    if (sig === presSig) return; presSig = sig;
+    const bar = $('#presBar'), fr = $('#folFrame'), btn = $('#presentBtn');
+    btn.setAttribute('aria-pressed', String(!!pres.on));
+    btn.setAttribute('aria-label', pres.on ? 'Завершити презентацію' : 'Презентувати');
+    $('#presentTip').firstChild.textContent = pres.on ? 'Завершити презентацію' : 'Презентувати: усі бачать те, що й ви';
+    fr.classList.toggle('on', !!st && st.k !== 'away'); fr.classList.toggle('mine', !!st && st.k === 'me');
+    if (st && st.col) fr.style.setProperty('--pc', st.col);
+    if (!st) { bar.hidden = true; return; }
+    bar.hidden = false;
+    $('#presLive').hidden = st.k !== 'me';
+    const av = $('#presAv'); av.hidden = st.k === 'me';
+    if (st.k !== 'me') { av.textContent = st.em; av.style.setProperty('--pc', st.col); }
+    const tx = $('#presText'); tx.textContent = '';
+    const b = document.createElement('b'), sub = document.createElement('span'); sub.className = 'pb-sub';
+    if (st.k === 'me') { b.textContent = 'Ви презентуєте'; sub.textContent = ' · ' + (st.n ? st.n + ' ' + plural(st.n, 'стежить', 'стежать', 'стежать') : 'поки ніхто не стежить'); tx.append(b, sub); }
+    else if (st.k === 'pick') { b.textContent = st.who; tx.append('Ви стежите за ', b); }
+    else { b.textContent = st.who; sub.textContent = ' презентує'; tx.append(b, sub); }
+    const nav = $('#presNav'), slide = st.k !== 'pick' && st.c > 0;
+    nav.hidden = !slide;
+    if (slide) $('#presCount').textContent = (st.i >= 0 ? st.i + 1 : '–') + ' / ' + st.c;
+    $('#presPrev').hidden = $('#presNext').hidden = st.k !== 'me';
+    const act = $('#presAct');
+    act.textContent = st.k === 'me' ? 'Завершити' : st.k === 'away' ? 'Повернутися' : st.k === 'lead' ? 'Не стежити' : 'Перестати';
+    act.classList.toggle('ghost', st.k === 'lead' || st.k === 'pick');
+  }
+  $('#presentBtn').addEventListener('click', () => (pres.on ? stopPresent() : startPresent()));
+  $('#presPrev').addEventListener('click', () => stepSlide(-1));
+  $('#presNext').addEventListener('click', () => stepSlide(1));
+  $('#presAct').addEventListener('click', () => {
+    if (pres.on) stopPresent();
+    else if (fol.peer) breakFollow();
+    else if (presAway && others().some((p) => p.peer === presAway)) { const id = presAway; presAway = null; startFollow(id, 'pres'); }
+  });
+  // touching the canvas (a press, a wheel or pinch) takes the camera back
+  vp.addEventListener('pointerdown', () => { if (fol.peer) breakFollow(); }, true);
+  vp.addEventListener('wheel', () => { if (fol.peer) breakFollow(); }, { capture: true, passive: true });
+  addEventListener('resize', () => { if (fol.peer && fol.t) { const p = others().find((q) => q.peer === fol.peer); if (p) folUpdate(p, false); } shareVp(); });
   function setStatus(s, text) { const el = $('#status'); el.dataset.s = s; el.lastChild.textContent = text; el.title = text; }
 
   // ---------- me popover ----------
@@ -5193,6 +5447,7 @@ const Plan = (() => {
     if (editingId && mod && e.code === 'KeyB') { e.preventDefault(); toggleBold(); return; }
     if (editingId) { if (e.key === 'Escape' || (mod && e.key === 'Enter') || (e.key === 'Enter' && items.get(editingId) && (titled(items.get(editingId)) || items.get(editingId).type === 'task' || isBar(items.get(editingId))))) { e.preventDefault(); els.get(editingId).firstChild.blur(); } return; }
     if (isTyping(e.target)) { if (e.key === 'Enter' || e.key === 'Escape') { if (e.target.classList && e.target.classList.contains('rope-label')) e.preventDefault(); if (e.key === 'Escape' && ropeEditId && e.target.classList.contains('rope-label')) { const l = items.get(ropeEditId); e.target.textContent = (l && l.label) || ''; } e.target.blur(); if (e.target.id === 'nameInput') $('#mePop').hidden = true; } return; }
+    if (!mod && presKey(e)) return;
     const k = e.key.toLowerCase();
     if (viewOnly() && (mod ? !['=', '+', '-', '0'].includes(k) : !(e.code === 'Space' || e.key === 'Escape' || e.code === 'KeyV' || e.code === 'KeyH' || e.code === 'KeyP' || (e.shiftKey && e.code === 'Digit1')))) {
       if (e.key === 'Delete' || e.key === 'Backspace' || (mod && 'zyda'.includes(k))) e.preventDefault();
@@ -6294,6 +6549,7 @@ const Plan = (() => {
     for (const d of els.values()) d.remove(); els.clear();
     for (const r of ropes.values()) { r.g.remove(); if (r.lab) r.lab.remove(); } ropes.clear(); tempRope = null; ropeEditId = null;
     booted = false; loadingBoard = true; ctx.hidden = true;
+    endFollow(); stopPresent(); presSeen = ''; presAway = null; renderPresBar();
     showTitle(); sendPresence({ board: id, sel: [], drag: null, resize: null, editing: null });
     boardSig = ''; renderPeople(); renderCursors(); renderAll();
     if (mode === 'shared') subscribeItems(); else loadLocalBoard();
