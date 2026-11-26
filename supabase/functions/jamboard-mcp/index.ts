@@ -430,13 +430,96 @@ const Plan = (() => {
     const x = g.kind === 'matrix' ? fitX(it.x) : w <= R.w - PAD * 2 ? R.x + (R.w - w) / 2 : R.x + PAD;
     return { x: Math.round(x), y: Math.round(fitY(it.y)) };
   }
-  // the next free spot in a cell: under the cards already there
+  // the next free spot in a cell: after the cards already there (in a matrix, under them)
   function slotIn(g, cell, w, h, members) {
     const R = cellRect(g, cell[0], cell[1]);
-    const here = members.filter((m) => Array.isArray(m.cell) && m.cell[0] === cell[0] && m.cell[1] === cell[1]);
+    const here = members.filter((m) => !isBar(m) && Array.isArray(m.cell) && m.cell[0] === cell[0] && m.cell[1] === cell[1]);
+    if (g.kind !== 'matrix') { const ps = flow(g, cell, here.sort(readOrder).concat([{ w, h }]), cellTop(g, cell[1], members)); const p = ps[ps.length - 1]; return { x: p.x, y: p.y }; }
     const y = here.length ? Math.max(...here.map((m) => m.y + (m.h || 0))) + 20 : R.y + PAD;
     return snap(g, { w, h, x: R.x + PAD, y }, cell);
   }
+
+  // ---------- cards in a cell line up in rows: as many side by side as the column fits, then the next row ----------
+  const GAP = 16, BAR_H = 36, TRACK = 46;
+  const isBar = (i) => !!i && i.type === 'bar';
+  const readOrder = (a, b) => a.y - b.y || a.x - b.x;
+  // where cards (in this order) go in a cell: left to right, wrapping; the widest row is centred in the column.
+  // Returns [{ m, x, y, row, col }]; `top` is where the first row starts (under the task bars of a timeline lane).
+  function flow(g, cell, list, top) {
+    const R = cellRect(g, cell[0], cell[1]), inner = R.w - PAD * 2, rows = [];
+    let row = null;
+    for (const m of list) {
+      const w = m.w || 200;
+      if (!row || (row.items.length && row.w + GAP + w > inner)) { row = { items: [], w: -GAP, h: 0 }; rows.push(row); }
+      row.items.push(m); row.w += GAP + w; row.h = Math.max(row.h, m.h || 120);
+    }
+    const span = rows.reduce((a, r) => Math.max(a, r.w), 0), x0 = R.x + PAD + Math.max(0, (inner - span) / 2), out = [];
+    let y = top != null ? top : R.y + PAD;
+    rows.forEach((r, ri) => { let x = x0; r.items.forEach((m, ci) => { out.push({ m, x: Math.round(x), y: Math.round(y), row: ri, col: ci }); x += (m.w || 200) + GAP; }); y += r.h + GAP; });
+    return out;
+  }
+  // the top of a cell's cards: on a timeline, under the lane's task bars
+  function cellTop(g, r, all) {
+    let y = cellRect(g, 0, r).y + PAD;
+    if (g.type === 'timeline') for (const b of all) if (isBar(b) && b.grid === g.id && cellOf(g, b)[1] === r) y = Math.max(y, b.y + BAR_H + GAP + 4);
+    return y;
+  }
+  // every card of a table or timeline in its place, cell by cell (only `cells`, a Set of "c,r", when given).
+  // Returns [{ m, x, y, row, col }] for all the cards laid out; a matrix keeps cards where they were put.
+  function reflow(g, all, cells) {
+    if (g.kind === 'matrix') return [];
+    const by = new Map(), out = [];
+    for (const m of all) {
+      if (m.grid !== g.id || !CARD.includes(m.type) || isBar(m)) continue;
+      const k = cellOf(g, m).join(',');
+      if (cells && !cells.has(k)) continue;
+      if (!by.has(k)) by.set(k, []); by.get(k).push(m);
+    }
+    for (const [k, list] of by) { const cell = k.split(',').map(Number); out.push(...flow(g, cell, list.sort(readOrder), cellTop(g, cell[1], all))); }
+    return out;
+  }
+
+  // ---------- task bars on a timeline (Gantt): start and due dates give x and width, a lane and track give y ----------
+  function xOfDay(g, day) { // board x of the start of a day (fractions too); before or after the columns it goes on at the edge column's pace
+    const d = dims(g), n = d.nc, at = (i, c) => g.x + d.side + (i + (day - c.from) / (c.to + 1 - c.from)) * d.cw;
+    const c0 = column(g, 0); if (day < c0.from) return at(0, c0);
+    for (let i = 0; i < n; i++) { const c = column(g, i); if (day < c.to + 1) return at(i, c); }
+    return at(n - 1, column(g, n - 1));
+  }
+  function dayAtX(g, x) {
+    const d = dims(g), u = (x - g.x - d.side) / d.cw, i = clamp(Math.floor(u), 0, d.nc - 1), c = column(g, i);
+    return c.from + (u - i) * (c.to + 1 - c.from);
+  }
+  const barSpan = (b) => { const s = dayOf(b.start), e = dayOf(b.due); return s == null ? null : [s, e == null || e < s ? s : e]; };
+  function barBox(g, b) { // { x, w } of a bar on its timeline; a milestone is a diamond on its day
+    const sp = barSpan(b); if (!sp) return null;
+    if (b.ms) { const cx = xOfDay(g, sp[1] + 0.5); return { x: Math.round(cx - BAR_H / 2), w: BAR_H }; }
+    const x0 = xOfDay(g, sp[0]), x1 = xOfDay(g, sp[1] + 1);
+    return { x: Math.round(x0), w: Math.max(14, Math.round(x1 - x0)) };
+  }
+  // the whole days a bar covers once it is put down at x (keeping its length) or stretched to x…x+w
+  function barDates(g, b, x, w, keepLen) {
+    const sp = barSpan(b) || [0, 0];
+    if (b.ms) { const d = Math.floor(dayAtX(g, x + (w || BAR_H) / 2)); return { start: isoOf(d), due: isoOf(d) }; }
+    const s = Math.round(dayAtX(g, x)), e = keepLen ? s + sp[1] - sp[0] : Math.max(s, Math.round(dayAtX(g, x + w)) - 1);
+    return { start: isoOf(s), due: isoOf(e) };
+  }
+  const laneY = (g, r) => cellRect(g, 0, r).y + PAD;
+  const trackOf = (g, b) => Math.max(0, Math.round((b.y - laneY(g, cellOf(g, b)[1])) / TRACK));
+  const barY = (g, r, k) => Math.round(laneY(g, r) + k * TRACK);
+  function nextTrack(g, r, all) { // a new bar in a lane goes on the row under the lowest bar there
+    let k = -1; for (const b of all) if (isBar(b) && b.grid === g.id && cellOf(g, b)[1] === r) k = Math.max(k, trackOf(g, b));
+    return k + 1;
+  }
+  const colOfDay = (g, day) => { const n = dims(g).nc; for (let i = 0; i < n; i++) if (day <= column(g, i).to) return i; return n - 1; };
+  // a bar put on a timeline: its dates decide x and width, its lane and track decide y
+  function placeBar(g, b, lane, track) {
+    const r = clamp(lane | 0, 0, dims(g).nr - 1), box = barBox(g, b), sp = barSpan(b);
+    if (!box) return b;
+    b.grid = g.id; b.cell = [sp ? colOfDay(g, sp[0]) : 0, r]; b.x = box.x; b.w = box.w; b.h = BAR_H; b.y = barY(g, r, Math.max(0, track | 0));
+    return b;
+  }
+  const workdays = (s, e) => { let n = 0; for (let d = s; d <= e; d++) { const w = new Date(d * DAY).getUTCDay(); if (w && w !== 6) n++; } return n; };
 
   // ---------- templates ----------
   const RETRO = {
@@ -448,6 +531,7 @@ const Plan = (() => {
   const TEMPLATES = [
     ['sprints', 'Таймлайн спринтів', 'Спринти по 2 тижні з доріжками команд'],
     ['weeks', 'Таймлайн тижнів', 'Шість тижнів від поточного'],
+    ['gantt', 'Діаграма Ганта', 'Задачі-смуги з прогресом і залежностями'],
     ['roadmap', 'Роадмап', 'Зараз · Далі · Потім'],
     ['matrix', 'Матриця Impact / Effort', 'Пріоритети: вплив проти зусиль'],
     ['table', 'Таблиця', 'Колонки й рядки, картки прилипають до клітинок'],
@@ -463,6 +547,17 @@ const Plan = (() => {
     const tl = (o, cw, lh) => { const t = { type: 'timeline', x: ox, y: oy, color: 'gray', start: thisMonday(nowMs || Date.now()), ...o }; Object.assign(t, sizeFor({ ...t, w: 0, h: 0 }, cw, lh)); return mk(t); };
     if (key === 'sprints') tl({ title: 'Спринти', unit: 'sprint', len: 14, k: 1, n: 4, lanes: ['Дизайн', 'Фронтенд', 'Бекенд'] }, 340, 250);
     else if (key === 'weeks') tl({ title: 'План на шість тижнів', unit: 'week', n: 6, lanes: [] }, 300, 420);
+    else if (key === 'gantt') {
+      const g = tl({ title: 'План проєкту', unit: 'week', n: 6, lanes: ['Дизайн', 'Розробка', 'Запуск'] }, 240, 0), s0 = dayOf(g.start);
+      const lh = [PAD * 2 + 2 * TRACK, PAD * 2 + 3 * TRACK, PAD * 2 + 2 * TRACK].map((v) => v + 40);
+      Object.assign(g, sizeFor(g, 240, Math.max(...lh)));
+      const bar = (text, lane, track, a, len, pct, color, extra) => { const b = mk({ type: 'bar', text, start: isoOf(s0 + a), due: isoOf(s0 + a + len - 1), pct, color, ...extra }); placeBar(g, b, lane, track); return b; };
+      const dep = (a, b) => out.push({ id: makeId(), type: 'link', a: a.id, b: b.id, by });
+      const res = bar('Дослідження', 0, 0, 0, 5, 100, 'purple'), ui = bar('Макети', 0, 1, 5, 9, 60, 'purple');
+      const api = bar('API', 1, 0, 3, 8, 40, 'info'), app = bar('Застосунок', 1, 1, 14, 11, 10, 'info'), qa = bar('Тестування', 1, 2, 25, 6, 0, 'teal');
+      const beta = bar('Бета', 2, 0, 32, 1, 0, 'pink', { ms: true }), launch = bar('Запуск', 2, 1, 34, 6, 0, 'ok');
+      dep(res, ui); dep(ui, app); dep(api, app); dep(app, qa); dep(qa, beta); dep(beta, launch);
+    }
     else if (key === 'roadmap') table({ title: 'Роадмап', cols: ['Зараз', 'Далі', 'Потім'], rows: ['Продукт', 'Дизайн', 'Розробка'], tint: ['ok', 'info', 'purple'] }, 380, 260);
     else if (key === 'matrix') table({ title: 'Пріоритети · Impact / Effort', kind: 'matrix', cols: ['Мало зусиль', 'Багато зусиль'], rows: ['Великий вплив', 'Малий вплив'], cells: ['Швидкі перемоги', 'Великі проєкти', 'Дрібниці', 'Не варто зусиль'], ax: ['Зусилля', 'Вплив'], tint: ['ok', 'warn'] }, 480, 380);
     else if (key === 'table') table({ title: 'Таблиця', cols: ['Колонка 1', 'Колонка 2', 'Колонка 3'], rows: ['Рядок 1', 'Рядок 2'] }, 320, 260);
@@ -484,7 +579,7 @@ const Plan = (() => {
     for (const s of all) if (s.type === 'section' && cx >= s.x && cx <= s.x + s.w && cy >= s.y && cy <= s.y + s.h && (!best || s.w * s.h < best.w * best.h)) best = s;
     return best;
   }
-  const CARD = ['sticky', 'image', 'text', 'web', 'node', 'board', 'task'];
+  const CARD = ['sticky', 'image', 'text', 'web', 'node', 'board', 'task', 'bar'];
   const isCardT = (i) => CARD.includes(i.type);
   const gridOf = (i, byId) => { const g = i.grid && byId.get(i.grid); return isGrid(g) ? g : null; };
 
@@ -492,7 +587,7 @@ const Plan = (() => {
   function sortByVotes(all, votes) {
     const byId = new Map(all.map((i) => [i.id, i])), groups = new Map(), out = [];
     for (const i of all) {
-      if (!isCardT(i)) continue;
+      if (!isCardT(i) || isBar(i)) continue;
       const g = gridOf(i, byId), s = g ? null : secOf(i, all);
       const key = g ? g.id + ':' + cellOf(g, i).join(',') : s ? s.id : null;
       if (!key) continue;
@@ -504,7 +599,10 @@ const Plan = (() => {
       if (list.length < 2 || !list.some((i) => v(i) > 0)) continue;
       const read = [...list].sort((a, b) => Math.round(a.y / 40) - Math.round(b.y / 40) || a.x - b.x);
       const ranked = [...read].sort((a, b) => v(b) - v(a) || read.indexOf(a) - read.indexOf(b));
-      if (g) { // a column of cards: stack them again, best on top
+      if (g && g.kind !== 'matrix') { // the cell's cards in rows again, best first
+        const c = cellOf(g, list[0]);
+        for (const p of flow(g, c, ranked, cellTop(g, c[1], all))) if (p.x !== p.m.x || p.y !== p.m.y) out.push({ id: p.m.id, x: p.x, y: p.y });
+      } else if (g) { // a matrix cell: stack them, best on top
         let y = Math.min(...list.map((i) => i.y));
         for (const i of ranked) { if (i.y !== y) out.push({ id: i.id, x: i.x, y }); y += (i.h || 120) + 20; }
       } else ranked.forEach((i, k) => { const s = read[k]; if (s.x !== i.x || s.y !== i.y) out.push({ id: i.id, x: s.x, y: s.y }); });
@@ -541,9 +639,17 @@ const Plan = (() => {
       return t.includes('\n') ? '- ' + t.split('\n').map((l, k) => (k ? '  ' + l : l)).join('\n') + vs(i) : '- ' + (t || '_(порожній стікер)_') + vs(i);
     };
     const put = (list) => ranked(list).forEach((i) => { const s = line(i); if (s) L.push(s); });
+    const barLines = (list) => [...list].sort((a, b) => (dayOf(a.start) || 0) - (dayOf(b.start) || 0) || read(a, b)).forEach((i) => {
+      if (hidden(i)) { L.push('- _(прихована картка)_'); return; }
+      const sp = barSpan(i), after = all.filter((l) => l.type === 'link' && l.b === i.id && isBar(byId.get(l.a))).map((l) => one(byId.get(l.a).text) || 'задача');
+      const when = sp ? (i.ms ? fmtD(sp[1]) : range(sp[0], sp[1])) : '';
+      const bits = [i.ms ? '◆ віха' : '', when && '📅 ' + when, !i.ms && Number.isFinite(i.pct) ? i.pct + '%' : '', i.who && '👤 ' + i.who, after.length ? 'після: ' + after.join(', ') : ''].filter(Boolean);
+      L.push(`- [${i.pct >= 100 ? 'x' : ' '}] **${one(i.text) || 'Задача'}**${bits.length ? ' · ' + bits.join(' · ') : ''}${vs(i)}`);
+    });
     L.push('# ' + (one(o.title) || 'Дошка JamBoard'), '');
     const nodes = all.filter((i) => i.type === 'node');
-    const cards = all.filter((i) => isCardT(i) && i.type !== 'node');
+    const cards = all.filter((i) => isCardT(i) && i.type !== 'node' && !isBar(i));
+    const bars = all.filter(isBar);
     const homes = new Map(); // container id → cards
     const loose = [];
     for (const i of cards) {
@@ -557,6 +663,8 @@ const Plan = (() => {
       if (b.type === 'section') { if (!list.length) continue; L.push('## ' + (one(b.title) || 'Секція'), ''); put(list); L.push(''); continue; }
       const d = dims(b), named = d.rows.length > 0;
       L.push('## ' + (one(b.title) || (b.type === 'timeline' ? 'Таймлайн' : 'Таблиця')), '');
+      const mine = bars.filter((i) => i.grid === b.id);
+      if (mine.length) { L.push('### Задачі', ''); barLines(mine); L.push(''); }
       const inCell = (c, r) => list.filter((i) => { const q = cellOf(b, i); return q[0] === c && q[1] === r; });
       if (b.kind === 'matrix') {
         for (let r = 0; r < d.nr; r++) for (let c = 0; c < d.nc; c++) {
@@ -575,6 +683,8 @@ const Plan = (() => {
         }
       }
     }
+    const looseBars = bars.filter((i) => !gridOf(i, byId));
+    if (looseBars.length) { L.push('## Задачі', ''); barLines(looseBars); L.push(''); }
     if (loose.length) { if (boxes.length || nodes.length) L.push('## Інше на дошці', ''); put(loose); L.push(''); }
     if (nodes.length) {
       const nid = new Map(nodes.map((n, k) => [n.id, 'n' + (k + 1)]));
@@ -591,7 +701,7 @@ const Plan = (() => {
       L.push('```', '');
     }
     const name = (i) => (!i ? '?' : hidden(i) ? 'прихована картка' : i.type === 'section' || isGrid(i) ? one(i.title) : one(i.type === 'task' || i.type === 'node' ? i.text : i.type === 'web' || i.type === 'board' ? i.title : plain(i)).slice(0, 60) || i.type);
-    const ropes = all.filter((l) => l.type === 'link' && byId.has(l.a) && byId.has(l.b) && !(byId.get(l.a).type === 'node' && byId.get(l.b).type === 'node'));
+    const ropes = all.filter((l) => l.type === 'link' && byId.has(l.a) && byId.has(l.b) && !(byId.get(l.a).type === 'node' && byId.get(l.b).type === 'node') && !(isBar(byId.get(l.a)) && isBar(byId.get(l.b))));
     if (ropes.length) { L.push('## Зв’язки', ''); ropes.forEach((l) => L.push(`- ${name(byId.get(l.a))} → ${name(byId.get(l.b))}${l.label ? ' (' + one(l.label) + ')' : ''}`)); L.push(''); }
     const notes = all.filter((i) => i.type === 'comment' && Array.isArray(i.msgs) && i.msgs.length);
     if (notes.length) {
@@ -615,12 +725,13 @@ const Plan = (() => {
   };
   const source = (u) => { for (const k in SOURCES) { const m = SOURCES[k].match(String(u || '')); if (m) return m; } return null; };
 
-  return { TOP, SIDE, PAD, UNITS, STATUSES, STATUS_NAMES, TEMPLATES, SOURCES, isGrid, dayOf, isoOf, localDay, thisMonday, dims, sizeFor, column, nowAt, rowName, cellRect, cellAt, cellOf, snap, slotIn, template, sortByVotes, markdown, source };
+  return { TOP, SIDE, PAD, GAP, BAR_H, TRACK, UNITS, STATUSES, STATUS_NAMES, TEMPLATES, SOURCES, isGrid, isBar, dayOf, isoOf, localDay, thisMonday, fmtD, range, dims, sizeFor, column, nowAt, rowName, cellRect, cellAt, cellOf, snap, slotIn, readOrder, flow, cellTop, reflow, xOfDay, dayAtX, barSpan, barBox, barDates, laneY, trackOf, barY, nextTrack, colOfDay, placeBar, workdays, template, sortByVotes, markdown, source };
 })();
 // </plan>
 
 // ---------- helpers ----------
-const isCard = (i) => ['sticky', 'image', 'text', 'web', 'node', 'board', 'task'].includes(i.type);
+const isCard = (i) => ['sticky', 'image', 'text', 'web', 'node', 'board', 'task', 'bar'].includes(i.type);
+const isBar = Plan.isBar;
 const isGrid = Plan.isGrid;
 const centerIn = (i, s) => { const cx = i.x + i.w / 2, cy = i.y + i.h / 2; return cx >= s.x && cx <= s.x + s.w && cy >= s.y && cy <= s.y + s.h; };
 function ownerOf(i, all) {
@@ -681,16 +792,43 @@ const cellName = (g, c) => {
   return [h.t + (h.d ? ' (' + h.d + ')' : ''), r].filter(Boolean).join(' / ');
 };
 const gridMembers = (g, all) => all.filter((i) => isCard(i) && i.grid === g.id);
-// cards keep their place inside their cell when the grid changes shape (same rule as the board)
+// cards keep their cell when the grid changes shape and line up in rows again (a matrix keeps their spot,
+// a task bar its lane and track; its dates give its x and width) — the same rules as the board
 function memberOffsets(g, all) {
-  return gridMembers(g, all).map((m) => { const c = Plan.cellOf(g, m), R = Plan.cellRect(g, c[0], c[1]); return { m, c, fx: (m.x - R.x) / R.w, fy: (m.y - R.y) / R.h }; });
+  return gridMembers(g, all).map((m) => { const c = Plan.cellOf(g, m), R = Plan.cellRect(g, c[0], c[1]); return { m, c, fx: (m.x - R.x) / R.w, fy: (m.y - R.y) / R.h, k: isBar(m) ? Plan.trackOf(g, m) : 0 }; });
 }
-function resnap(g, offs) {
+function resnap(g, offs, all) {
   const d = Plan.dims(g);
   for (const o of offs) {
-    const c = [Math.min(o.c[0], d.nc - 1), Math.min(o.c[1], d.nr - 1)], R = Plan.cellRect(g, c[0], c[1]);
-    o.m.cell = c; const q = Plan.snap(g, { ...o.m, x: R.x + o.fx * R.w, y: R.y + o.fy * R.h }, c); o.m.x = q.x; o.m.y = q.y;
+    const c = [Math.min(o.c[0], d.nc - 1), Math.min(o.c[1], d.nr - 1)];
+    if (isBar(o.m)) { if (g.type === 'timeline') Plan.placeBar(g, o.m, c[1], o.k); continue; }
+    o.m.cell = c;
+    if (g.kind !== 'matrix') continue;
+    const R = Plan.cellRect(g, c[0], c[1]), q = Plan.snap(g, { ...o.m, x: R.x + o.fx * R.w, y: R.y + o.fy * R.h }, c); o.m.x = q.x; o.m.y = q.y;
   }
+  return relayout(g, all || offs.map((o) => o.m));
+}
+// the cards of a table or timeline in rows, cell by cell; lanes grow so bars and cards fit. Returns what moved.
+function relayout(g, all) {
+  const moved = new Set();
+  for (const p of Plan.reflow(g, all)) if (p.m.x !== p.x || p.m.y !== p.y) { p.m.x = p.x; p.m.y = p.y; moved.add(p.m); }
+  const d = Plan.dims(g); let need = 0;
+  for (const m of gridMembers(g, all)) { const top = Plan.cellRect(g, 0, Plan.cellOf(g, m)[1]).y; need = Math.max(need, m.y + (m.h || 0) + Plan.PAD - top); }
+  if (need > d.lh + 0.5) {
+    const offs = memberOffsets(g, all); g.h = Math.round(Plan.TOP + d.nr * Math.ceil(need)); moved.add(g);
+    offs.forEach((o) => moved.add(o.m)); resnap(g, offs, all);
+  }
+  return moved;
+}
+function barFields(it, spec) { // a task bar on a timeline: name, dates, progress, owner, milestone
+  if (spec.text != null) it.text = String(spec.text).replace(/\s+/g, ' ').trim().slice(0, 200);
+  for (const k of ['start', 'due']) if (spec[k] != null) { if (Plan.dayOf(spec[k]) == null) throw new Error(k + ': a YYYY-MM-DD date'); it[k] = spec[k]; }
+  if (spec.days != null && spec.due == null) it.due = Plan.isoOf(Plan.dayOf(it.start) + clampN(spec.days, 1, 3660, 5) - 1);
+  if (spec.milestone === true) { it.ms = true; if (spec.start == null && spec.due != null) it.start = it.due; else it.due = it.start; }
+  else if (spec.milestone === false) delete it.ms;
+  if (Plan.dayOf(it.due) < Plan.dayOf(it.start)) it.due = it.start;
+  if (spec.progress != null) it.pct = clampN(spec.progress, 0, 100, 0);
+  for (const k of ['who', 'assignee']) if (spec[k] != null) { const v = String(spec[k]).trim().slice(0, 40); if (v) it.who = v; else delete it.who; }
 }
 function gridFields(it, spec) { // timeline / table fields from a tool call, normalised like the board does
   if (spec.title != null) it.title = String(spec.title).slice(0, 120);
@@ -768,8 +906,12 @@ function summary(i, all, retro) {
     o.lanes = i.lanes || [];
   }
   if (i.type === 'table') { o.title = i.title || ''; if (i.kind === 'matrix') { o.matrix = true; o.cells = i.cells || []; if (i.ax && i.ax.length) o.axes = i.ax; } o.columns = i.cols || []; o.rows = i.rows || []; }
+  if (i.type === 'bar') {
+    o.text = i.text || ''; o.start = i.start; o.due = i.due; o.progress = i.pct || 0; if (i.ms) o.milestone = true; if (i.who) o.who = i.who;
+    if (all) { const after = all.filter((l) => l.type === 'link' && l.b === i.id && all.some((q) => q.id === l.a && isBar(q))).map((l) => l.a); if (after.length) o.after = after; }
+  }
   if (i.type === 'task') { o.text = i.text || ''; o.status = i.status || 'todo'; for (const [k, f] of [['who', 'who'], ['estimate', 'est'], ['due', 'due'], ['tags', 'tags']]) if (i[f]) o[k] = i[f]; if (i.src) o.source = { tracker: i.src.p, key: i.src.key, url: i.src.url }; }
-  if (all && i.grid) { const g = all.find((q) => q.id === i.grid); if (g && isGrid(g)) { o.grid = g.id; o.cell = cellName(g, Plan.cellOf(g, i)); } }
+  if (all && i.grid) { const g = all.find((q) => q.id === i.grid); if (g && isGrid(g)) { o.grid = g.id; if (isBar(i)) o.lane = Plan.rowName(g, Plan.cellOf(g, i)[1]) || 1; else o.cell = cellName(g, Plan.cellOf(g, i)); } }
   if (retro && isHidden(i, retro)) { o.hidden = true; if (o.text != null) o.text = '(hidden until revealed)'; }
   if (retro && retro.tally[i.id]) o.votes = retro.tally[i.id];
   if (i.color) o.color = i.color;
@@ -803,10 +945,10 @@ function refit(sec, all) {
 const boardArg = { type: 'string', description: 'Board id from list_boards (the part after #b= in a board link).' };
 const TOOLS = [
   { name: 'list_boards', description: 'List the JamBoard boards (id and title).', inputSchema: { type: 'object', properties: {} } },
-  { name: 'get_board', description: 'Read everything on a board: stickies, text, sections, timelines, tables and 2×2 matrices, task cards, diagram nodes, ropes (links), link cards, stamps, comments, plus the retro state (hidden writing, dot voting with vote counts). Coordinates are board pixels; a sticky is 200×200. A card\'s "section" is the id of the section it belongs to; "grid" and "cell" say which timeline/table cell it sits in.', inputSchema: { type: 'object', properties: { board: boardArg } } },
+  { name: 'get_board', description: 'Read everything on a board: stickies, text, sections, timelines, tables and 2×2 matrices, task cards, Gantt bars (start, due, progress, after = the bars they wait for), diagram nodes, ropes (links), link cards, stamps, comments, plus the retro state (hidden writing, dot voting with vote counts). Coordinates are board pixels; a sticky is 200×200. A card\'s "section" is the id of the section it belongs to; "grid" and "cell" say which timeline/table cell it sits in.', inputSchema: { type: 'object', properties: { board: boardArg } } },
   {
     name: 'add_items',
-    description: 'Add items to a board in one go. Planning types: timeline (title, unit day|week|sprint|month, start YYYY-MM-DD, columns: a count or a list of names, sprint_days, first_sprint, lanes: team or stream names), table (title, columns, rows; matrix: true with cells: the 4 quadrant names and axes [x, y] makes a 2×2 prioritisation matrix), task (text, status todo|doing|review|done, who, estimate, due YYYY-MM-DD, tags, url: a Jira/Linear/GitHub issue link; GitHub issues fill themselves in). Put any card into a timeline or table cell with grid (ref or id) plus column (1-based number, header name, or a YYYY-MM-DD date on a timeline) and lane/row (number or name); in a matrix, cell can be the quadrant name. Other types: node (a diagram block for flows and architecture: text, shape rect|round|pill|circle|diamond|cyl|hex, icon service|db|cache|queue|api|user|web|mobile|cloud|storage|fn|lock|mail|none; ropes between two nodes are drawn straight with an arrow), stamp (emoji, on: a card to stamp, size), comment (text: a comment pin, on: a card), sticky (text, color), text (text, style h1|h2|p|s), section (title, color; give other items "section": its ref to put them inside — the section grows to fit), link (a rope from "from" to "to", optional label and color), web (url: a link card with preview; YouTube shows the video thumbnail). Leave x/y out to let the board lay items out in a tidy grid (inside their section if given). Use "ref" to name a new item so links and "section" can point at it in the same call; existing ids work too.',
+    description: 'Add items to a board in one go. Planning types: timeline (title, unit day|week|sprint|month, start YYYY-MM-DD, columns: a count or a list of names, sprint_days, first_sprint, lanes: team or stream names), table (title, columns, rows; matrix: true with cells: the 4 quadrant names and axes [x, y] makes a 2×2 prioritisation matrix), task (text, status todo|doing|review|done, who, estimate, due YYYY-MM-DD, tags, url: a Jira/Linear/GitHub issue link; GitHub issues fill themselves in), bar (a Gantt task bar on a timeline: text, grid: the timeline, lane, start and due YYYY-MM-DD (or days), progress 0–100, who, milestone, after: bars it depends on; x and width follow the dates). Cards in a table or timeline cell line up in rows, side by side as far as the column is wide. Put any card into a timeline or table cell with grid (ref or id) plus column (1-based number, header name, or a YYYY-MM-DD date on a timeline) and lane/row (number or name); in a matrix, cell can be the quadrant name. Other types: node (a diagram block for flows and architecture: text, shape rect|round|pill|circle|diamond|cyl|hex, icon service|db|cache|queue|api|user|web|mobile|cloud|storage|fn|lock|mail|none; ropes between two nodes are drawn straight with an arrow), stamp (emoji, on: a card to stamp, size), comment (text: a comment pin, on: a card), sticky (text, color), text (text, style h1|h2|p|s), section (title, color; give other items "section": its ref to put them inside — the section grows to fit), link (a rope from "from" to "to", optional label and color), web (url: a link card with preview; YouTube shows the video thumbnail). Leave x/y out to let the board lay items out in a tidy grid (inside their section if given). Use "ref" to name a new item so links and "section" can point at it in the same call; existing ids work too.',
     inputSchema: {
       type: 'object', required: ['items'],
       properties: {
@@ -816,9 +958,14 @@ const TOOLS = [
           items: {
             type: 'object', required: ['type'],
             properties: {
-              type: { type: 'string', enum: ['sticky', 'text', 'section', 'link', 'web', 'stamp', 'comment', 'node', 'timeline', 'table', 'task'] },
+              type: { type: 'string', enum: ['sticky', 'text', 'section', 'link', 'web', 'stamp', 'comment', 'node', 'timeline', 'table', 'task', 'bar'] },
+              progress: { type: 'number', description: 'Bar: percent done, 0–100.' },
+              days: { type: 'number', description: 'Bar: length in days when due is left out (default 5).' },
+              milestone: { type: 'boolean', description: 'Bar: a milestone, one date shown as a diamond.' },
+              after: { type: 'array', items: { type: 'string' }, description: 'Bar: refs or ids of the bars it depends on (drawn as arrows from their end to its start).' },
+              track: { type: 'number', description: 'Bar: row inside its lane, 1-based (default: under the bars already there).' },
               unit: { type: 'string', enum: ['day', 'week', 'sprint', 'month'], description: 'Timeline: what one column is (default week).' },
-              start: { type: 'string', description: 'Timeline: first day, YYYY-MM-DD (default: this Monday).' },
+              start: { type: 'string', description: 'Timeline: first day, YYYY-MM-DD (default: this Monday). Bar: its first day.' },
               columns: { description: 'Timeline: number of columns, or a list of custom column names. Table: list of column names.', anyOf: [{ type: 'number' }, { type: 'array', items: { type: 'string' } }] },
               sprint_days: { type: 'number', description: 'Timeline with unit sprint: sprint length in days (default 14).' },
               first_sprint: { type: 'number', description: 'Timeline with unit sprint: number of the first sprint (default 1).' },
@@ -830,7 +977,7 @@ const TOOLS = [
               tints: { type: 'array', items: { type: 'string' }, description: 'Table: a colour per column header.' },
               status: { type: 'string', enum: ['todo', 'doing', 'review', 'done'], description: 'Task status.' },
               who: { type: 'string', description: 'Task assignee.' }, estimate: { type: 'string', description: 'Task estimate, e.g. "3 SP" or "2d".' },
-              due: { type: 'string', description: 'Task due date YYYY-MM-DD.' }, tags: { type: 'array', items: { type: 'string' }, description: 'Task tags (up to 8).' },
+              due: { type: 'string', description: 'Task due date YYYY-MM-DD. Bar: its last day (inclusive).' }, tags: { type: 'array', items: { type: 'string' }, description: 'Task tags (up to 8).' },
               grid: { type: 'string', description: 'Ref or id of a timeline or table to put this card into.' },
               column: { description: 'With grid: column as a 1-based number, its name, or (timeline) a YYYY-MM-DD date.', anyOf: [{ type: 'number' }, { type: 'string' }] },
               lane: { description: 'With grid: timeline lane or table row, 1-based number or name.', anyOf: [{ type: 'number' }, { type: 'string' }] },
@@ -861,9 +1008,9 @@ const TOOLS = [
   },
   {
     name: 'update_items',
-    description: 'Change existing items: text, title, color, style, label, node shape and icon, link arrow/dash/thick, position (x, y), size (w, h), section (id, or "" to take a card out of its section). Tasks: status, who, estimate, due, tags, url. Timelines/tables: title, unit, start, columns, sprint_days, first_sprint, lanes, rows, cells, axes, tints (cards keep their cells; moving one moves its cards). Move a card into a cell with grid + column + lane/row (or cell on a matrix), or grid "" to take it out. Only the fields you pass change.',
+    description: 'Change existing items: text, title, color, style, label, node shape and icon, link arrow/dash/thick, position (x, y), size (w, h), section (id, or "" to take a card out of its section). Tasks: status, who, estimate, due, tags, url. Bars: text, start, due, progress, who, milestone, lane, track (dependencies are links: add_items link from → to, or delete them). Timelines/tables: title, unit, start, columns, sprint_days, first_sprint, lanes, rows, cells, axes, tints (cards keep their cells; moving one moves its cards). Move a card into a cell with grid + column + lane/row (or cell on a matrix), or grid "" to take it out. Only the fields you pass change.',
     inputSchema: { type: 'object', required: ['changes'], properties: { board: boardArg, changes: { type: 'array', minItems: 1, maxItems: 200, items: { type: 'object', required: ['id'], properties: { id: { type: 'string' }, text: { type: 'string' },
-      status: { type: 'string', enum: ['todo', 'doing', 'review', 'done'] }, who: { type: 'string' }, estimate: { type: 'string' }, due: { type: 'string', description: 'YYYY-MM-DD, or "" to clear.' }, tags: { type: 'array', items: { type: 'string' } }, url: { type: 'string', description: 'Task: tracker issue link, or "" to unlink.' },
+      status: { type: 'string', enum: ['todo', 'doing', 'review', 'done'] }, who: { type: 'string' }, progress: { type: 'number' }, milestone: { type: 'boolean' }, days: { type: 'number' }, track: { type: 'number' }, estimate: { type: 'string' }, due: { type: 'string', description: 'YYYY-MM-DD, or "" to clear.' }, tags: { type: 'array', items: { type: 'string' } }, url: { type: 'string', description: 'Task: tracker issue link, or "" to unlink.' },
       unit: { type: 'string', enum: ['day', 'week', 'sprint', 'month'] }, start: { type: 'string' }, columns: { anyOf: [{ type: 'number' }, { type: 'array', items: { type: 'string' } }] }, sprint_days: { type: 'number' }, first_sprint: { type: 'number' }, lanes: { type: 'array', items: { type: 'string' } }, rows: { type: 'array', items: { type: 'string' } }, cells: { type: 'array', items: { type: 'string' } }, axes: { type: 'array', items: { type: 'string' } }, tints: { type: 'array', items: { type: 'string' } }, matrix: { type: 'boolean' },
       grid: { type: 'string', description: 'Timeline/table id to move the card into, or "" to take it out.' }, column: { anyOf: [{ type: 'number' }, { type: 'string' }] }, lane: { anyOf: [{ type: 'number' }, { type: 'string' }] }, row: { anyOf: [{ type: 'number' }, { type: 'string' }] }, cell: { type: 'string' }, shape: { type: 'string', enum: Flow.SHAPES }, icon: { type: 'string', enum: Flow.ICONS }, arrow: { type: 'boolean' }, dash: { type: 'boolean' }, thick: { type: 'boolean' }, title: { type: 'string' }, color: { type: 'string' }, style: { type: 'string', enum: TEXT_STYLES }, label: { type: 'string' }, section: { type: 'string' }, x: { type: 'number' }, y: { type: 'number' }, w: { type: 'number' }, h: { type: 'number' } } } } } },
   },
@@ -876,7 +1023,7 @@ const TOOLS = [
   { name: 'create_board', description: 'Create a new empty board and return its id.', inputSchema: { type: 'object', required: ['title'], properties: { title: { type: 'string' } } } },
   {
     name: 'add_template',
-    description: 'Put a ready-made planning or retro template on the board (placed to the right of existing content unless x/y are given): sprints (timeline of 2-week sprints with team lanes), weeks (6-week timeline), roadmap (Now/Next/Later table), matrix (Impact/Effort 2×2), table (3×2), sprint (sprint goal + backlog/commit/risks), ssc (Start/Stop/Continue retro), msg (Mad/Sad/Glad), 4l (Liked/Learned/Lacked/Longed for), sail (sailboat retro). Returns the ids; fill it with add_items using grid + column/lane.',
+    description: 'Put a ready-made planning or retro template on the board (placed to the right of existing content unless x/y are given): sprints (timeline of 2-week sprints with team lanes), weeks (6-week timeline), roadmap (Now/Next/Later table), matrix (Impact/Effort 2×2), table (3×2), sprint (sprint goal + backlog/commit/risks), gantt (a project timeline with Gantt bars, progress and dependencies), ssc (Start/Stop/Continue retro), msg (Mad/Sad/Glad), 4l (Liked/Learned/Lacked/Longed for), sail (sailboat retro). Returns the ids; fill it with add_items using grid + column/lane.',
     inputSchema: { type: 'object', required: ['template'], properties: { board: boardArg, template: { type: 'string', enum: Plan.TEMPLATES.map((t) => t[0]) }, title: { type: 'string', description: 'Optional title for the main timeline/table.' }, x: { type: 'number' }, y: { type: 'number' } } },
   },
   {
@@ -947,11 +1094,11 @@ async function callTool(name, a) {
     if (!Plan.TEMPLATES.some((t) => t[0] === key)) throw new Error('template: ' + Plan.TEMPLATES.map((t) => t[0]).join(', '));
     const list = Plan.template(key, 0, 0, uid, BY, Date.now());
     const main = list.find(isGrid); if (main && typeof a.title === 'string' && a.title.trim()) main.title = a.title.trim().slice(0, 120);
-    const nb = bbox(list), b0 = bbox(all.filter((i) => i.type !== 'link' && i.type !== 'comment'));
+    const nb = bbox(list.filter((i) => i.type !== 'link')), b0 = bbox(all.filter((i) => i.type !== 'link' && i.type !== 'comment'));
     const ox = num(a.x) ?? (b0 ? b0.x2 + 200 : 0), oy = num(a.y) ?? (b0 ? b0.y1 + 60 : 0);
-    for (const it of list) { it.x += ox - nb.x1; it.y += oy - nb.y1; it.z = ++z; }
+    for (const it of list) { if (it.type !== 'link') { it.x += ox - nb.x1; it.y += oy - nb.y1; } it.z = ++z; }
     await save(board, list);
-    return { added: list.map((i) => summary(i, list)), hint: 'Add cards into it with add_items: { type: "sticky" | "task", text, grid: "<id>", column: <number, name or date>, lane: <number or name> }.' };
+    return { added: list.map((i) => summary(i, list)), hint: 'Add cards into it with add_items: { type: "sticky" | "task", text, grid: "<id>", column: <number, name or date>, lane: <number or name> }. On a timeline, add Gantt bars with { type: "bar", text, grid, lane, start, due, progress, after: [refs or ids] }.' };
   }
 
   if (name === 'hidden_writing') {
@@ -1018,7 +1165,7 @@ async function callTool(name, a) {
 
   if (name === 'add_items') {
     const list = Array.isArray(a.items) ? a.items.slice(0, 200) : [];
-    const refs = new Map(), made = [], touched = new Set();
+    const refs = new Map(), made = [], touched = new Set(), touchedGrids = new Set(), deps = [];
     const resolve = (k) => (k == null ? null : refs.get(String(k)) || byId.get(String(k)) || null);
     // free area for loose items: to the right of what is already there
     const b0 = bbox(all.filter((i) => i.type !== 'link' && i.type !== 'comment'));
@@ -1037,7 +1184,7 @@ async function callTool(name, a) {
       const p = { x: st.x, y: st.y }; st.x += w + 40; st.rowH = Math.max(st.rowH, h); st.col++; return p;
     };
     // sections first, so cards can be placed inside them
-    const rank = (t) => (t === 'section' || t === 'timeline' || t === 'table' ? 0 : t === 'link' ? 2 : 1);
+    const rank = (t) => (t === 'section' || t === 'timeline' || t === 'table' ? 0 : t === 'link' ? 2 : t === 'bar' ? 0.5 : 1);
     const order = [...list].sort((p, q) => rank(p.type) - rank(q.type));
     for (const spec of order) {
       const t = spec.type; let it;
@@ -1057,6 +1204,21 @@ async function callTool(name, a) {
         if (num(spec.w) != null) it.w = Math.max(num(spec.w), d.side + d.nc * 80);
         if (num(spec.h) != null) it.h = Math.max(num(spec.h), Plan.TOP + d.nr * 80);
         if (spec.x != null && spec.y != null) { it.x = num(spec.x); it.y = num(spec.y); } else { const p = slot(it.w, it.h + 50); it.x = p.x; it.y = p.y + 50; }
+      } else if (t === 'bar') { // a task bar: on a timeline its dates give x and width, its lane and track give y
+        it = { id: uid(), type: 'bar', text: '', start: Plan.isoOf(Plan.localDay(Date.now())), due: Plan.isoOf(Plan.localDay(Date.now()) + 4), pct: 0, color: stickyColor(spec.color) || 'pink', w: 160, h: Plan.BAR_H, z: ++z, by: BY };
+        barFields(it, spec);
+        const g = spec.grid != null ? resolve(spec.grid) : null;
+        if (spec.grid != null && (!g || g.type !== 'timeline')) throw new Error(`No timeline "${spec.grid}" for the bar`);
+        if (g) {
+          if (spec.start == null && spec.column != null) { const c = Plan.column(g, colIndex(g, spec.column)); const n = Plan.dayOf(it.due) - Plan.dayOf(it.start); it.start = Plan.isoOf(c.from); it.due = Plan.isoOf(c.from + n); }
+          const lane = rowIndex(g, spec.lane ?? spec.row), track = num(spec.track) != null ? Math.max(0, num(spec.track) - 1) : Plan.nextTrack(g, lane, gridMembers(g, all.concat(made)));
+          Plan.placeBar(g, it, lane, track); touchedGrids.add(g);
+          const home = geoSec(it, all.concat(made)); it.sec = home ? home.id : null;
+        } else {
+          it.w = Math.max(40, (Plan.dayOf(it.due) - Plan.dayOf(it.start) + 1) * 24);
+          if (spec.x != null && spec.y != null) { it.x = num(spec.x); it.y = num(spec.y); } else { const p = slot(it.w, it.h); it.x = p.x; it.y = p.y; }
+        }
+        for (const dep of Array.isArray(spec.after) ? spec.after.slice(0, 20) : []) deps.push([dep, it]);
       } else if (t === 'link') {
         const A = resolve(spec.from), B = resolve(spec.to);
         if (!A || !B || !isCard(A) || !isCard(B) || A === B) throw new Error(`Link needs "from" and "to" pointing at two different cards (got ${spec.from} → ${spec.to})`);
@@ -1104,7 +1266,7 @@ async function callTool(name, a) {
         if (g) { // into a timeline or table cell, under the cards already there
           const cell = matrixCell(g, spec.cell) || [colIndex(g, spec.column), rowIndex(g, spec.lane ?? spec.row)];
           const q = spec.x != null && spec.y != null ? Plan.snap(g, { ...it, x: num(spec.x), y: num(spec.y) }, cell) : Plan.slotIn(g, cell, it.w, it.h, gridMembers(g, all.concat(made)));
-          it.x = q.x; it.y = q.y; it.grid = g.id; it.cell = cell;
+          it.x = q.x; it.y = q.y; it.grid = g.id; it.cell = cell; touchedGrids.add(g);
           const home = geoSec(it, all.concat(made)); it.sec = home ? home.id : null;
         } else {
           if (spec.x != null && spec.y != null) { it.x = num(spec.x); it.y = num(spec.y); }
@@ -1132,7 +1294,12 @@ async function callTool(name, a) {
       if (spec.ref) refs.set(String(spec.ref), it);
       made.push(it);
     }
+    for (const [dep, it] of deps) { // "after": the bars this one waits for, as links between the two bars
+      const A = resolve(dep); if (!A || !isBar(A) || A === it) throw new Error(`after: "${dep}" is not another bar`);
+      const l = { id: uid(), type: 'link', a: A.id, b: it.id, z: ++z, by: BY }; made.push(l);
+    }
     const everything = all.concat(made), extra = [];
+    for (const g of touchedGrids) for (const m of relayout(g, everything)) if (!made.includes(m) && !extra.includes(m)) extra.push(m);
     for (const sec of touched) if (refit(sec, everything) && !made.includes(sec)) extra.push(sec);
     for (const sec of made.filter((i) => i.type === 'section')) refit(sec, everything);
     await save(board, made.concat(extra));
@@ -1140,12 +1307,13 @@ async function callTool(name, a) {
   }
 
   if (name === 'update_items') {
-    const changed = new Set(), touched = new Set();
+    const changed = new Set(), touched = new Set(), grids = new Set();
     for (const c of (a.changes || []).slice(0, 200)) {
       const it = byId.get(String(c.id)); if (!it) throw new Error('No item ' + c.id);
       const was = ownerOf(it, all), ox = it.x, oy = it.y, ow = it.w, oh = it.h;
       const offs = isGrid(it) ? memberOffsets(it, all) : null, d0 = isGrid(it) ? Plan.dims(it) : null;
       if (it.type === 'task') taskFields(it, c);
+      if (isBar(it)) barFields(it, c);
       if (isGrid(it)) {
         gridFields(it, c);
         if (c.w == null && c.h == null) Object.assign(it, Plan.sizeFor(it, d0.cw, d0.lh)); // cells keep their size
@@ -1160,13 +1328,19 @@ async function callTool(name, a) {
         if (c.thick != null) { if (c.thick) it.thick = true; else delete it.thick; }
       }
       if (c.title != null && it.type === 'section') it.title = String(c.title).slice(0, 120);
-      if (c.grid != null && isCard(it)) {
+      const og = it.grid && byId.get(it.grid); if (og && isGrid(og)) grids.add(og);
+      if (c.grid != null && isBar(it)) {
+        if (c.grid === '') { delete it.grid; delete it.cell; }
+        else { const g = byId.get(String(c.grid)); if (!g || g.type !== 'timeline') throw new Error('No timeline ' + c.grid); const lane = rowIndex(g, c.lane ?? c.row); Plan.placeBar(g, it, lane, Plan.nextTrack(g, lane, gridMembers(g, all).filter((m) => m !== it))); grids.add(g); }
+      } else if (isBar(it) && it.grid && (c.lane != null || c.row != null || c.track != null)) {
+        const g = byId.get(it.grid); if (g && g.type === 'timeline') { const lane = c.lane != null || c.row != null ? rowIndex(g, c.lane ?? c.row) : Plan.cellOf(g, it)[1]; Plan.placeBar(g, it, lane, num(c.track) != null ? Math.max(0, num(c.track) - 1) : Plan.trackOf(g, it)); }
+      } else if (c.grid != null && isCard(it)) {
         if (c.grid === '') { delete it.grid; delete it.cell; }
         else {
           const g = byId.get(String(c.grid)); if (!g || !isGrid(g)) throw new Error('No timeline or table ' + c.grid);
           const cell = matrixCell(g, c.cell) || [colIndex(g, c.column), rowIndex(g, c.lane ?? c.row)];
           const q = Plan.slotIn(g, cell, it.w, it.h, gridMembers(g, all).filter((m) => m !== it));
-          it.x = q.x; it.y = q.y; it.grid = g.id; it.cell = cell;
+          it.x = q.x; it.y = q.y; it.grid = g.id; it.cell = cell; grids.add(g);
           const home = geoSec(it, all); it.sec = home ? home.id : null;
         }
       }
@@ -1180,8 +1354,10 @@ async function callTool(name, a) {
       if ((c.w != null || c.h != null) && it.type === 'section') it.autofit = false;
       if (isGrid(it)) {
         const d = Plan.dims(it); it.w = Math.max(it.w, d.side + d.nc * 80); it.h = Math.max(it.h, Plan.TOP + d.nr * 80);
-        if (it.x !== ox || it.y !== oy || it.w !== ow || it.h !== oh || offs.some((o) => o.c[0] >= d.nc || o.c[1] >= d.nr)) { resnap(it, offs); offs.forEach((o) => changed.add(o.m)); }
+        if (it.x !== ox || it.y !== oy || it.w !== ow || it.h !== oh || offs.some((o) => o.c[0] >= d.nc || o.c[1] >= d.nr) || c.unit != null || c.start != null || c.columns != null || c.sprint_days != null) { resnap(it, offs, all).forEach((m) => changed.add(m)); offs.forEach((o) => changed.add(o.m)); }
+        grids.add(it);
       }
+      if (isBar(it) && it.grid) { const g = byId.get(it.grid); if (g && g.type === 'timeline') { Plan.placeBar(g, it, Plan.cellOf(g, it)[1], Plan.trackOf(g, it)); grids.add(g); } }
       if (c.section != null && isCard(it)) {
         const s = c.section === '' ? null : byId.get(String(c.section));
         if (c.section !== '' && (!s || s.type !== 'section')) throw new Error('No section ' + c.section);
@@ -1194,6 +1370,7 @@ async function callTool(name, a) {
       changed.add(it);
       const now = ownerOf(it, all); if (was) touched.add(was); if (now) touched.add(now);
     }
+    for (const g of grids) relayout(g, all).forEach((m) => changed.add(m));
     for (const s of touched) if (refit(s, all)) changed.add(s);
     await save(board, [...changed]);
     return { updated: [...changed].map((i) => i.id) };

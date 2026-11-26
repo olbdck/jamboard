@@ -703,6 +703,67 @@ body.view-only .tk-st { cursor: default; box-shadow: none; }
 .tk-foot span::before { margin-right: 4px; }
 .tk-who::before { content: "👤"; } .tk-est::before { content: "⏱"; } .tk-due::before { content: "📅"; }
 .tk-due.late { color: var(--bad); font-weight: 600; }
+/* task bars on a timeline (Gantt): the name inside (or beside, when the bar is short), progress filling from the left */
+.item.bar { display: flex; align-items: center; gap: 8px; padding: 0 12px; border-radius: 10px; color: var(--ink); --p: 0%; --edge: color-mix(in srgb, var(--c) 62%, var(--ink) 38%);
+  background: color-mix(in srgb, var(--c) 48%, #fff); box-shadow: inset 0 0 0 calc(1px / var(--z)) var(--edge), 0 1px 2px rgba(0, 0, 0, .1); }
+.bar .br-fill { position: absolute; left: 0; top: 0; bottom: 0; width: var(--p); border-radius: 10px 3px 3px 10px; background: var(--c); box-shadow: inset 0 0 0 calc(1px / var(--z)) var(--edge); pointer-events: none; transition: width var(--base) var(--ease-em); }
+.bar.done .br-fill { border-radius: 10px; }
+.bar .txt { position: relative; z-index: 1; flex: 1; min-width: 0; font: 600 14px/1.2 var(--f-text); letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; outline: none; }
+.bar .txt:empty::before { content: "Назва задачі"; opacity: .55; font-weight: 500; }
+.bar.editing .txt { cursor: text; user-select: text; -webkit-user-select: text; text-overflow: clip; }
+.bar .br-pct { position: relative; z-index: 1; flex: none; font: 600 12px/1 var(--f-text); font-variant-numeric: tabular-nums; }
+.bar[data-fit="nopct"] .br-pct, .bar[data-fit="out"] .br-pct { display: none; }
+.bar[data-fit="out"] .txt { position: absolute; left: 100%; top: 50%; translate: 0 -50%; margin-left: 10px; overflow: visible; color: var(--text); }
+.bar.late { --edge: var(--bad); }
+.bar.ms { background: none; box-shadow: none; }
+.bar.ms::before { content: ""; position: absolute; inset: 6px; rotate: 45deg; border-radius: 4px; background: var(--c); box-shadow: inset 0 0 0 calc(1px / var(--z)) var(--edge), 0 1px 2px rgba(0, 0, 0, .14); }
+.bar.ms .br-fill, .bar.ms .handle { display: none !important; }
+.bar.ms.sel { outline-offset: calc(1px / var(--z)); border-radius: 50%; }
+.item.bar.snapping { transition: translate 360ms var(--ease-em), width 360ms var(--ease-em), box-shadow var(--slow) var(--ease-em); }
+.bar .handle { top: 50%; bottom: auto; right: calc(-5px / var(--z)); translate: 0 -50%; width: calc(10px / var(--z)); height: min(26px, calc(22px / var(--z))); border-radius: calc(5px / var(--z)); cursor: ew-resize; }
+.bar .handle.bl { right: auto; left: calc(-5px / var(--z)); }
+.bar:hover .handle { display: block; }
+.br-when { position: absolute; left: 0; bottom: 100%; margin-bottom: 6px; transform-origin: 0 100%; scale: max(1, calc(0.8 / var(--z))); padding: 4px 9px; border-radius: var(--r-pill); background: var(--text); color: var(--bg); font: 600 12px/1 var(--f-text); white-space: nowrap; pointer-events: none; opacity: 0; translate: 0 -3px; transition: opacity var(--fast) var(--ease), translate var(--fast) var(--ease); z-index: 2; }
+.bar:is(.dragging, .resizing) .br-when { opacity: 1; translate: 0 0; }
+.bar > .port.l, .bar > .port.r { display: none; } /* the ends stretch the bar; links start from the top or bottom */
+.bar.editing .br-when { opacity: 0; }
+#links g.dep .rope { stroke-width: 2px; } #links g.dep .head { stroke-width: 1px; }
+#links g.clash .rope { stroke-dasharray: 5 4; }
+.pv-bar { border-radius: 10px; background: linear-gradient(to right, var(--c) var(--p), color-mix(in srgb, var(--c) 48%, #fff) var(--p)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 62%, var(--ink) 38%); display: flex; align-items: center; padding: 0 12px; box-sizing: border-box; }
+.pv-bar b { font: 600 14px/1.2 var(--f-text); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pv-bar.ms { background: none; box-shadow: none; } .pv-bar.ms b { display: none; }
+/* the bar details: an inspector on the right */
+.panel.popover.side-pop#barPop { left: auto; right: calc(16px + env(safe-area-inset-right, 0px)); top: 72px; width: 340px; max-height: calc(100vh - 170px); overflow: auto; overscroll-behavior: contain; transform-origin: 100% 0; }
+.br-grid { display: grid; grid-template-columns: 82px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.br-grid .br-wide { grid-column: 2 / 4; }
+.br-steps { display: flex; gap: 4px; }
+.br-steps .step { width: 30px; height: 30px; border-radius: 50%; border: 0; background: var(--chip); color: var(--text); font-size: 17px; line-height: 1; cursor: pointer; transition: background-color var(--fast) var(--ease), scale var(--fast) var(--ease-spring); }
+.br-steps .step:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 14%, var(--chip)); }
+.br-steps .step:active { scale: .92; } .br-steps .step:disabled { opacity: .35; cursor: default; }
+.br-len { font-size: 14px; font-variant-numeric: tabular-nums; }
+.br-ph { display: flex; align-items: baseline; justify-content: space-between; }
+.br-ph b { font: 600 15px var(--f-text); font-variant-numeric: tabular-nums; }
+.br-range { -webkit-appearance: none; appearance: none; width: 100%; height: 24px; margin: 0; background: transparent; cursor: pointer; --v: 0%; }
+.br-range::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: linear-gradient(to right, var(--accent) var(--v), color-mix(in srgb, var(--text) 14%, transparent) var(--v)); }
+.br-range::-moz-range-track { height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--text) 14%, transparent); }
+.br-range::-moz-range-progress { height: 6px; border-radius: 3px; background: var(--accent); }
+.br-range::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; margin-top: -7px; border-radius: 50%; background: #fff; border: 0; box-shadow: 0 0 0 1px rgba(0, 0, 0, .12), 0 2px 6px rgba(0, 0, 0, .25); transition: scale var(--fast) var(--ease-spring); }
+.br-range::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 0; box-shadow: 0 0 0 1px rgba(0, 0, 0, .12), 0 2px 6px rgba(0, 0, 0, .25); }
+.br-range:active::-webkit-slider-thumb { scale: 1.15; }
+.br-range:focus-visible { outline: none; } .br-range:focus-visible::-webkit-slider-thumb { box-shadow: var(--focus); }
+.br-check { margin: 0; }
+.br-warn { margin: 0; font-size: 13px; line-height: 1.4; color: var(--bad); }
+.br-n { color: var(--muted); }
+.br-deps { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.br-deps li { display: flex; align-items: center; gap: 8px; min-height: 32px; min-width: 0; }
+.br-deps i { flex: none; width: 12px; height: 12px; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18); }
+.br-deps i.done { background: radial-gradient(circle, var(--ok) 0 3px, var(--c) 3.5px); }
+.br-go { flex: 1; min-width: 0; text-align: left; border: 0; background: none; padding: 4px 0; font: 500 14px var(--f-text); color: var(--text); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 6px; }
+.br-go:hover { color: var(--accent); } .br-go:focus-visible { outline: 2px solid var(--accent); }
+.br-deps small { flex: none; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.br-x { flex: none; width: 28px; height: 28px; border: 0; border-radius: 50%; background: none; color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; transition: background-color var(--fast) var(--ease); }
+.br-x:hover { background: var(--chip); color: var(--text); }
+.br-none { color: var(--muted); font-size: 13px; min-height: 24px !important; }
 /* hidden writing: someone else's card shows only who is writing it; your own carries a quiet dashed frame */
 .sticky.masked { background-image: repeating-linear-gradient(-45deg, transparent 0 11px, rgba(0, 0, 0, .045) 11px 22px); }
 .sticky.masked .txt::before { content: "🙈"; position: absolute; inset: 0 0 22px; display: grid; place-items: center; font-size: 46px; opacity: .9; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
@@ -923,6 +984,22 @@ select.field.sm { padding-right: 8px; }
   <p class="hint" id="tkSrcNote"></p>
   <button class="txt-btn" id="tkPull" hidden>Оновити з GitHub</button>
 </div>
+<div class="panel popover side-pop" id="barPop" role="dialog" aria-label="Задача на таймлайні" hidden>
+  <div class="tm-head"><span class="label">Задача на таймлайні</span><button class="close" id="brClose" aria-label="Закрити">×</button></div>
+  <label class="fl"><span class="label">Назва</span><input class="field sm" id="brText" maxlength="200" autocomplete="off" placeholder="Назва задачі"></label>
+  <div class="br-grid">
+    <span class="label">Виконавець</span><input class="field sm br-wide" id="brWho" maxlength="40" autocomplete="off" placeholder="Ім’я">
+    <span class="label">Початок</span><input type="date" class="field sm" id="brStart"><span class="br-steps"><button class="step" data-d="start:-1" aria-label="Почати на день раніше">−</button><button class="step" data-d="start:1" aria-label="Почати на день пізніше">+</button></span>
+    <span class="label" id="brDueL">Дедлайн</span><input type="date" class="field sm" id="brDue"><span class="br-steps"><button class="step" data-d="due:-1" aria-label="Дедлайн на день раніше">−</button><button class="step" data-d="due:1" aria-label="Дедлайн на день пізніше">+</button></span>
+    <span class="label">Тривалість</span><span class="br-len br-wide" id="brLen"></span>
+  </div>
+  <div class="fl" id="brPctRow"><div class="br-ph"><span class="label">Прогрес</span><b id="brPctV" aria-hidden="true">0%</b></div><input type="range" class="br-range" id="brPct" min="0" max="100" step="5" aria-label="Прогрес, відсотків"></div>
+  <label class="check br-check"><input type="checkbox" id="brMs"> Віха (одна дата, ромб)</label>
+  <p class="br-warn" id="brWarn" hidden></p>
+  <div class="fl"><span class="label">Залежить від <span class="br-n" id="brDepN"></span></span><ul class="br-deps" id="brDeps"></ul></div>
+  <div class="fl"><span class="label">Блокує <span class="br-n" id="brBlkN"></span></span><ul class="br-deps" id="brBlocks"></ul></div>
+  <select class="field sm" id="brAdd" aria-label="Додати залежність"></select>
+</div>
 <div class="panel popover" id="votePop" role="dialog" aria-label="Голосування крапками" hidden>
   <div class="tm-head"><span class="label">Голосування крапками</span><button class="close" id="vtClose" aria-label="Закрити">×</button></div>
   <div id="vtIdle">
@@ -974,6 +1051,7 @@ select.field.sm { padding-right: 8px; }
     <button class="icon-btn" id="gDelCol" aria-label="Прибрати останню колонку"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="10" height="15" rx="2"/><path d="M8.5 4.5v15M15.5 12h6"/></svg><span class="tip">Прибрати останню колонку</span></button>
     <button class="icon-btn" id="gAddRow" aria-label="Додати рядок"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="3.5" width="15" height="10" rx="2"/><path d="M4.5 8.5h15M12 15.5v6M9 18.5h6"/></svg><span class="tip" id="gAddRowTip">Додати рядок</span></button>
     <button class="icon-btn" id="gDelRow" aria-label="Прибрати останній рядок"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="3.5" width="15" height="10" rx="2"/><path d="M4.5 8.5h15M9 18.5h6"/></svg><span class="tip" id="gDelRowTip">Прибрати останній рядок</span></button>
+    <button class="icon-btn" id="gAddBar" aria-label="Додати задачу-смугу"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="11" height="5" rx="2.5"/><rect x="7" y="14" width="9" height="5" rx="2.5"/><path d="M19 4.5v5M16.5 7h5"/></svg><span class="tip">Додати задачу-смугу</span></button>
     <button class="icon-btn" id="gSetBtn" aria-label="Дати й крок таймлайну" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></svg><span class="tip">Дати й крок</span></button>
   </div>
   <div class="sep" id="ctxGridSep"></div>
@@ -981,6 +1059,10 @@ select.field.sm { padding-right: 8px; }
     <button class="icon-btn" id="tkBtn" aria-label="Деталі задачі" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></svg><span class="tip">Виконавець, естімейт, дедлайн</span></button>
   </div>
   <div class="sep" id="ctxTaskSep"></div>
+  <div class="group" id="ctxBar" style="gap:2px;padding:0 2px">
+    <button class="icon-btn" id="brBtn" aria-label="Дати, прогрес і залежності" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8.5" width="18" height="7" rx="3.5"/><path d="M6.5 12h6" stroke-width="2.6"/></svg><span class="tip">Дати, прогрес і залежності</span></button>
+  </div>
+  <div class="sep" id="ctxBarSep"></div>
   <div class="group" id="ctxColors"></div>
   <div class="sep" id="ctxSep"></div>
   <div class="group txt-tools" id="ctxText">
@@ -1707,13 +1789,96 @@ const Plan = (() => {
     const x = g.kind === 'matrix' ? fitX(it.x) : w <= R.w - PAD * 2 ? R.x + (R.w - w) / 2 : R.x + PAD;
     return { x: Math.round(x), y: Math.round(fitY(it.y)) };
   }
-  // the next free spot in a cell: under the cards already there
+  // the next free spot in a cell: after the cards already there (in a matrix, under them)
   function slotIn(g, cell, w, h, members) {
     const R = cellRect(g, cell[0], cell[1]);
-    const here = members.filter((m) => Array.isArray(m.cell) && m.cell[0] === cell[0] && m.cell[1] === cell[1]);
+    const here = members.filter((m) => !isBar(m) && Array.isArray(m.cell) && m.cell[0] === cell[0] && m.cell[1] === cell[1]);
+    if (g.kind !== 'matrix') { const ps = flow(g, cell, here.sort(readOrder).concat([{ w, h }]), cellTop(g, cell[1], members)); const p = ps[ps.length - 1]; return { x: p.x, y: p.y }; }
     const y = here.length ? Math.max(...here.map((m) => m.y + (m.h || 0))) + 20 : R.y + PAD;
     return snap(g, { w, h, x: R.x + PAD, y }, cell);
   }
+
+  // ---------- cards in a cell line up in rows: as many side by side as the column fits, then the next row ----------
+  const GAP = 16, BAR_H = 36, TRACK = 46;
+  const isBar = (i) => !!i && i.type === 'bar';
+  const readOrder = (a, b) => a.y - b.y || a.x - b.x;
+  // where cards (in this order) go in a cell: left to right, wrapping; the widest row is centred in the column.
+  // Returns [{ m, x, y, row, col }]; `top` is where the first row starts (under the task bars of a timeline lane).
+  function flow(g, cell, list, top) {
+    const R = cellRect(g, cell[0], cell[1]), inner = R.w - PAD * 2, rows = [];
+    let row = null;
+    for (const m of list) {
+      const w = m.w || 200;
+      if (!row || (row.items.length && row.w + GAP + w > inner)) { row = { items: [], w: -GAP, h: 0 }; rows.push(row); }
+      row.items.push(m); row.w += GAP + w; row.h = Math.max(row.h, m.h || 120);
+    }
+    const span = rows.reduce((a, r) => Math.max(a, r.w), 0), x0 = R.x + PAD + Math.max(0, (inner - span) / 2), out = [];
+    let y = top != null ? top : R.y + PAD;
+    rows.forEach((r, ri) => { let x = x0; r.items.forEach((m, ci) => { out.push({ m, x: Math.round(x), y: Math.round(y), row: ri, col: ci }); x += (m.w || 200) + GAP; }); y += r.h + GAP; });
+    return out;
+  }
+  // the top of a cell's cards: on a timeline, under the lane's task bars
+  function cellTop(g, r, all) {
+    let y = cellRect(g, 0, r).y + PAD;
+    if (g.type === 'timeline') for (const b of all) if (isBar(b) && b.grid === g.id && cellOf(g, b)[1] === r) y = Math.max(y, b.y + BAR_H + GAP + 4);
+    return y;
+  }
+  // every card of a table or timeline in its place, cell by cell (only `cells`, a Set of "c,r", when given).
+  // Returns [{ m, x, y, row, col }] for all the cards laid out; a matrix keeps cards where they were put.
+  function reflow(g, all, cells) {
+    if (g.kind === 'matrix') return [];
+    const by = new Map(), out = [];
+    for (const m of all) {
+      if (m.grid !== g.id || !CARD.includes(m.type) || isBar(m)) continue;
+      const k = cellOf(g, m).join(',');
+      if (cells && !cells.has(k)) continue;
+      if (!by.has(k)) by.set(k, []); by.get(k).push(m);
+    }
+    for (const [k, list] of by) { const cell = k.split(',').map(Number); out.push(...flow(g, cell, list.sort(readOrder), cellTop(g, cell[1], all))); }
+    return out;
+  }
+
+  // ---------- task bars on a timeline (Gantt): start and due dates give x and width, a lane and track give y ----------
+  function xOfDay(g, day) { // board x of the start of a day (fractions too); before or after the columns it goes on at the edge column's pace
+    const d = dims(g), n = d.nc, at = (i, c) => g.x + d.side + (i + (day - c.from) / (c.to + 1 - c.from)) * d.cw;
+    const c0 = column(g, 0); if (day < c0.from) return at(0, c0);
+    for (let i = 0; i < n; i++) { const c = column(g, i); if (day < c.to + 1) return at(i, c); }
+    return at(n - 1, column(g, n - 1));
+  }
+  function dayAtX(g, x) {
+    const d = dims(g), u = (x - g.x - d.side) / d.cw, i = clamp(Math.floor(u), 0, d.nc - 1), c = column(g, i);
+    return c.from + (u - i) * (c.to + 1 - c.from);
+  }
+  const barSpan = (b) => { const s = dayOf(b.start), e = dayOf(b.due); return s == null ? null : [s, e == null || e < s ? s : e]; };
+  function barBox(g, b) { // { x, w } of a bar on its timeline; a milestone is a diamond on its day
+    const sp = barSpan(b); if (!sp) return null;
+    if (b.ms) { const cx = xOfDay(g, sp[1] + 0.5); return { x: Math.round(cx - BAR_H / 2), w: BAR_H }; }
+    const x0 = xOfDay(g, sp[0]), x1 = xOfDay(g, sp[1] + 1);
+    return { x: Math.round(x0), w: Math.max(14, Math.round(x1 - x0)) };
+  }
+  // the whole days a bar covers once it is put down at x (keeping its length) or stretched to x…x+w
+  function barDates(g, b, x, w, keepLen) {
+    const sp = barSpan(b) || [0, 0];
+    if (b.ms) { const d = Math.floor(dayAtX(g, x + (w || BAR_H) / 2)); return { start: isoOf(d), due: isoOf(d) }; }
+    const s = Math.round(dayAtX(g, x)), e = keepLen ? s + sp[1] - sp[0] : Math.max(s, Math.round(dayAtX(g, x + w)) - 1);
+    return { start: isoOf(s), due: isoOf(e) };
+  }
+  const laneY = (g, r) => cellRect(g, 0, r).y + PAD;
+  const trackOf = (g, b) => Math.max(0, Math.round((b.y - laneY(g, cellOf(g, b)[1])) / TRACK));
+  const barY = (g, r, k) => Math.round(laneY(g, r) + k * TRACK);
+  function nextTrack(g, r, all) { // a new bar in a lane goes on the row under the lowest bar there
+    let k = -1; for (const b of all) if (isBar(b) && b.grid === g.id && cellOf(g, b)[1] === r) k = Math.max(k, trackOf(g, b));
+    return k + 1;
+  }
+  const colOfDay = (g, day) => { const n = dims(g).nc; for (let i = 0; i < n; i++) if (day <= column(g, i).to) return i; return n - 1; };
+  // a bar put on a timeline: its dates decide x and width, its lane and track decide y
+  function placeBar(g, b, lane, track) {
+    const r = clamp(lane | 0, 0, dims(g).nr - 1), box = barBox(g, b), sp = barSpan(b);
+    if (!box) return b;
+    b.grid = g.id; b.cell = [sp ? colOfDay(g, sp[0]) : 0, r]; b.x = box.x; b.w = box.w; b.h = BAR_H; b.y = barY(g, r, Math.max(0, track | 0));
+    return b;
+  }
+  const workdays = (s, e) => { let n = 0; for (let d = s; d <= e; d++) { const w = new Date(d * DAY).getUTCDay(); if (w && w !== 6) n++; } return n; };
 
   // ---------- templates ----------
   const RETRO = {
@@ -1725,6 +1890,7 @@ const Plan = (() => {
   const TEMPLATES = [
     ['sprints', 'Таймлайн спринтів', 'Спринти по 2 тижні з доріжками команд'],
     ['weeks', 'Таймлайн тижнів', 'Шість тижнів від поточного'],
+    ['gantt', 'Діаграма Ганта', 'Задачі-смуги з прогресом і залежностями'],
     ['roadmap', 'Роадмап', 'Зараз · Далі · Потім'],
     ['matrix', 'Матриця Impact / Effort', 'Пріоритети: вплив проти зусиль'],
     ['table', 'Таблиця', 'Колонки й рядки, картки прилипають до клітинок'],
@@ -1740,6 +1906,17 @@ const Plan = (() => {
     const tl = (o, cw, lh) => { const t = { type: 'timeline', x: ox, y: oy, color: 'gray', start: thisMonday(nowMs || Date.now()), ...o }; Object.assign(t, sizeFor({ ...t, w: 0, h: 0 }, cw, lh)); return mk(t); };
     if (key === 'sprints') tl({ title: 'Спринти', unit: 'sprint', len: 14, k: 1, n: 4, lanes: ['Дизайн', 'Фронтенд', 'Бекенд'] }, 340, 250);
     else if (key === 'weeks') tl({ title: 'План на шість тижнів', unit: 'week', n: 6, lanes: [] }, 300, 420);
+    else if (key === 'gantt') {
+      const g = tl({ title: 'План проєкту', unit: 'week', n: 6, lanes: ['Дизайн', 'Розробка', 'Запуск'] }, 240, 0), s0 = dayOf(g.start);
+      const lh = [PAD * 2 + 2 * TRACK, PAD * 2 + 3 * TRACK, PAD * 2 + 2 * TRACK].map((v) => v + 40);
+      Object.assign(g, sizeFor(g, 240, Math.max(...lh)));
+      const bar = (text, lane, track, a, len, pct, color, extra) => { const b = mk({ type: 'bar', text, start: isoOf(s0 + a), due: isoOf(s0 + a + len - 1), pct, color, ...extra }); placeBar(g, b, lane, track); return b; };
+      const dep = (a, b) => out.push({ id: makeId(), type: 'link', a: a.id, b: b.id, by });
+      const res = bar('Дослідження', 0, 0, 0, 5, 100, 'purple'), ui = bar('Макети', 0, 1, 5, 9, 60, 'purple');
+      const api = bar('API', 1, 0, 3, 8, 40, 'info'), app = bar('Застосунок', 1, 1, 14, 11, 10, 'info'), qa = bar('Тестування', 1, 2, 25, 6, 0, 'teal');
+      const beta = bar('Бета', 2, 0, 32, 1, 0, 'pink', { ms: true }), launch = bar('Запуск', 2, 1, 34, 6, 0, 'ok');
+      dep(res, ui); dep(ui, app); dep(api, app); dep(app, qa); dep(qa, beta); dep(beta, launch);
+    }
     else if (key === 'roadmap') table({ title: 'Роадмап', cols: ['Зараз', 'Далі', 'Потім'], rows: ['Продукт', 'Дизайн', 'Розробка'], tint: ['ok', 'info', 'purple'] }, 380, 260);
     else if (key === 'matrix') table({ title: 'Пріоритети · Impact / Effort', kind: 'matrix', cols: ['Мало зусиль', 'Багато зусиль'], rows: ['Великий вплив', 'Малий вплив'], cells: ['Швидкі перемоги', 'Великі проєкти', 'Дрібниці', 'Не варто зусиль'], ax: ['Зусилля', 'Вплив'], tint: ['ok', 'warn'] }, 480, 380);
     else if (key === 'table') table({ title: 'Таблиця', cols: ['Колонка 1', 'Колонка 2', 'Колонка 3'], rows: ['Рядок 1', 'Рядок 2'] }, 320, 260);
@@ -1761,7 +1938,7 @@ const Plan = (() => {
     for (const s of all) if (s.type === 'section' && cx >= s.x && cx <= s.x + s.w && cy >= s.y && cy <= s.y + s.h && (!best || s.w * s.h < best.w * best.h)) best = s;
     return best;
   }
-  const CARD = ['sticky', 'image', 'text', 'web', 'node', 'board', 'task'];
+  const CARD = ['sticky', 'image', 'text', 'web', 'node', 'board', 'task', 'bar'];
   const isCardT = (i) => CARD.includes(i.type);
   const gridOf = (i, byId) => { const g = i.grid && byId.get(i.grid); return isGrid(g) ? g : null; };
 
@@ -1769,7 +1946,7 @@ const Plan = (() => {
   function sortByVotes(all, votes) {
     const byId = new Map(all.map((i) => [i.id, i])), groups = new Map(), out = [];
     for (const i of all) {
-      if (!isCardT(i)) continue;
+      if (!isCardT(i) || isBar(i)) continue;
       const g = gridOf(i, byId), s = g ? null : secOf(i, all);
       const key = g ? g.id + ':' + cellOf(g, i).join(',') : s ? s.id : null;
       if (!key) continue;
@@ -1781,7 +1958,10 @@ const Plan = (() => {
       if (list.length < 2 || !list.some((i) => v(i) > 0)) continue;
       const read = [...list].sort((a, b) => Math.round(a.y / 40) - Math.round(b.y / 40) || a.x - b.x);
       const ranked = [...read].sort((a, b) => v(b) - v(a) || read.indexOf(a) - read.indexOf(b));
-      if (g) { // a column of cards: stack them again, best on top
+      if (g && g.kind !== 'matrix') { // the cell's cards in rows again, best first
+        const c = cellOf(g, list[0]);
+        for (const p of flow(g, c, ranked, cellTop(g, c[1], all))) if (p.x !== p.m.x || p.y !== p.m.y) out.push({ id: p.m.id, x: p.x, y: p.y });
+      } else if (g) { // a matrix cell: stack them, best on top
         let y = Math.min(...list.map((i) => i.y));
         for (const i of ranked) { if (i.y !== y) out.push({ id: i.id, x: i.x, y }); y += (i.h || 120) + 20; }
       } else ranked.forEach((i, k) => { const s = read[k]; if (s.x !== i.x || s.y !== i.y) out.push({ id: i.id, x: s.x, y: s.y }); });
@@ -1818,9 +1998,17 @@ const Plan = (() => {
       return t.includes('\n') ? '- ' + t.split('\n').map((l, k) => (k ? '  ' + l : l)).join('\n') + vs(i) : '- ' + (t || '_(порожній стікер)_') + vs(i);
     };
     const put = (list) => ranked(list).forEach((i) => { const s = line(i); if (s) L.push(s); });
+    const barLines = (list) => [...list].sort((a, b) => (dayOf(a.start) || 0) - (dayOf(b.start) || 0) || read(a, b)).forEach((i) => {
+      if (hidden(i)) { L.push('- _(прихована картка)_'); return; }
+      const sp = barSpan(i), after = all.filter((l) => l.type === 'link' && l.b === i.id && isBar(byId.get(l.a))).map((l) => one(byId.get(l.a).text) || 'задача');
+      const when = sp ? (i.ms ? fmtD(sp[1]) : range(sp[0], sp[1])) : '';
+      const bits = [i.ms ? '◆ віха' : '', when && '📅 ' + when, !i.ms && Number.isFinite(i.pct) ? i.pct + '%' : '', i.who && '👤 ' + i.who, after.length ? 'після: ' + after.join(', ') : ''].filter(Boolean);
+      L.push(`- [${i.pct >= 100 ? 'x' : ' '}] **${one(i.text) || 'Задача'}**${bits.length ? ' · ' + bits.join(' · ') : ''}${vs(i)}`);
+    });
     L.push('# ' + (one(o.title) || 'Дошка JamBoard'), '');
     const nodes = all.filter((i) => i.type === 'node');
-    const cards = all.filter((i) => isCardT(i) && i.type !== 'node');
+    const cards = all.filter((i) => isCardT(i) && i.type !== 'node' && !isBar(i));
+    const bars = all.filter(isBar);
     const homes = new Map(); // container id → cards
     const loose = [];
     for (const i of cards) {
@@ -1834,6 +2022,8 @@ const Plan = (() => {
       if (b.type === 'section') { if (!list.length) continue; L.push('## ' + (one(b.title) || 'Секція'), ''); put(list); L.push(''); continue; }
       const d = dims(b), named = d.rows.length > 0;
       L.push('## ' + (one(b.title) || (b.type === 'timeline' ? 'Таймлайн' : 'Таблиця')), '');
+      const mine = bars.filter((i) => i.grid === b.id);
+      if (mine.length) { L.push('### Задачі', ''); barLines(mine); L.push(''); }
       const inCell = (c, r) => list.filter((i) => { const q = cellOf(b, i); return q[0] === c && q[1] === r; });
       if (b.kind === 'matrix') {
         for (let r = 0; r < d.nr; r++) for (let c = 0; c < d.nc; c++) {
@@ -1852,6 +2042,8 @@ const Plan = (() => {
         }
       }
     }
+    const looseBars = bars.filter((i) => !gridOf(i, byId));
+    if (looseBars.length) { L.push('## Задачі', ''); barLines(looseBars); L.push(''); }
     if (loose.length) { if (boxes.length || nodes.length) L.push('## Інше на дошці', ''); put(loose); L.push(''); }
     if (nodes.length) {
       const nid = new Map(nodes.map((n, k) => [n.id, 'n' + (k + 1)]));
@@ -1868,7 +2060,7 @@ const Plan = (() => {
       L.push('```', '');
     }
     const name = (i) => (!i ? '?' : hidden(i) ? 'прихована картка' : i.type === 'section' || isGrid(i) ? one(i.title) : one(i.type === 'task' || i.type === 'node' ? i.text : i.type === 'web' || i.type === 'board' ? i.title : plain(i)).slice(0, 60) || i.type);
-    const ropes = all.filter((l) => l.type === 'link' && byId.has(l.a) && byId.has(l.b) && !(byId.get(l.a).type === 'node' && byId.get(l.b).type === 'node'));
+    const ropes = all.filter((l) => l.type === 'link' && byId.has(l.a) && byId.has(l.b) && !(byId.get(l.a).type === 'node' && byId.get(l.b).type === 'node') && !(isBar(byId.get(l.a)) && isBar(byId.get(l.b))));
     if (ropes.length) { L.push('## Зв’язки', ''); ropes.forEach((l) => L.push(`- ${name(byId.get(l.a))} → ${name(byId.get(l.b))}${l.label ? ' (' + one(l.label) + ')' : ''}`)); L.push(''); }
     const notes = all.filter((i) => i.type === 'comment' && Array.isArray(i.msgs) && i.msgs.length);
     if (notes.length) {
@@ -1892,12 +2084,13 @@ const Plan = (() => {
   };
   const source = (u) => { for (const k in SOURCES) { const m = SOURCES[k].match(String(u || '')); if (m) return m; } return null; };
 
-  return { TOP, SIDE, PAD, UNITS, STATUSES, STATUS_NAMES, TEMPLATES, SOURCES, isGrid, dayOf, isoOf, localDay, thisMonday, dims, sizeFor, column, nowAt, rowName, cellRect, cellAt, cellOf, snap, slotIn, template, sortByVotes, markdown, source };
+  return { TOP, SIDE, PAD, GAP, BAR_H, TRACK, UNITS, STATUSES, STATUS_NAMES, TEMPLATES, SOURCES, isGrid, isBar, dayOf, isoOf, localDay, thisMonday, fmtD, range, dims, sizeFor, column, nowAt, rowName, cellRect, cellAt, cellOf, snap, slotIn, readOrder, flow, cellTop, reflow, xOfDay, dayAtX, barSpan, barBox, barDates, laneY, trackOf, barY, nextTrack, colOfDay, placeBar, workdays, template, sortByVotes, markdown, source };
 })();
 // </plan>
   const isSec = (i) => i.type === 'section';
-  const isCard = (i) => i.type === 'sticky' || i.type === 'image' || i.type === 'text' || i.type === 'web' || i.type === 'node' || i.type === 'board' || i.type === 'task';
-  const isGrid = Plan.isGrid; // timeline or table: cards dropped in stick to a cell
+  const isCard = (i) => i.type === 'sticky' || i.type === 'image' || i.type === 'text' || i.type === 'web' || i.type === 'node' || i.type === 'board' || i.type === 'task' || i.type === 'bar';
+  const isGrid = Plan.isGrid;
+  const isBar = Plan.isBar; // a task bar on a timeline (Gantt): dates, progress, dependencies (links between bars) // timeline or table: cards dropped in stick to a cell
   const isBack = (i) => !!i && (isSec(i) || isGrid(i)); // containers you can click "through" to make things on
   const titled = (i) => !!i && (isSec(i) || isGrid(i)); // their name is `title`, edited above the box
   const isNode = (i) => !!i && i.type === 'node';
@@ -1951,7 +2144,7 @@ const Plan = (() => {
   const RANK = { section: 0, timeline: 0.5, table: 0.5, stamp: 2, comment: 3 };
   const rank = (i) => (i.type in RANK ? RANK[i.type] : 1);
   const sorted = () => [...items.values()].filter((i) => !isLink(i)).sort((a, b) => rank(a) - rank(b) || (a.z || 0) - (b.z || 0) || (a.id < b.id ? -1 : 1));
-  const TYPES_OK = ['sticky', 'image', 'section', 'stamp', 'comment', 'text', 'link', 'web', 'node', 'board', 'timeline', 'table', 'task'];
+  const TYPES_OK = ['sticky', 'image', 'section', 'stamp', 'comment', 'text', 'link', 'web', 'node', 'board', 'timeline', 'table', 'task', 'bar'];
   const STAMPS = ['👍', '❤️', '🔥', '⭐', '✅', '❌', '❓', '💡', '🎉', '😂', '👀', '🚀'];
   let stampEmoji = STAMPS.includes(store.get('jamboard:stamp')) ? store.get('jamboard:stamp') : STAMPS[0];
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -2022,6 +2215,18 @@ const Plan = (() => {
       if (Plan.dayOf(o.due) == null) delete o.due;
       o.tags = strs(o.tags, 8, 24).filter((t) => t.trim()); if (!o.tags.length) delete o.tags;
       const s = o.src; if (s && typeof s === 'object' && Plan.SOURCES[s.p]) o.src = { p: s.p, key: String(s.key || '').slice(0, 60), url: safeHttps(s.url) || '', at: +s.at || 0 }; else delete o.src;
+      delete o.html;
+    }
+    if (o.type === 'bar') {
+      o.text = typeof o.text === 'string' ? o.text.slice(0, 200) : '';
+      const t0 = Plan.localDay(Date.now());
+      if (Plan.dayOf(o.start) == null) o.start = Plan.isoOf(t0);
+      if (Plan.dayOf(o.due) == null || Plan.dayOf(o.due) < Plan.dayOf(o.start)) o.due = Plan.isoOf(Plan.dayOf(o.start) + (Plan.dayOf(o.due) == null ? 6 : 0));
+      o.pct = clamp(Math.round(+o.pct) || 0, 0, 100);
+      if (typeof o.who !== 'string' || !o.who.trim()) delete o.who; else o.who = o.who.slice(0, 40);
+      if (!COLORS.includes(o.color)) o.color = 'pink';
+      if (o.ms !== true) delete o.ms;
+      o.h = Plan.BAR_H; o.w = Math.max(14, +o.w || 160);
       delete o.html;
     }
     if (o.grid != null && typeof o.grid !== 'string') delete o.grid;
@@ -2113,6 +2318,8 @@ const Plan = (() => {
       const it = before[id] === null && items.get(id);
       if (it && HIDEABLE.includes(it.type) && !it.hid) { it.hid = hideMode.s; it.own = myVid; }
     }
+    const t = performance.now(); for (const id in before) touchedAt.set(id, t);
+    reflowTouched(before); // cards in table and timeline cells line up again around what changed
     for (const [id, prev] of autofitSections()) if (!(id in before)) before[id] = prev;
     const after = snapIds(Object.keys(before));
     undoStack.push({ before, after }); if (undoStack.length > 120) undoStack.shift();
@@ -2161,7 +2368,7 @@ const Plan = (() => {
   // (selected, edited, hovered cards, sections, link and task cards, tables, pins, others' frames). The rest keeps 1.
   // The hovered card is marked by .hov from script: a `.item:hover` rule here would restyle every card on each zoom step.
   const zoomCss = document.createElement('style'); document.head.appendChild(zoomCss);
-  const Z_USERS = ['.sel', '.editing', '.link-target', '.drop-target', '.mine-hidden', '.hov', '.section', '.comment', '.web', '.board', '.grid', '.task', '.vb', '.peer-box', '#ghostSection'].map((q) => '#world ' + q).join(', ');
+  const Z_USERS = ['.sel', '.editing', '.link-target', '.drop-target', '.mine-hidden', '.hov', '.section', '.comment', '.web', '.board', '.grid', '.task', '.bar', '.vb', '.peer-box', '#ghostSection'].map((q) => '#world ' + q).join(', ');
   function paintView() {
     world.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.z})`;
     if (view.z !== paintedZ) { // zoom-dependent work only when the zoom changed, not on every pan frame
@@ -2330,7 +2537,7 @@ const Plan = (() => {
   // ---------- rendering ----------
   // A card's four link ports are added the first time the pointer comes over it, not for every card up front:
   // on a big board that is most of the board's elements, and their memory, styles and hit tests, saved.
-  const PORT_TYPES = new Set(['sticky', 'text', 'board', 'web', 'node', 'task', 'image']);
+  const PORT_TYPES = new Set(['sticky', 'text', 'board', 'web', 'node', 'task', 'image', 'bar']);
   function ensurePorts(d) {
     if (d._ports || !PORT_TYPES.has(d._type)) return; d._ports = true;
     d.insertAdjacentHTML('beforeend', '<i class="port t new"></i><i class="port r new"></i><i class="port b new"></i><i class="port l new"></i>');
@@ -2392,6 +2599,11 @@ const Plan = (() => {
       const t = d.firstChild;
       t.addEventListener('input', () => { liveText(id); const cur = items.get(id); if (cur) { cur.h = d.offsetHeight; schedule('links'); updateCtx(); } });
       t.addEventListener('blur', () => { if (editingId === id) finishEdit(); });
+    } else if (it.type === 'bar') {
+      d.innerHTML = '<div class="txt"></div><div class="br-fill"></div><span class="br-pct"></span><span class="br-when"></span><div class="handle bl" data-side="l" title="Змінити початок"></div><div class="handle" data-side="r" title="Змінити дедлайн"></div>';
+      const t = d.firstChild;
+      t.addEventListener('input', () => liveText(id));
+      t.addEventListener('blur', () => { if (editingId === id) finishEdit(); });
     } else if (it.type === 'stamp') {
       d.innerHTML = '<span class="emo"></span>';
     } else if (it.type === 'comment') {
@@ -2444,6 +2656,7 @@ const Plan = (() => {
   function setVar(el, k, v) { const c = el._st || (el._st = {}); if (c[k] !== v) { c[k] = v; el.style.setProperty(k, v); } }
   function setText(el, v) { if (el.textContent !== v) el.textContent = v; } // the same text set again still re-lays the card out
   function render(it, index) {
+    if (isBar(it) && !active.has(it.id)) fitBar(it); // a bar on a timeline is as long as its dates, wherever they came from
     const d = elFor(it), g = geom(it);
     schedule('links');
     setSt(d, 'translate', `${g.x}px ${g.y}px`); setSt(d, 'width', g.w + 'px'); setSt(d, 'height', AUTO_H.has(it.type) ? 'auto' : g.h + 'px');
@@ -2469,20 +2682,22 @@ const Plan = (() => {
       else if (editingId !== it.id) setRich(t, it);
       setData(d, 'ts', TEXT_TS.includes(it.ts) ? it.ts : 'p');
       t.style.fontWeight = it.b ? '700' : ''; t.style.textAlign = it.al || '';
-      const hh = d.offsetHeight; if (hh && Math.abs(hh - (it.h || 0)) > 0.5) it.h = hh;
+      const hh = d.offsetHeight; if (hh && Math.abs(hh - (it.h || 0)) > 0.5) { it.h = hh; if (it.grid) reflowSoon(it); }
     } else if (it.type === 'board') {
       renderBoardCard(d, it);
-      const hh = d.offsetHeight; if (hh && Math.abs(hh - (it.h || 0)) > 0.5) it.h = hh;
+      const hh = d.offsetHeight; if (hh && Math.abs(hh - (it.h || 0)) > 0.5) { it.h = hh; if (it.grid) reflowSoon(it); }
     } else if (it.type === 'web') {
       renderWeb(d, it);
-      const hh = d.offsetHeight; if (hh && Math.abs(hh - (it.h || 0)) > 0.5) it.h = hh;
+      const hh = d.offsetHeight; if (hh && Math.abs(hh - (it.h || 0)) > 0.5) { it.h = hh; if (it.grid) reflowSoon(it); }
     } else if (it.type === 'node') {
       renderNode(d, it, g);
     } else if (isGrid(it)) {
       renderGrid(d, it, g);
     } else if (it.type === 'task') {
       renderTask(d, it);
-      const hh = d.offsetHeight; if (hh && Math.abs(hh - (it.h || 0)) > 0.5) it.h = hh;
+      const hh = d.offsetHeight; if (hh && Math.abs(hh - (it.h || 0)) > 0.5) { it.h = hh; if (it.grid) reflowSoon(it); }
+    } else if (it.type === 'bar') {
+      renderBar(d, it, g);
     } else if (it.type === 'stamp') {
       const e = d.firstChild; if (e.textContent !== it.emoji) e.textContent = it.emoji;
       d.style.fontSize = Math.round(g.h * 0.8) + 'px';
@@ -2608,6 +2823,47 @@ const Plan = (() => {
     const due = set('.tk-due', !masked && it.due ? 'до ' + dueText(it.due) : '');
     due.classList.toggle('late', !!it.due && it.status !== 'done' && Plan.dayOf(it.due) < Plan.localDay(Date.now()));
     d.querySelector('.tk-foot').hidden = masked || !(it.who || it.est || it.due);
+    if (d.title) d.title = '';
+  }
+  // task bars (Gantt): the label sits inside when it fits, else beside the bar; progress fills it from the left
+  const measureCv = document.createElement('canvas').getContext('2d'), textWs = new Map();
+  function textW(s) {
+    let w = textWs.get(s);
+    if (w == null) { measureCv.font = '600 14px ' + getComputedStyle(document.body).getPropertyValue('--f-text'); w = measureCv.measureText(s).width; if (textWs.size > 2000) textWs.clear(); textWs.set(s, w); }
+    return w;
+  }
+  const dayWord = (n) => { const a = n % 10, b = n % 100; return n + ' ' + (a === 1 && b !== 11 ? 'день' : a >= 2 && a <= 4 && (b < 12 || b > 14) ? 'дні' : 'днів'); };
+  function barWhen(it) { // the dates a bar shows: while it is moved or stretched, the ones it gets when let go
+    if (active.has(it.id) && action && (action.type === 'move' || action.type === 'resize')) {
+      const own = gridOfItem(it);
+      if (action.type === 'resize') { if (own) return Plan.barDates(own, it, it.x, it.w, false); }
+      else if (!(own && action.ids.has(own.id))) { const g = gridAt({ x: it.x + it.w / 2, y: it.y + it.h / 2 }, action.ids); if (g && g.type === 'timeline') return Plan.barDates(g, it, it.x, it.w, true); }
+    }
+    return { start: it.start, due: it.due };
+  }
+  function whenText(w, ms) {
+    const s = Plan.dayOf(w.start), e = Plan.dayOf(w.due); if (s == null) return '';
+    return ms ? Plan.fmtD(e) : Plan.range(s, e) + ' · ' + dayWord(e - s + 1);
+  }
+  function fitBar(it) {
+    const g = gridOfItem(it); if (!g || g.type !== 'timeline') return;
+    const b = Plan.barBox(g, it); if (!b) return;
+    it.x = b.x; it.w = b.w; it.h = Plan.BAR_H;
+    const ly = Plan.laneY(g, Plan.cellOf(g, it)[1]); if (!(it.y >= ly - 1)) it.y = ly; // one with no place yet starts at the top of its lane
+  }
+  function renderBar(d, it, g) {
+    setVar(d, '--c', `var(--t-${COLORS.includes(it.color) ? it.color : 'pink'})`);
+    const t = d.firstChild, pct = clamp(it.pct | 0, 0, 100), name = it.text || '';
+    if (editingId !== it.id && t._k !== 'T' + name) { t._k = 'T' + name; t.textContent = name; }
+    setVar(d, '--p', pct + '%');
+    d.classList.toggle('ms', !!it.ms);
+    d.classList.toggle('done', pct >= 100);
+    const today = Plan.localDay(Date.now());
+    d.classList.toggle('late', !it.ms && pct < 100 && Plan.dayOf(it.due) < today);
+    setText(d.children[2], it.ms ? '' : pct + '%');
+    const tw = textW(name || 'Назва задачі');
+    setData(d, 'fit', it.ms ? 'out' : tw + 70 <= g.w ? 'in' : tw + 26 <= g.w ? 'nopct' : 'out');
+    setText(d.children[3], whenText(barWhen(it), it.ms));
     if (d.title) d.title = '';
   }
   // hidden writing: someone else's card from this session shows only who is writing it, never the text
@@ -2794,7 +3050,7 @@ const Plan = (() => {
     $('#ctxGrid').hidden = $('#ctxGridSep').hidden = !g0;
     if (g0) {
       const tl = g0.type === 'timeline', dm = Plan.dims(g0), rows = tl ? g0.lanes : g0.rows;
-      $('#gSetBtn').hidden = !tl;
+      $('#gSetBtn').hidden = !tl; $('#gAddBar').hidden = !tl;
       $('#gAddColTip').textContent = tl ? 'Додати ' + ({ day: 'день', week: 'тиждень', sprint: 'спринт', month: 'місяць' }[g0.unit] || 'колонку') : 'Додати колонку';
       $('#gAddRowTip').textContent = tl ? 'Додати доріжку' : 'Додати рядок'; $('#gDelRowTip').textContent = tl ? 'Прибрати останню доріжку' : 'Прибрати останній рядок';
       $('#gAddRow').setAttribute('aria-label', $('#gAddRowTip').textContent); $('#gDelRow').setAttribute('aria-label', $('#gDelRowTip').textContent);
@@ -2804,7 +3060,10 @@ const Plan = (() => {
     const task1 = sel.length === 1 && sel[0].type === 'task' && !hiddenFor(sel[0]);
     $('#ctxTask').hidden = $('#ctxTaskSep').hidden = !task1;
     if (!task1 && !$('#taskPop').hidden) openTaskPop(false);
-    const tinted = sel.filter((i) => i.type === 'sticky' || isSec(i) || isNode(i) || isGrid(i));
+    const bar1 = sel.length === 1 && isBar(sel[0]);
+    $('#ctxBar').hidden = $('#ctxBarSep').hidden = !bar1;
+    if (!bar1 && !$('#barPop').hidden) openBarPop(false); else if (bar1 && !$('#barPop').hidden) fillBarPop();
+    const tinted = sel.filter((i) => i.type === 'sticky' || isSec(i) || isNode(i) || isGrid(i) || isBar(i));
     $('#wrapBtn').hidden = !sel.some(isCard);
     const secs = sel.filter(isSec);
     $('#fitSecBtn').hidden = !secs.length;
@@ -2984,7 +3243,7 @@ const Plan = (() => {
   }
   function startEdit(id) {
     finishEdit();
-    const it = items.get(id); if (!it || (it.type !== 'sticky' && it.type !== 'text' && it.type !== 'task' && !isNode(it) && !titled(it)) || hiddenFor(it)) return;
+    const it = items.get(id); if (!it || (it.type !== 'sticky' && it.type !== 'text' && it.type !== 'task' && !isBar(it) && !isNode(it) && !titled(it)) || hiddenFor(it)) return;
     editingId = id; editBefore = freshText.delete(id) ? { [id]: null } : snapIds([id]); active.add(id);
     const d = els.get(id); d.classList.add('editing');
     const t = d.firstChild;
@@ -3029,7 +3288,7 @@ const Plan = (() => {
     if (it) {
       const f = titled(it) ? 'title' : 'text';
       const prev = editBefore[id] ? editBefore[id][f] : null, prevHtml = editBefore[id] ? editBefore[id].html : undefined;
-      it[f] = titled(it) ? text.replace(/\s+/g, ' ').trim().slice(0, isSec(it) ? 80 : 120) : it.type === 'task' ? text.slice(0, 400) : text;
+      it[f] = titled(it) ? text.replace(/\s+/g, ' ').trim().slice(0, isSec(it) ? 80 : 120) : it.type === 'task' ? text.slice(0, 400) : isBar(it) ? text.replace(/\s+/g, ' ').trim().slice(0, 200) : text;
       if (isRich(it)) { const h = cleanRich(t.innerHTML); if (hasFormatting(h)) it.html = h; else delete it.html; t._k = null; }
       if (text !== prev || it.html !== prevHtml) commit(editBefore); else write(it);
       render(it); updateCtx();
@@ -3099,25 +3358,154 @@ const Plan = (() => {
     if (gridHi) gridHi.classList.remove('hi');
     gridHi = el; if (el) el.classList.add('hi');
   }
-  // where each card sits inside its cell, as a share of the cell, so it stays put while the grid is resized or reshaped
+  // where each card sits inside its cell (as a share of the cell in a matrix; a bar keeps its lane and track),
+  // so things stay put while the grid is resized or reshaped
   function memberOffsets(g) {
-    return members(g).map((m) => { const c = Plan.cellOf(g, m), R = Plan.cellRect(g, c[0], c[1]); return { m, c, fx: (m.x - R.x) / R.w, fy: (m.y - R.y) / R.h }; });
+    return members(g).map((m) => { const c = Plan.cellOf(g, m), R = Plan.cellRect(g, c[0], c[1]); return { m, c, fx: (m.x - R.x) / R.w, fy: (m.y - R.y) / R.h, k: isBar(m) ? Plan.trackOf(g, m) : 0 }; });
   }
   function resnap(g, offs) {
     const d = Plan.dims(g);
-    offs.forEach(({ m, c, fx, fy }) => {
-      const cc = [Math.min(c[0], d.nc - 1), Math.min(c[1], d.nr - 1)], R = Plan.cellRect(g, cc[0], cc[1]);
-      const q = Plan.snap(g, { ...m, x: R.x + fx * R.w, y: R.y + fy * R.h }, cc);
-      m.cell = cc; m.x = q.x; m.y = q.y;
+    offs.forEach(({ m, c, fx, fy, k }) => {
+      const cc = [Math.min(c[0], d.nc - 1), Math.min(c[1], d.nr - 1)];
+      if (isBar(m)) { if (g.type === 'timeline') Plan.placeBar(g, m, cc[1], k); return; }
+      m.cell = cc;
+      if (g.kind !== 'matrix') return; // tables and timelines lay their cards out in rows below
+      const R = Plan.cellRect(g, cc[0], cc[1]), q = Plan.snap(g, { ...m, x: R.x + fx * R.w, y: R.y + fy * R.h }, cc);
+      m.x = q.x; m.y = q.y;
+    });
+    flowCells(g, null);
+  }
+  // Cards in a table or timeline cell sit in rows, as many side by side as the column fits. A card that changes
+  // row or place in its row glides there; one that only shifts with the column (while resizing) follows at once.
+  function glideTo(m, x, y, force) {
+    const slot = m._slot, moved = m.x !== x || m.y !== y;
+    m.x = x; m.y = y;
+    if (!moved) return false;
+    const d = els.get(m.id);
+    if (d && booted && !reduceMotion && (force || slot === undefined || slot !== m._slotNew)) {
+      d.classList.add('snapping'); clearTimeout(d._snapT); d._snapT = setTimeout(() => d.classList.remove('snapping'), 420);
+    }
+    return true;
+  }
+  function flowCells(g, cells, before) { // lays out these cells ("c,r" strings; all when null); returns the ids that moved
+    const moved = [];
+    for (const p of Plan.reflow(g, [...items.values()], cells)) {
+      const m = p.m; m._slotNew = p.row + ':' + p.col;
+      if (before && !(m.id in before) && (m.x !== p.x || m.y !== p.y)) before[m.id] = { ...clean(m), id: m.id };
+      if (glideTo(m, p.x, p.y)) moved.push(m.id);
+      m._slot = m._slotNew;
+    }
+    return moved;
+  }
+  // after any change: the cells that cards left, joined or grew in, and the lanes whose bars moved, are laid out again
+  function reflowTouched(before) {
+    const want = new Map(), lane = (g, r) => { for (let c = 0; c < Plan.dims(g).nc; c++) want.get(g.id).add(c + ',' + r); };
+    const add = (gid, it) => {
+      const g = items.get(gid); if (!isGrid(g) || g.kind === 'matrix' || !it) return;
+      if (!want.has(g.id)) want.set(g.id, new Set());
+      if (want.get(g.id) === null) return;
+      if (isBar(it)) lane(g, Plan.cellOf(g, it)[1]); else want.get(g.id).add(Plan.cellOf(g, it).join(','));
+    };
+    for (const id in before) {
+      const it = items.get(id), was = before[id];
+      if (it && isGrid(it)) { if (it.kind !== 'matrix') want.set(it.id, null); continue; }
+      if (was && was.grid) add(was.grid, was);
+      if (it && it.grid && isCard(it)) add(it.grid, it);
+    }
+    for (const [gid, cells] of want) { const g = items.get(gid); if (g) { flowCells(g, cells, before); growLanes(g, before); } }
+  }
+  // a card whose height followed its new text: lay its cell out again (only for changes made here, so two browsers
+  // that measure text a pixel apart never take turns moving the same cards)
+  const touchedAt = new Map(); let reflowQ = new Set(), reflowT = 0;
+  function reflowSoon(it) {
+    const g = gridOfItem(it); if (!g || g.kind === 'matrix' || isBar(it) || !(performance.now() - (touchedAt.get(it.id) || -1e9) < 4000)) return;
+    reflowQ.add(it.id);
+    if (!reflowT) reflowT = requestAnimationFrame(() => {
+      reflowT = 0; const ids = [...reflowQ]; reflowQ = new Set();
+      const before = {}; ids.forEach((id) => { const m = items.get(id); if (m && m.grid) before[id] = { ...clean(m), id }; });
+      reflowTouched(before);
+      for (const id in before) { const m = items.get(id), b = before[id]; if (m && b && (m.x !== b.x || m.y !== b.y || m.h !== b.h)) { write(m); render(m); } }
     });
   }
-  // a card made inside a grid joins the cell under it; `stack` puts it under the cards already there
+  // a card made inside a grid joins the cell under it; `stack` puts it after the cards already there
   function placeInGrid(it, stack) {
     const c = { x: it.x + it.w / 2, y: it.y + it.h / 2 }, g = gridAt(c, new Set([it.id]));
     if (!g) return false;
+    if (isBar(it)) { if (g.type !== 'timeline') return false; const cell = Plan.cellAt(g, c.x, c.y); Plan.placeBar(g, it, cell[1], Plan.nextTrack(g, cell[1], members(g))); return true; }
     const cell = Plan.cellAt(g, c.x, c.y), q = stack ? Plan.slotIn(g, cell, it.w, it.h, members(g).filter((m) => m.id !== it.id)) : Plan.snap(g, it, cell);
     it.grid = g.id; it.cell = cell; it.x = q.x; it.y = q.y;
     return true;
+  }
+  // while a card is dragged over a cell, the cards there make room for it, and the cell it left closes up
+  function dragFlowList(a) { // the dragged cards that will join a cell: not bars, not ones riding along with their grid
+    return a.starts.map((st) => st.it).filter((i) => isCard(i) && !isBar(i) && !(gridOfItem(i) && a.ids.has(i.grid)));
+  }
+  function flowWith(g, cell, a, dropped, p) { // positions for a cell's other cards with the dragged ones put in at p
+    const key = cell.join(','), orig = (m) => (a.pv && a.pv.orig.get(m.id)) || m;
+    const others = members(g).filter((m) => !isBar(m) && !a.ids.has(m.id) && Plan.cellOf(g, m).join(',') === key)
+      .sort((x, y) => Plan.readOrder(orig(x), orig(y)));
+    const top = Plan.cellTop(g, cell[1], members(g)), base = Plan.flow(g, cell, others, top);
+    let at = others.length;
+    if (dropped.length && p) {
+      let row = 0; base.forEach((q) => { if (q.y <= p.y) row = q.row; });
+      const inRow = base.map((q, k) => [q, k]).filter(([q]) => q.row === row);
+      const hit = inRow.find(([q]) => p.x < q.x + (q.m.w || 200) / 2);
+      at = hit ? hit[1] : inRow.length ? inRow[inRow.length - 1][1] + 1 : 0;
+    }
+    const list = others.slice(0, at).concat(dropped, others.slice(at));
+    return Plan.flow(g, cell, list, top);
+  }
+  function pvMove(a, m, x, y) { // a card shifted by the preview: remembered, so undo and a cancelled drag put it back
+    if (!a.pv.orig.has(m.id)) { a.pv.orig.set(m.id, { x: m.x, y: m.y }); if (!(m.id in a.before)) a.before[m.id] = { ...clean(m), id: m.id }; }
+    if (m.x === x && m.y === y) return;
+    m.x = x; m.y = y;
+    const d = els.get(m.id); if (d && !reduceMotion) { d.classList.add('snapping'); clearTimeout(d._snapT); d._snapT = setTimeout(() => d.classList.remove('snapping'), 420); }
+    render(m);
+  }
+  function previewFlow(a) {
+    const dropped = dragFlowList(a); if (!dropped.length) return;
+    const lead = items.get(a.id), anchor = lead && dropped.includes(lead) ? lead : dropped[0];
+    const p = { x: anchor.x + anchor.w / 2, y: anchor.y + anchor.h / 2 };
+    const g = gridAt(p, a.ids), cell = g && g.kind !== 'matrix' ? Plan.cellAt(g, p.x, p.y) : null;
+    if (!a.pv) a.pv = { orig: new Map(), sig: '', touched: new Set() };
+    const want = new Map(); // "gid|c,r" → [g, cell, with dropped?]
+    if (cell) want.set(g.id + '|' + cell.join(','), [g, cell, true]);
+    dropped.forEach((i) => { const own = gridOfItem(i); if (own && own.kind !== 'matrix') { const c = Plan.cellOf(own, i), k = own.id + '|' + c.join(','); if (!want.has(k)) want.set(k, [own, c, false]); } });
+    let sig = [...want.keys()].join(';');
+    const plans = [];
+    for (const [k, [gg, cc, withDrop]] of want) {
+      const ps = flowWith(gg, cc, a, withDrop ? dropped : [], withDrop ? p : null);
+      plans.push(ps); sig += '#' + ps.filter((q) => !dropped.includes(q.m)).map((q) => q.m.id + q.x + ',' + q.y).join();
+    }
+    if (sig === a.pv.sig) return; a.pv.sig = sig;
+    const now = new Set();
+    plans.forEach((ps) => ps.forEach((q) => { if (dropped.includes(q.m)) return; now.add(q.m.id); pvMove(a, q.m, q.x, q.y); }));
+    a.pv.touched.forEach((id) => { if (now.has(id)) return; const m = items.get(id), o = a.pv.orig.get(id); if (m && o) pvMove(a, m, o.x, o.y); });
+    a.pv.touched = now;
+  }
+  // a bar let go: on a timeline its dates follow where it landed, then it settles on the nearest track of the lane
+  function dropBar(it, a) {
+    const c = { x: it.x + it.w / 2, y: it.y + it.h / 2 }, g = gridAt(c, a.ids);
+    if (!g || g.type !== 'timeline') { delete it.grid; delete it.cell; return; }
+    Object.assign(it, Plan.barDates(g, it, it.x, it.w, true));
+    const r = Plan.cellAt(g, c.x, c.y)[1], k = clamp(Math.round((it.y - Plan.laneY(g, r)) / Plan.TRACK), 0, 40);
+    const x0 = it.x, y0 = it.y; Plan.placeBar(g, it, r, k);
+    const d = els.get(it.id); if (d && (x0 !== it.x || y0 !== it.y)) { d.classList.add('snapping'); clearTimeout(d._snapT); d._snapT = setTimeout(() => d.classList.remove('snapping'), 420); }
+    growLanes(g, a.before, true);
+  }
+  // lanes grow so their bars and cards fit (all lanes of a timeline share one height)
+  function growLanes(g, before, barsOnly) { // (barsOnly: before the cards are laid out again)
+    const d = Plan.dims(g); let need = 0;
+    for (const m of members(g)) {
+      if (barsOnly && !isBar(m)) continue;
+      const r = Plan.cellOf(g, m)[1], top = Plan.cellRect(g, 0, r).y;
+      need = Math.max(need, m.y + (m.h || 0) + Plan.PAD - top);
+    }
+    if (need <= d.lh + 0.5) return;
+    const offs = memberOffsets(g);
+    if (before) [g, ...offs.map((o) => o.m)].forEach((m) => { if (!(m.id in before)) before[m.id] = { ...clean(m), id: m.id }; });
+    g.h = Math.round(Plan.TOP + d.nr * Math.ceil(need));
+    resnap(g, offs); render(g);
   }
   // double-click a column, lane or cell name to rename it
   function startHeadEdit(id, hk) {
@@ -3200,7 +3588,7 @@ const Plan = (() => {
 
     if (dbl && !e.target.closest('.handle')) {
       const hk = hit && isGrid(hit) && e.target.closest('[data-hk]');
-      if (hit && (hit.type === 'sticky' || hit.type === 'text' || hit.type === 'task' || isNode(hit))) pendingEdit = id;
+      if (hit && (hit.type === 'sticky' || hit.type === 'text' || hit.type === 'task' || isBar(hit) || isNode(hit))) pendingEdit = id;
       else if (hit && hit.type === 'web') openWeb(hit);
       else if (hit && hit.type === 'board') openPeek(hit.bid, els.get(id));
       else if (hk) { action = null; startHeadEdit(id, hk.dataset.hk); return; }
@@ -3215,9 +3603,9 @@ const Plan = (() => {
     }
     const handle = e.target.closest('.handle');
     if (handle && id) {
-      action = { type: 'resize', id, sx: e.clientX, sy: e.clientY, w: hit.w, h: hit.h, before: snapIds([id]), moved: false };
+      action = { type: 'resize', id, sx: e.clientX, sy: e.clientY, w: hit.w, h: hit.h, x: hit.x, side: handle.dataset.side || 'r', before: snapIds([id]), moved: false };
       if (isGrid(hit)) { const offs = memberOffsets(hit); action.offs = offs; Object.assign(action.before, snapIds(offs.map((o) => o.m.id))); }
-      active.add(id); itemEl.classList.add('resizing'); return;
+      active.add(id); itemEl.classList.add('resizing'); if (isBar(hit)) { ctxHidden = true; updateCtx(); } return;
     }
     if (id) {
       if (e.shiftKey) { const s = new Set(selected); s.has(id) ? s.delete(id) : s.add(id); setSel(s); }
@@ -3232,7 +3620,7 @@ const Plan = (() => {
       const starts = [...ids].map((k) => items.get(k)).map((i) => ({ it: i, x: i.x, y: i.y }));
       ids.forEach((k) => active.add(k));
       const tilt = !reduceMotion && !selList.some(isBack);
-      action = { type: 'move', id, sx: e.clientX, sy: e.clientY, starts, ids, before: snapIds([...ids]), moved: false, shift: e.shiftKey, tilt, vx: 0, r: 0, lastX: e.clientX };
+      action = { type: 'move', id, sx: e.clientX, sy: e.clientY, starts, ids, before: snapIds([...ids]), moved: false, shift: e.shiftKey, tilt, vx: 0, r: 0, lastX: e.clientX, hasBack: selList.some(isBack) };
       return;
     }
     if (tool === 'sticky') { pendingEdit = createStickyAt(toWorld(e.clientX, e.clientY)).id; setTool('select'); action = null; return; }
@@ -3274,12 +3662,17 @@ const Plan = (() => {
       const wdx = Math.round(dx / view.z), wdy = Math.round(dy / view.z);
       action.starts.forEach((s) => { s.it.x = s.x + wdx; s.it.y = s.y + wdy; render(s.it); });
       if (action.tilt) { setDropTarget(sectionAt(w, action.ids)); setGridDrop(gridAt(w, action.ids), w); }
+      if (!action.hasBack) previewFlow(action);
       sendPresence({ drag: { ids: action.starts.slice(0, 60).map((s) => s.it.id), dx: wdx, dy: wdy } });
       updateCtx(); schedule('boxes'); if (threadId && action.ids.has(threadId)) schedule('thread');
     } else if (action.type === 'resize') {
       const it = items.get(action.id); action.moved = true;
       if (it.type === 'text') it.w = Math.round(Math.max(60, action.w + dx / view.z));
       else if (it.type === 'web' || it.type === 'board' || it.type === 'task') it.w = Math.round(clamp(action.w + dx / view.z, 220, 720));
+      else if (isBar(it)) { // a bar stretches from either end
+        if (action.side === 'l') { const nx = Math.min(action.x + dx / view.z, action.x + action.w - 14); it.x = Math.round(nx); it.w = Math.round(action.x + action.w - nx); }
+        else it.w = Math.round(Math.max(14, action.w + dx / view.z));
+      }
       else if (it.type === 'node') {
         it.w = Math.round(Math.max(64, action.w + dx / view.z)); it.h = Math.round(Math.max(44, action.h + dy / view.z));
         if (it.shape === 'circle' && !e.shiftKey) it.h = it.w;
@@ -3346,14 +3739,34 @@ const Plan = (() => {
           const z = topZ(); action.starts.forEach((s, i) => { if (!isSec(s.it)) s.it.z = z + i; });
           const p = lastPointer ? toWorld(lastPointer.x, lastPointer.y) : null;
           const target = p && sectionAt(p, action.ids);
-          action.starts.forEach((s) => { // a card dropped on a timeline or table sticks to the cell under its centre
+          const fl = dragFlowList(action), lay = new Map(); // cells to lay out again: where cards landed and where they left
+          const glide = (it) => { const d = els.get(it.id); if (d) { d.classList.add('snapping'); clearTimeout(d._snapT); d._snapT = setTimeout(() => d.classList.remove('snapping'), 420); } };
+          action.starts.forEach((s) => { // a card dropped on a timeline or table joins the cell under its centre
             const it = s.it; if (!isCard(it)) return;
             const own = gridOfItem(it); if (own && action.ids.has(own.id)) return; // it travelled with its grid
+            if (isBar(it)) { dropBar(it, action); return; }
+            if (own && own.kind !== 'matrix') { const c = Plan.cellOf(own, it); lay.set(own.id + '|' + c, [own, c]); }
             const g = gridAt({ x: it.x + it.w / 2, y: it.y + it.h / 2 }, action.ids);
             if (!g) { delete it.grid; delete it.cell; return; }
-            const cell = Plan.cellAt(g, it.x + it.w / 2, it.y + it.h / 2), q = Plan.snap(g, it, cell);
+            const cell = Plan.cellAt(g, it.x + it.w / 2, it.y + it.h / 2);
             it.grid = g.id; it.cell = cell;
-            if (q.x !== it.x || q.y !== it.y) { it.x = q.x; it.y = q.y; const d = els.get(it.id); if (d) { d.classList.add('snapping'); setTimeout(() => d.classList.remove('snapping'), 420); } }
+            if (g.kind !== 'matrix') { lay.set(g.id + '|' + cell, [g, cell]); return; }
+            const q = Plan.snap(g, it, cell);
+            if (q.x !== it.x || q.y !== it.y) { it.x = q.x; it.y = q.y; glide(it); }
+          });
+          const lead = items.get(action.id);
+          for (const [g, cell] of lay.values()) { // the dropped cards go in where they were let go, the rest close up or make room
+            const here = fl.filter((i) => i.grid === g.id && Plan.cellOf(g, i).join() === cell.join()).sort(Plan.readOrder);
+            const an = here.includes(lead) ? lead : here[0], p = an ? { x: an.x + an.w / 2, y: an.y + an.h / 2 } : null;
+            for (const q of flowWith(g, cell, action, here, p)) {
+              const m = q.m; if (m.x === q.x && m.y === q.y) continue;
+              if (!(m.id in action.before)) action.before[m.id] = { ...clean(m), id: m.id };
+              m.x = q.x; m.y = q.y; glide(m);
+            }
+          }
+          if (action.pv) action.pv.touched.forEach((id) => { // cards the preview shifted in a cell nobody dropped into go back
+            const m = items.get(id), o = action.pv.orig.get(id), g = m && gridOfItem(m);
+            if (m && o && !(g && lay.has(g.id + '|' + Plan.cellOf(g, m)))) { m.x = o.x; m.y = o.y; glide(m); }
           });
           action.starts.forEach((s) => {
             const it = s.it; if (!isCard(it)) return;
@@ -3383,6 +3796,12 @@ const Plan = (() => {
         if (action.moved) {
           const it = items.get(action.id);
           if (it && isSec(it) && it.autofit !== false) { it.autofit = false; toast('Розмір задано вручну, автопідгонку вимкнено'); }
+          const tg = it && isBar(it) && gridOfItem(it);
+          if (tg && tg.type === 'timeline') { // the stretched bar takes whole days
+            Object.assign(it, Plan.barDates(tg, it, it.x, it.w, false)); Plan.placeBar(tg, it, Plan.cellOf(tg, it)[1], Plan.trackOf(tg, it));
+            if (d) { d.classList.add('snapping'); clearTimeout(d._snapT); d._snapT = setTimeout(() => d.classList.remove('snapping'), 420); }
+            render(it); if (!$('#barPop').hidden) fillBarPop();
+          }
           if (it && isSec(it)) Object.entries(regroup(it, true)).forEach(([k, v]) => { if (!(k in action.before)) action.before[k] = v; });
           commit(action.before); sendPresence({ resize: null });
         }
@@ -3476,6 +3895,21 @@ const Plan = (() => {
     for (const it of items.values()) if (isCard(it)) { const g = geom(it); boxes.set(it.id, { x: g.x, y: g.y, w: g.w, h: g.h, shape: isNode(it) ? it.shape || 'rect' : '' }); }
     return router.update(boxes, want);
   }
+  // a dependency between two task bars: out of the end of the first, down (or up) and into the start of the next
+  function depRoute(r, A, B) {
+    const a = geom(A), b = geom(B), x0 = a.x + a.w, y0 = a.y + a.h / 2, x1 = b.x, y1 = b.y + b.h / 2, o = 10;
+    const key = x0 + ',' + y0 + ',' + x1 + ',' + y1 + ',' + b.y + ',' + b.h;
+    if (r._dk === key && r._dp) return r._dp;
+    let p;
+    if (A.ms && y1 > a.y + a.h + o && x1 > a.x + a.w / 2 + o) p = [{ x: a.x + a.w / 2, y: a.y + a.h - 1 }, { x: a.x + a.w / 2, y: y1 }, { x: x1, y: y1 }]; // out of a milestone's lower tip, clear of its name
+    else if (Math.abs(y1 - y0) < 1 && x1 - x0 >= o) p = [{ x: x0, y: y0 }, { x: x1, y: y1 }];
+    else if (x1 - x0 >= o * 2.4) p = [{ x: x0, y: y0 }, { x: x0 + o, y: y0 }, { x: x0 + o, y: y1 }, { x: x1, y: y1 }];
+    else { // the next one starts too early: loop round between the two rows
+      const ym = y1 > y0 ? b.y - 7 : y1 < y0 ? b.y + b.h + 7 : a.y + a.h + 9;
+      p = [{ x: x0, y: y0 }, { x: x0 + o, y: y0 }, { x: x0 + o, y: ym }, { x: x1 - o * 1.6, y: ym }, { x: x1 - o * 1.6, y: y1 }, { x: x1, y: y1 }];
+    }
+    r._dk = key; r._dp = p; return p;
+  }
   function setPts(r, pts) { // a routed wire: its polyline and running lengths, for the label, the pulse and the arrow
     r.pts = pts; r.cum = [0];
     for (let i = 1; i < pts.length; i++) r.cum.push(r.cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
@@ -3497,20 +3931,22 @@ const Plan = (() => {
       seen.add(l.id);
       let r = ropes.get(l.id), fresh = false;
       if (!r) { r = makeRope(l.id, ends, !!l.temp); ropes.set(l.id, r); fresh = booted; }
-      const A = items.get(l.a), B = items.get(l.temp ? l.to : l.b);
-      const pts = routes && routes.get(l.id);
-      r.taut = isNode(A) && isNode(B); r.arrow = !l.temp && r.taut && l.flow !== false;
+      const A = items.get(l.a), B = items.get(l.temp ? l.to : l.b), dep = !l.temp && isBar(A) && isBar(B);
+      const pts = (routes && routes.get(l.id)) || (dep ? depRoute(r, A, B) : null);
+      r.taut = (isNode(A) && isNode(B)) || dep; r.arrow = dep || (!l.temp && r.taut && l.flow !== false);
       if (pts) { if (r.pts !== pts) setPts(r, pts); if (fresh) { const g = r.g; g.classList.add('fresh'); setTimeout(() => g.classList.remove('fresh'), 400); } }
       else { r.pts = null; r.p0 = ends[0]; r.p1 = ends[1]; r.t = ropeTarget(ends[0], ends[1], r.taut); }
-      r.g.classList.toggle('arrow', r.arrow); r.g.classList.toggle('dash', !!l.dash); r.g.classList.toggle('thick', !!l.thick);
+      r.g.classList.toggle('arrow', r.arrow); r.g.classList.toggle('dep', dep); r.dep = dep; r.g.classList.toggle('dash', !!l.dash); r.g.classList.toggle('thick', !!l.thick);
       r.g.classList.toggle('sel', selected.has(l.id));
       const hi = dimOn && (focus.has(l.a) || focus.has(l.b));
       r.g.classList.toggle('hi', hi); if (r.lab) r.lab.classList.toggle('hi', hi);
       r.dim = dimOn && !hi && !l.temp && !selected.has(l.id); // a stepped-back rope shows no dot
       r.g.classList.toggle('temp', !!l.temp);
-      const rc = l.temp ? 'var(--accent)' : ropeColor(l);
+      const clash = dep && Plan.dayOf(B.start) <= Plan.dayOf(A.due); // it starts before what it waits for is done
+      r.g.classList.toggle('clash', clash);
+      const rc = l.temp ? 'var(--accent)' : clash ? 'var(--bad)' : ropeColor(l);
       if (r.rc !== rc) { r.rc = rc; r.g.style.setProperty('--rc', rc); if (r.lab) r.lab.style.setProperty('--rc', rc); }
-      r.flowOn = !l.temp && l.flow !== false && !reduceMotion;
+      r.flowOn = !l.temp && !dep && l.flow !== false && !reduceMotion;
       if (!l.temp) syncLabel(r, l);
     }
     for (const [id, r] of ropes) if (!seen.has(id)) {
@@ -3660,7 +4096,7 @@ const Plan = (() => {
     r.path.setAttribute('d', d); r.hit.setAttribute('d', d); r.halo.setAttribute('d', d);
     if (r.arrow) { // a small head at the end, along the rope's last tangent
       let ux = tip.x - from.x, uy = tip.y - from.y; const n = Math.hypot(ux, uy) || 1; ux /= n; uy /= n;
-      const L = 13, W = 6.5, bx = tip.x - ux * L, by = tip.y - uy * L;
+      const L = r.dep ? 9 : 13, W = r.dep ? 4.5 : 6.5, bx = tip.x - ux * L, by = tip.y - uy * L;
       r.head.setAttribute('d', `M${f(tip.x)},${f(tip.y)}L${f(bx - uy * W)},${f(by + ux * W)}L${f(bx + uy * W)},${f(by - ux * W)}Z`);
     }
     placeLabel(r);
@@ -4306,6 +4742,7 @@ const Plan = (() => {
         const gi = document.createElement('div'); gi.className = 'g-in'; const gc = document.createElement('div'); gc.className = 'g-cells'; gi.appendChild(gc); e.appendChild(gi);
         try { const g = full(i.id || 'pv', i); e.style.width = g.w + 'px'; e.style.height = g.h + 'px'; fillGrid(gc, g, Plan.nowAt(g, Date.now())); } catch (er) {}
       }
+      else if (i.type === 'bar') { e = box(i, 'pv-bar' + (i.ms ? ' ms' : '')); e.style.setProperty('--c', T(i.color, 'pink')); e.style.setProperty('--p', clamp(i.pct | 0, 0, 100) + '%'); const t = document.createElement('b'); t.textContent = i.text || ''; e.appendChild(t); }
       else if (i.type === 'task') { e = box(i, 'pv-web pv-task'); e.style.height = 'auto'; const s = document.createElement('small'); s.textContent = Plan.STATUS_NAMES[i.status] || Plan.STATUS_NAMES.todo; s.dataset.s = i.status || 'todo'; const t = document.createElement('b'); t.textContent = i.text || 'Задача'; e.append(s, t); }
       else if (i.type === 'stamp') { e = box(i, 'pv-stamp'); e.style.fontSize = Math.round(H(i) * 0.8) + 'px'; e.textContent = typeof i.emoji === 'string' ? i.emoji.slice(0, 16) : '👍'; }
       else if (i.type === 'comment') { e = box(i, 'pv-pin'); const m0 = (i.msgs || [])[0] || {}; e.style.setProperty('--pc', safeColor(m0.c)); e.textContent = typeof m0.e === 'string' && m0.e.length <= 8 ? m0.e : '💬'; e.title = (m0.n ? m0.n + ': ' : '') + String(m0.t || '').slice(0, 120); }
@@ -4743,7 +5180,7 @@ const Plan = (() => {
       return;
     }
     if (editingId && mod && e.code === 'KeyB') { e.preventDefault(); toggleBold(); return; }
-    if (editingId) { if (e.key === 'Escape' || (mod && e.key === 'Enter') || (e.key === 'Enter' && items.get(editingId) && (titled(items.get(editingId)) || items.get(editingId).type === 'task'))) { e.preventDefault(); els.get(editingId).firstChild.blur(); } return; }
+    if (editingId) { if (e.key === 'Escape' || (mod && e.key === 'Enter') || (e.key === 'Enter' && items.get(editingId) && (titled(items.get(editingId)) || items.get(editingId).type === 'task' || isBar(items.get(editingId))))) { e.preventDefault(); els.get(editingId).firstChild.blur(); } return; }
     if (isTyping(e.target)) { if (e.key === 'Enter' || e.key === 'Escape') { if (e.target.classList && e.target.classList.contains('rope-label')) e.preventDefault(); if (e.key === 'Escape' && ropeEditId && e.target.classList.contains('rope-label')) { const l = items.get(ropeEditId); e.target.textContent = (l && l.label) || ''; } e.target.blur(); if (e.target.id === 'nameInput') $('#mePop').hidden = true; } return; }
     const k = e.key.toLowerCase();
     if (viewOnly() && (mod ? !['=', '+', '-', '0'].includes(k) : !(e.code === 'Space' || e.key === 'Escape' || e.code === 'KeyV' || e.code === 'KeyH' || e.code === 'KeyP' || (e.shiftKey && e.code === 'Digit1')))) {
@@ -4888,6 +5325,7 @@ const Plan = (() => {
       else if (t === 'comment') s.push(['c', ...p]);
       else if (isGrid(i)) { const d = Plan.dims(i); s.push(['G', ...p, col(i.color, 'gray'), d.nc, d.nr, r(d.side), r(Plan.TOP)]); }
       else if (t === 'task') s.push(['k', ...p, Plan.STATUSES.indexOf(i.status)]);
+      else if (t === 'bar') s.push(['n', ...p, col(i.color, 'pink'), i.ms ? 'diamond' : 'pill']);
     }
     const ends = new Map(cards.map((i) => [i.id, i]));
     let ropes = 0;
@@ -5494,14 +5932,14 @@ const Plan = (() => {
   addEventListener('pointerdown', (e) => { if (!$('#votePop').hidden && !e.target.closest('#votePop, #voteChip, .item')) openVotePop(false); }, true);
 
   // the «Планінг і ретро» popover: templates, a task card, and the facilitation tools
-  const PLAN_ICONS = { sprints: '🗓️', weeks: '📆', roadmap: '🛣️', matrix: '🎯', table: '🔲', sprint: '🏃', ssc: '🚦', msg: '🎭', '4l': '🍀', sail: '⛵' };
+  const PLAN_ICONS = { sprints: '🗓️', weeks: '📆', gantt: '📊', roadmap: '🛣️', matrix: '🎯', table: '🔲', sprint: '🏃', ssc: '🚦', msg: '🎭', '4l': '🍀', sail: '⛵' };
   function planTile(box, icon, name, desc, fn, edit) {
     const b = document.createElement('button'); b.className = 'pl-tile' + (edit ? ' pl-edit' : '');
     const i = document.createElement('span'); i.className = 'pl-ico'; i.textContent = icon; i.setAttribute('aria-hidden', 'true');
     const t = document.createElement('span'); t.className = 'pl-t'; const n = document.createElement('b'); n.textContent = name; const d = document.createElement('small'); d.textContent = desc; t.append(n, d);
     b.append(i, t); b.addEventListener('click', () => { openPlan(false); fn(); }); box.appendChild(b); return b;
   }
-  Plan.TEMPLATES.forEach(([k, name, desc], i) => planTile(i < 6 ? $('#plPlan') : $('#plRetro'), PLAN_ICONS[k] || '▦', name, desc, () => insertTemplate(k), true));
+  Plan.TEMPLATES.forEach(([k, name, desc], i) => planTile(i < 7 ? $('#plPlan') : $('#plRetro'), PLAN_ICONS[k] || '▦', name, desc, () => insertTemplate(k), true));
   planTile($('#plPlan'), '✅', 'Картка задачі', 'Статус, виконавець, естімейт; з Jira, Linear, GitHub', () => { const it = createTaskAt(center()); pendingEdit = null; startEdit(it.id); }, true);
   planTile($('#plFac'), '🗳️', 'Голосування крапками', 'Кілька голосів на кожного, потім сортування', () => openVotePop(true), true);
   const hideTile = planTile($('#plFac'), '🙈', 'Приховане писання', 'Чужі картки не видно, доки їх не відкриють', () => (hideMode.on ? revealAll() : startHide()), true);
@@ -5538,14 +5976,14 @@ const Plan = (() => {
   function insertTemplate(key) {
     if (viewOnly()) return;
     finishEdit();
-    const list = Plan.template(key, 0, 0, uid, me.name, Date.now()), b = bbox(list), c = freeSpot(b, center());
+    const list = Plan.template(key, 0, 0, uid, me.name, Date.now()), b = bbox(list.filter((i) => !isLink(i))), c = freeSpot(b, center());
     const dx = Math.round(c.x - (b.x1 + b.x2) / 2), dy = Math.round(c.y - (b.y1 + b.y2) / 2);
     let z = topZ();
-    const made = list.map((it) => { it.x += dx; it.y += dy; it.z = z++; const f = full(it.id, it); items.set(it.id, f); return f; });
+    const made = list.map((it) => { if (!isLink(it)) { it.x += dx; it.y += dy; } it.z = z++; const f = full(it.id, it); items.set(it.id, f); return f; });
     ripArmed = performance.now();
     commit({}, made.map((i) => i.id)); setSel(made.filter(isGrid).map((i) => i.id)); renderAll();
     showArea({ x1: b.x1 + dx, y1: b.y1 + dy - 50, x2: b.x2 + dx, y2: b.y2 + dy + 40 });
-    toast('Додано: ' + (TPL_NAMES[key] || 'шаблон') + '. Подвійний клік у клітинці додає стікер');
+    toast('Додано: ' + (TPL_NAMES[key] || 'шаблон') + (key === 'gantt' ? '. Тягніть смугу або її краї, щоб змінити дати' : '. Подвійний клік у клітинці додає стікер'));
   }
 
   // grid controls in the context bar: one more or one fewer column or lane; cells keep their size, cards their cells
@@ -5569,7 +6007,7 @@ const Plan = (() => {
   function openTlPop(open) {
     const pop = $('#tlPop'); open = open != null ? open : pop.hidden;
     pop.hidden = !open; $('#gSetBtn').setAttribute('aria-expanded', String(open));
-    if (open) { openTaskPop(false); fillTlPop(); placeSidePop(pop); }
+    if (open) { openTaskPop(false); openBarPop(false); fillTlPop(); placeSidePop(pop); }
   }
   function placeSidePop(pop) { // just under the context bar, kept on screen
     const r = ctx.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
@@ -5597,7 +6035,7 @@ const Plan = (() => {
   $('#tlToday').addEventListener('click', () => tlOp((g) => { g.start = Plan.thisMonday(Date.now()); }));
   ['#tlPop', '#taskPop'].forEach((s) => $(s).addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') { e.preventDefault(); closeSidePops(); } }));
   function closeSidePops() { if (!$('#tlPop').hidden) openTlPop(false); if (!$('#taskPop').hidden) openTaskPop(false); }
-  addEventListener('pointerdown', (e) => { if (!e.target.closest('#tlPop, #taskPop, #ctx')) closeSidePops(); }, true);
+  addEventListener('pointerdown', (e) => { if (!e.target.closest('#tlPop, #taskPop, #barPop, #ctx')) closeSidePops(); }, true);
   // today's line on timelines moves on by itself
   setInterval(() => { items.forEach((i) => { if (i.type === 'timeline') render(i); }); }, 60000);
 
@@ -5613,7 +6051,7 @@ const Plan = (() => {
   function openTaskPop(open) {
     const pop = $('#taskPop'); open = open != null ? open : pop.hidden;
     pop.hidden = !open; $('#tkBtn').setAttribute('aria-expanded', String(open));
-    if (open) { openTlPop(false); fillTaskPop(); placeSidePop(pop); setTimeout(() => $('#tkWho').focus({ preventScroll: true }), 30); }
+    if (open) { openTlPop(false); openBarPop(false); fillTaskPop(); placeSidePop(pop); setTimeout(() => $('#tkWho').focus({ preventScroll: true }), 30); }
   }
   function fillTaskPop() {
     if ($('#taskPop').hidden) return;
@@ -5657,6 +6095,113 @@ const Plan = (() => {
     for (const op of undoStack) if (op.after[id]) Object.assign(op.after[id], patch, { src: it.src }); // redo keeps what was pulled
     renderAll(); fillTaskPop(); toast(`Оновлено з ${S.name}`);
   }
+
+  // task bars on a timeline: a details popover with the name, owner, dates, progress and dependencies
+  const selBar = () => { const s = selItems(); return s.length === 1 && isBar(s[0]) ? s[0] : null; };
+  function barOp(fn, id) {
+    const b = id ? items.get(id) : selBar(); if (!b || viewOnly()) return;
+    const before = snapIds([b.id]); fn(b);
+    const g = gridOfItem(b); if (g && g.type === 'timeline') Plan.placeBar(g, b, Plan.cellOf(g, b)[1], Plan.trackOf(g, b));
+    const d = els.get(b.id); if (d && !reduceMotion) { d.classList.add('snapping'); clearTimeout(d._snapT); d._snapT = setTimeout(() => d.classList.remove('snapping'), 420); }
+    commit(before); renderAll(); fillBarPop();
+  }
+  function openBarPop(open) {
+    const pop = $('#barPop'); open = open != null ? open : pop.hidden;
+    pop.hidden = !open; $('#brBtn').setAttribute('aria-expanded', String(open));
+    if (open) { openTlPop(false); openTaskPop(false); fillBarPop(); }
+  }
+  const barName = (b) => (b.text || '').trim() || 'Без назви';
+  // bars this one waits for (links into it) and bars waiting for it (links out of it)
+  const depsOf = (b) => [...items.values()].filter((l) => isLink(l) && l.b === b.id && isBar(items.get(l.a)));
+  const blocksOf = (b) => [...items.values()].filter((l) => isLink(l) && l.a === b.id && isBar(items.get(l.b)));
+  function waitsOn(b, other) { // would linking other → b close a loop (does other already wait on b)?
+    const seen = new Set(), stack = [b.id];
+    while (stack.length) { const id = stack.pop(); if (id === other.id) return true; if (seen.has(id)) continue; seen.add(id); items.forEach((l) => { if (isLink(l) && l.a === id) stack.push(l.b); }); }
+    return false;
+  }
+  function depRow(list, l, end, kind) {
+    const o = items.get(l[end]); const li = document.createElement('li');
+    const dot = document.createElement('i'); dot.style.setProperty('--c', `var(--t-${COLORS.includes(o.color) ? o.color : 'pink'})`); dot.classList.toggle('done', (o.pct | 0) >= 100);
+    const nm = document.createElement('button'); nm.className = 'br-go'; nm.type = 'button'; nm.textContent = barName(o); nm.title = 'Перейти до задачі';
+    nm.addEventListener('click', () => { setSel([o.id]); const g = geom(o); if (g.x * view.z + view.x < 0 || (g.x + g.w) * view.z + view.x > innerWidth || g.y * view.z + view.y < 64 || (g.y + g.h) * view.z + view.y > innerHeight - 90) flyTo({ x: innerWidth / 2 - (g.x + g.w / 2) * view.z, y: innerHeight / 2 - (g.y + g.h / 2) * view.z, z: view.z }); });
+    const when = document.createElement('small'); when.textContent = kind === 'dep' ? 'до ' + Plan.fmtD(Plan.dayOf(o.due)) : 'з ' + Plan.fmtD(Plan.dayOf(o.start));
+    const x = document.createElement('button'); x.className = 'br-x'; x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', 'Прибрати зв’язок з «' + barName(o) + '»');
+    x.hidden = viewOnly();
+    x.addEventListener('click', () => { const before = snapIds([l.id]); items.delete(l.id); commit(before); renderAll(); fillBarPop(); });
+    li.append(dot, nm, when, x); list.appendChild(li);
+  }
+  function fillBarPop() {
+    if ($('#barPop').hidden) return;
+    const b = selBar(); if (!b) { openBarPop(false); return; }
+    const set = (id, v) => { const e = $(id); if (document.activeElement !== e) e.value = v; };
+    set('#brText', b.text || ''); set('#brWho', b.who || ''); set('#brStart', b.start); set('#brDue', b.due);
+    const s = Plan.dayOf(b.start), e = Plan.dayOf(b.due), n = e - s + 1;
+    $('#brLen').textContent = b.ms ? 'Віха на ' + Plan.fmtD(e) : dayWord(n) + ' · робочих ' + Plan.workdays(s, e);
+    $('#brStart').closest('.br-grid').classList.toggle('ms', !!b.ms); $('#brDueL').textContent = b.ms ? 'Дата' : 'Дедлайн';
+    $('#brMs').checked = !!b.ms; $('#brPctRow').hidden = !!b.ms;
+    if (!pctBefore) { $('#brPct').value = b.pct | 0; $('#brPctV').textContent = (b.pct | 0) + '%'; }
+    $('#brPct').style.setProperty('--v', (b.pct | 0) + '%');
+    const deps = depsOf(b), blocks = blocksOf(b);
+    $('#brDeps').textContent = ''; $('#brBlocks').textContent = '';
+    deps.forEach((l) => depRow($('#brDeps'), l, 'a', 'dep')); blocks.forEach((l) => depRow($('#brBlocks'), l, 'b', 'blk'));
+    $('#brDepN').textContent = deps.length ? '· ' + deps.length : ''; $('#brBlkN').textContent = blocks.length ? '· ' + blocks.length : '';
+    if (!deps.length) $('#brDeps').innerHTML = '<li class="br-none">Нічого</li>';
+    if (!blocks.length) $('#brBlocks').innerHTML = '<li class="br-none">Нічого</li>';
+    const late = deps.map((l) => items.get(l.a)).filter((a) => Plan.dayOf(a.due) >= s);
+    $('#brWarn').hidden = !late.length;
+    if (late.length) $('#brWarn').textContent = 'Починається раніше, ніж завершиться ' + late.map((a) => '«' + barName(a) + '»').join(', ') + '.';
+    const g = gridOfItem(b), linked = new Set([...deps.map((l) => l.a), ...blocks.map((l) => l.b)]);
+    const cand = [...items.values()].filter((o) => isBar(o) && o.id !== b.id && !linked.has(o.id) && (!g || o.grid === b.grid) && !waitsOn(b, o))
+      .sort((x, y) => Plan.dayOf(x.start) - Plan.dayOf(y.start) || barName(x).localeCompare(barName(y)));
+    const sel = $('#brAdd'); sel.textContent = '';
+    const head = new Option(cand.length ? '＋ Додати залежність…' : 'Інших задач для залежності немає', ''); sel.add(head);
+    cand.forEach((o) => sel.add(new Option(barName(o) + ' · до ' + Plan.fmtD(Plan.dayOf(o.due)), o.id)));
+    sel.disabled = !cand.length || viewOnly(); sel.value = '';
+    ['#brText', '#brWho', '#brStart', '#brDue', '#brPct', '#brMs'].forEach((q) => { $(q).disabled = viewOnly(); });
+    $('#barPop').querySelectorAll('.step').forEach((x) => { x.disabled = viewOnly(); });
+  }
+  let pctBefore = null;
+  $('#brBtn').addEventListener('click', () => openBarPop());
+  $('#brClose').addEventListener('click', () => openBarPop(false));
+  $('#brText').addEventListener('change', (e) => barOp((b) => { b.text = e.target.value.trim().slice(0, 200); }));
+  $('#brWho').addEventListener('change', (e) => barOp((b) => { const v = e.target.value.trim().slice(0, 40); if (v) b.who = v; else delete b.who; }));
+  $('#brStart').addEventListener('change', (e) => { const d = Plan.dayOf(e.target.value); if (d == null) return; barOp((b) => { const n = Plan.dayOf(b.due) - Plan.dayOf(b.start); b.start = e.target.value; b.due = Plan.isoOf(b.ms ? d : Math.max(d, Plan.dayOf(b.due))); if (!b.ms && Plan.dayOf(b.due) < d) b.due = Plan.isoOf(d + n); }); });
+  $('#brDue').addEventListener('change', (e) => { const d = Plan.dayOf(e.target.value); if (d == null) return; barOp((b) => { b.due = e.target.value; if (b.ms || d < Plan.dayOf(b.start)) b.start = e.target.value; }); });
+  $('#barPop').querySelector('.br-grid').addEventListener('click', (e) => {
+    const k = e.target.closest('[data-d]'); if (!k) return;
+    const [f, n] = k.dataset.d.split(':');
+    barOp((b) => {
+      const s = Plan.dayOf(b.start), d = Plan.dayOf(b.due);
+      if (b.ms) { b.start = b.due = Plan.isoOf(d + +n); return; }
+      if (f === 'start') b.start = Plan.isoOf(Math.min(d, s + +n)); else b.due = Plan.isoOf(Math.max(s, d + +n));
+    });
+  });
+  $('#brPct').addEventListener('input', (e) => { // the bar fills as the slider moves; one undo step when it is let go
+    const b = selBar(); if (!b || viewOnly()) return;
+    if (!pctBefore) pctBefore = snapIds([b.id]);
+    b.pct = clamp(Math.round(+e.target.value), 0, 100); $('#brPctV').textContent = b.pct + '%'; e.target.style.setProperty('--v', b.pct + '%'); render(b);
+  });
+  $('#brPct').addEventListener('change', () => { const b = selBar(), before = pctBefore; pctBefore = null; if (b && before) { commit(before); render(b); fillBarPop(); } });
+  $('#brMs').addEventListener('change', (e) => barOp((b) => { if (e.target.checked) { b.ms = true; b.start = b.due; } else { delete b.ms; b.start = Plan.isoOf(Plan.dayOf(b.due) - 4); } }));
+  $('#brAdd').addEventListener('change', (e) => {
+    const b = selBar(), o = items.get(e.target.value); if (!b || !o || viewOnly()) return;
+    const it = { id: uid(), type: 'link', a: o.id, b: b.id, z: topZ(), by: me.name };
+    items.set(it.id, it); commit({}, [it.id]); renderAll(); fillBarPop();
+  });
+  $('#barPop').addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') { e.preventDefault(); openBarPop(false); } });
+  // a new bar on the selected timeline: from today (or its first column), one column long, on the next free track
+  function addBarTo(g) {
+    if (viewOnly() || !g || g.type !== 'timeline') return;
+    finishEdit();
+    const c0 = Plan.column(g, 0), n = Plan.dims(g).nc, cl = Plan.column(g, n - 1), today = Plan.localDay(Date.now());
+    const s = today >= c0.from && today <= cl.to ? today : c0.from, len = g.unit === 'day' ? 2 : g.unit === 'month' ? 14 : g.unit === 'sprint' ? Math.min(g.len || 14, 10) : 5;
+    const it = full(uid(), { type: 'bar', text: '', start: Plan.isoOf(s), due: Plan.isoOf(s + len - 1), pct: 0, color: 'pink', x: g.x, y: g.y, z: topZ(), by: me.name });
+    Plan.placeBar(g, it, 0, Plan.nextTrack(g, 0, members(g)));
+    items.set(it.id, it);
+    const before = { [it.id]: null }; growLanes(g, before, true);
+    commit(before, [it.id]); setSel([it.id]); renderAll(); startEdit(it.id);
+  }
+  $('#gAddBar').addEventListener('click', () => { const g = selItems().find((i) => i.type === 'timeline'); if (g) addBarTo(g); });
 
   // markdown export: everything on the board (or just the selection) as text, in a dialog with a copy button
   let mdScope = 'all';
