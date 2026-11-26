@@ -565,14 +565,16 @@ body.view-only .ro-note { display: flex; animation: palIn var(--base) var(--ease
 .rail .icon-btn { width: 40px; height: 40px; }
 .rail .emo-ico { font-size: 20px; line-height: 1; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
 .rail .dot { position: absolute; right: 4px; bottom: 4px; width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 0 1.5px var(--surface); }
-.tip {
-  position: absolute; left: 50%; bottom: calc(100% + 12px); transform: translate(-50%, 4px); white-space: nowrap; z-index: 3;
-  background: var(--text); color: var(--bg); font-size: 12px; padding: 5px 10px; border-radius: var(--r-pill); opacity: 0; pointer-events: none;
+.tip { display: none; } /* the text source; #tipLayer shows it */
+#tipLayer {
+  position: fixed; left: 0; top: 0; z-index: 1000; pointer-events: none; white-space: nowrap; max-width: calc(100vw - 16px);
+  background: var(--text); color: var(--bg); font-size: 12px; line-height: 16px; padding: 5px 10px; border-radius: var(--r-pill);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .18); opacity: 0; transform: translateY(var(--dy, 4px)); will-change: translate, opacity;
   transition: opacity var(--fast) var(--ease), transform var(--fast) var(--ease);
 }
-.tip kbd { font: inherit; opacity: .6; margin-left: 6px; }
-#ctx .tip { bottom: calc(100% + 10px); }
-.icon-btn:hover .tip, .icon-btn:focus-visible .tip { opacity: 1; transform: translate(-50%, 0); }
+#tipLayer.on { opacity: 1; transform: none; }
+#tipLayer.glide { transition: opacity var(--fast) var(--ease), transform var(--fast) var(--ease), translate 140ms var(--ease); }
+#tipLayer kbd { font: inherit; opacity: .6; margin-left: 6px; }
 .palette { position: fixed; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); translate: -50% 0; display: flex; flex-direction: row; align-items: center; gap: 8px; padding: 10px; border-radius: var(--r-pill); z-index: 5; transform-origin: 50% 100%; animation: palIn var(--base) var(--ease-spring) both; }
 @keyframes palIn { from { opacity: 0; transform: translateY(8px) scale(0.9); } }
 .palette.emojis, .palette.nodes { gap: 2px; padding: 6px; }
@@ -3318,6 +3320,7 @@ const Plan = (() => {
     if (isCard(i) && 'sec' in i) { const s = i.sec && items.get(i.sec); return s && isSec(s) ? s : null; }
     return geoOwner(i);
   }
+  const boxIn = (i, s) => i.x >= s.x && i.y >= s.y && i.x + i.w <= s.x + s.w && i.y + i.h <= s.y + s.h;
   const contained = (sec) => [...items.values()].filter((i) => ownerOf(i) === sec);
   // cards with no section yet whose centre is inside `sec` join it; with `release`, members now outside leave it
   function regroup(sec, release) {
@@ -4282,6 +4285,14 @@ const Plan = (() => {
   }
   function deleteSelected() {
     const ids = new Set([...selected].filter((id) => items.has(id))); if (!ids.size) return;
+    // a section, table or timeline takes everything inside it along (nested ones too), in one undo step
+    for (let todo = [...ids]; todo.length;) {
+      const c = items.get(todo.pop()); if (!c) continue;
+      const inner = isSec(c) ? contained(c).concat([...items.values()].filter((s) => isSec(s) && s !== c && s.w * s.h < c.w * c.h && boxIn(s, c))) : isGrid(c) ? members(c) : [];
+      for (const i of inner) if (!ids.has(i.id)) { ids.add(i.id); todo.push(i.id); }
+    }
+    const gone = [...ids].map((k) => items.get(k)).filter(isCard); // stamps and pins sitting on a deleted card go too
+    if (gone.length) items.forEach((i) => { if (isMark(i) && !ids.has(i.id) && gone.some((c) => centerIn(i, c))) ids.add(i.id); });
     items.forEach((i) => { if (isLink(i) && (ids.has(i.a) || ids.has(i.b))) ids.add(i.id); }); // ropes go with their cards
     const before = snapIds([...ids]);
     ids.forEach((id) => items.delete(id)); selected.clear(); commit(before); renderAll(); setSel([]);
@@ -6625,6 +6636,48 @@ const Plan = (() => {
       }, () => setStatus(mode === 'shared' ? 'ok' : '', mode === 'shared' ? 'Спільна дошка' : 'Лише на цьому пристрої'));
     } else if (mode === 'shared') setStatus('ok', 'Спільна дошка');
   }
+  // ---------- tooltips: one floating layer above every panel, palette and menu. The first one waits a moment;
+  // moving on to a neighbour while one is up (or just after) shows it at once and glides there ----------
+  (() => {
+    const layer = document.createElement('div'); layer.id = 'tipLayer'; layer.setAttribute('aria-hidden', 'true'); document.body.appendChild(layer);
+    const DELAY = 450, WARM = 600;
+    let cur = null, timer = 0, on = false, warmUntil = 0, muted = null;
+    const tipOf = (b) => { for (const c of b.children) if (c.classList.contains('tip')) return c; return null; };
+    const btnOf = (t) => { const b = t && t.closest && t.closest('.icon-btn'); return b && tipOf(b) ? b : null; };
+    function show(b) {
+      const t = tipOf(b); if (!t || !b.isConnected || !b.getClientRects().length || b.disabled) return hide();
+      const glide = on; layer.classList.toggle('glide', glide);
+      if (layer.innerHTML !== t.innerHTML) layer.innerHTML = t.innerHTML;
+      const r = b.getBoundingClientRect(), w = layer.offsetWidth, h = layer.offsetHeight, gap = b.closest('#ctx') ? 8 : 10;
+      const x = Math.round(Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2)));
+      let y = r.top - gap - h, dy = 4; if (y < 8) { y = r.bottom + gap; dy = -4; }
+      layer.style.translate = x + 'px ' + Math.round(y) + 'px'; layer.style.setProperty('--dy', dy + 'px');
+      layer.classList.add('on'); on = true;
+    }
+    function hide() {
+      clearTimeout(timer); timer = 0; cur = null;
+      if (on) { on = false; warmUntil = performance.now() + WARM; layer.classList.remove('on'); }
+    }
+    function enter(b) {
+      if (b === cur) return;
+      clearTimeout(timer); timer = 0; cur = b;
+      if (on || performance.now() < warmUntil) show(b); else timer = setTimeout(() => { timer = 0; if (cur === b) show(b); }, DELAY);
+    }
+    document.addEventListener('pointerover', (e) => {
+      if (e.pointerType !== 'mouse' && e.pointerType !== 'pen') return;
+      const b = btnOf(e.target);
+      if (b !== muted) muted = null;
+      if (!b || b === muted) { if (cur) hide(); return; }
+      enter(b);
+    }, true);
+    document.addEventListener('pointerout', (e) => { if (!e.relatedTarget && cur) hide(); }, true);
+    // a press hides it until the pointer leaves that button (its state, and maybe its text, just changed)
+    document.addEventListener('pointerdown', (e) => { muted = btnOf(e.target); hide(); warmUntil = 0; }, true);
+    document.addEventListener('keydown', (e) => { if (e.key !== 'Tab' && cur && !cur.matches(':focus-visible')) hide(); }, true);
+    document.addEventListener('focusin', (e) => { const b = btnOf(e.target); if (b && b.matches(':focus-visible')) enter(b); }, true);
+    document.addEventListener('focusout', (e) => { if (cur && cur === btnOf(e.target)) hide(); }, true);
+    addEventListener('blur', hide); addEventListener('resize', hide);
+  })();
   boot();
 })();
 </script>
