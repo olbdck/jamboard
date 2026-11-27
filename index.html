@@ -410,6 +410,43 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
 .pv-stamp { display: grid; place-items: center; line-height: 1; }
 .pv-pin { display: grid; place-items: center; border-radius: 50% 50% 50% 4px; background: color-mix(in srgb, var(--pc) 30%, var(--surface)); box-shadow: 0 0 0 2px var(--pc), var(--note-shadow); font-size: 18px; }
 @media (max-width: 520px) { .panel.peek { width: calc(100vw - 16px); height: calc(100vh - 16px); } .peek-head { flex-wrap: wrap; padding: 12px 10px 10px 16px; } .peek-hd { flex-basis: 100%; } .peek-head .peek-new { margin-left: auto; } }
+/* version history: a list on the right; a version opens in the preview dialog beside it */
+.panel.hist-pop { position: fixed; top: calc(72px + env(safe-area-inset-top, 0px)); right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(88px + env(safe-area-inset-bottom, 0px)); width: 340px; max-width: calc(100vw - 24px); box-sizing: border-box; z-index: 22; display: flex; flex-direction: column; background: var(--surface); border-radius: var(--r-xl); box-shadow: var(--shadow-lg); overflow: hidden; animation: hsIn var(--slow) var(--ease-em) both; }
+.panel.hist-pop.out { animation: hsOut 170ms var(--ease) both; pointer-events: none; }
+@keyframes hsIn { from { opacity: 0; translate: 24px 0; } }
+@keyframes hsOut { to { opacity: 0; translate: 16px 0; } }
+.hs-head { display: flex; align-items: flex-start; gap: 10px; padding: 16px 14px 10px 18px; }
+.hs-hd { flex: 1; min-width: 0; }
+.hs-hd h2 { margin: 0; font: 600 18px/1.25 var(--f-display); letter-spacing: -0.02em; }
+.hs-hd p { margin: 3px 0 0; font-size: 12.5px; line-height: 1.35; color: var(--muted); }
+.hs-head .close { flex: none; border: 0; background: var(--chip); color: var(--muted); cursor: pointer; font-size: 15px; line-height: 1; width: 26px; height: 26px; border-radius: 50%; transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease); }
+.hs-head .close:hover { color: var(--text); background: color-mix(in srgb, var(--text) 10%, transparent); }
+.hs-head .close:focus-visible { outline: none; box-shadow: var(--focus); }
+.hs-list { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 0 8px 10px; contain: content; }
+.hs-day { position: sticky; top: 0; z-index: 1; padding: 10px 10px 6px; font: 600 12px var(--f-text); color: var(--muted); background: var(--surface); }
+.hs-item { display: flex; align-items: flex-start; gap: 10px; width: 100%; box-sizing: border-box; border: 0; background: transparent; color: var(--text); text-align: left; padding: 9px 10px; border-radius: var(--r-md); cursor: pointer; font: inherit; position: relative; transition: background-color var(--fast) var(--ease); }
+.hs-item:hover { background: var(--chip); }
+.hs-item:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+.hs-item[aria-current="true"] { background: var(--accent-soft); }
+.hs-item[aria-current="true"]::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 2px; background: var(--accent); }
+.hs-item .av { flex: none; width: 28px; height: 28px; margin: 1px 0 0; border: 0; font-size: 15px; animation: none; }
+.hs-t { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.hs-l { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.hs-l b { font-weight: 600; font-size: 14px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hs-l time { margin-left: auto; flex: none; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.hs-t small { font-size: 12.5px; line-height: 1.35; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.hs-now { flex: none; align-self: center; padding: 2px 8px; border-radius: var(--r-pill); background: var(--accent); color: var(--accent-fg); font: 600 11px/1.4 var(--f-text); }
+.hs-more { display: block; margin: 6px auto 4px; }
+.hs-msg { padding: 18px 22px 22px; font-size: 13.5px; line-height: 1.45; color: var(--muted); }
+.hs-msg:empty { display: none; }
+.hs-msg code { font: 500 12.5px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text); background: var(--chip); padding: 1px 5px; border-radius: 5px; }
+.hs-list.wait::after { content: ""; display: block; height: 220px; margin: 0 4px; border-radius: var(--r-md); background: linear-gradient(100deg, var(--chip) 30%, color-mix(in srgb, var(--surface) 45%, transparent) 50%, var(--chip) 70%) -100% 0 / 200% 100% no-repeat; animation: shimmer 1.3s var(--ease) infinite; }
+body.view-only #histBtn { display: none !important; }
+/* the preview of a version sits left of the list; what changed in it is ringed, the rest a little faded */
+.panel.peek.hist { left: calc((100vw - 372px) / 2); top: calc(72px + env(safe-area-inset-top, 0px)); translate: -50% 0; width: min(1080px, calc(100vw - 404px)); height: calc(100vh - 160px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
+.peek-world.hs-diff .pv:not(.pv-sec):not(.hs-hit) { opacity: .5; }
+.pv.hs-hit { outline: 5px solid var(--accent); outline-offset: 6px; }
+@media (max-width: 760px) { .panel.peek.hist { left: 50%; top: 8px; width: calc(100vw - 16px); height: calc(100vh - 16px); } body.hs-pv #histPop { visibility: hidden; } .panel.hist-pop { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); } }
 /* view-only boards (the demo): pan, zoom and read; every editing control is gone */
 body.view-only .rail [data-tool]:not([data-tool="select"]):not([data-tool="hand"]), body.view-only #mermaidBtn, body.view-only #imageBtn, body.view-only #undoBtn, body.view-only #redoBtn, body.view-only .rail .rule, body.view-only #palette, body.view-only #ctx, body.view-only #timerPill, body.view-only #timerPill + .vsep, body.view-only .port, body.view-only .handle { display: none !important; }
 body.view-only #viewport, body.view-only #viewport .item { cursor: grab; }
@@ -994,6 +1031,12 @@ select.field.sm { padding-right: 8px; }
   <div class="rule"></div>
   <button class="icon-btn" id="undoBtn" aria-label="Скасувати"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L4.5 11.5 9 16"/><path d="M5 11.5h9a5 5 0 010 10h-2"/></svg><span class="tip">Скасувати<kbd>Ctrl+Z</kbd></span></button>
   <button class="icon-btn" id="redoBtn" aria-label="Повторити"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7l4.5 4.5L15 16"/><path d="M19 11.5h-9a5 5 0 000 10h2"/></svg><span class="tip">Повторити<kbd>Ctrl+Shift+Z</kbd></span></button>
+  <button class="icon-btn" id="histBtn" aria-label="Історія версій" aria-haspopup="dialog" aria-expanded="false" aria-controls="histPop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.6 13.2A7.5 7.5 0 106.4 6.6"/><path d="M3.8 4.6v3.6h3.6"/><path d="M12 8.2V12l2.6 1.7"/></svg><span class="tip">Історія версій: хто, що й коли змінив</span></button>
+</div>
+<div class="panel hist-pop" id="histPop" role="dialog" aria-labelledby="histTitle" hidden>
+  <div class="hs-head"><div class="hs-hd"><h2 id="histTitle">Історія версій</h2><p>Хто, що й коли змінив. Натисніть версію, щоб переглянути або відновити її</p></div><button class="close" id="histClose" aria-label="Закрити">×</button></div>
+  <div class="hs-list" id="histList" role="list"></div>
+  <div class="hs-msg" id="histMsg" role="status"></div>
 </div>
 <div class="panel palette" id="palette" hidden></div>
 <div class="panel popover" id="mmPop" role="dialog" aria-label="Схема з Mermaid" hidden>
@@ -2366,7 +2409,7 @@ const Plan = (() => {
     const after = snapIds(Object.keys(before));
     undoStack.push({ before, after }); if (undoStack.length > 120) undoStack.shift();
     redoStack.length = 0; updateHistoryButtons();
-    persist(after); coverSoon(true);
+    persist(after); coverSoon(true); histSoon();
     if (ripArmed && newIds.length) { // the first thing created after a paste gets the ripple
       const fresh = performance.now() - ripArmed < 10000; ripArmed = 0;
       const made = newIds.map((id) => items.get(id)).filter((i) => i && !isLink(i));
@@ -2383,7 +2426,7 @@ const Plan = (() => {
   function applyMap(map) {
     for (const id in map) map[id] ? putItem(id, { ...map[id] }) : items.delete(id);
     selected = new Set([...selected].filter((id) => items.has(id)));
-    persist(map); renderAll(); coverSoon(true);
+    persist(map); renderAll(); coverSoon(true); histSoon();
   }
   function undo() { finishEdit(); const op = undoStack.pop(); if (!op) return; applyMap(op.before); redoStack.push(op); updateHistoryButtons(); }
   function redo() { finishEdit(); const op = redoStack.pop(); if (!op) return; applyMap(op.after); undoStack.push(op); updateHistoryButtons(); }
@@ -4759,7 +4802,7 @@ const Plan = (() => {
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     for (const i of cards) { x0 = Math.min(x0, i.x); y0 = Math.min(y0, i.y - (i.type === 'section' ? 40 : 0)); x1 = Math.max(x1, i.x + W(i)); y1 = Math.max(y1, i.y + H(i)); }
     const T = (c, d) => `var(--t-${COLORS.includes(c) ? c : d})`;
-    const box = (i, cls) => { const e = document.createElement('div'); e.className = 'pv ' + cls; e.style.cssText = `left:${i.x}px;top:${i.y}px;width:${W(i)}px;height:${H(i)}px`; return e; };
+    const box = (i, cls) => { const e = document.createElement('div'); e.className = 'pv ' + cls; e.style.cssText = `left:${i.x}px;top:${i.y}px;width:${W(i)}px;height:${H(i)}px`; if (i.id) e.dataset.id = i.id; return e; };
     const order = cards.sort((a, b) => rank(a) - rank(b) || (a.z || 0) - (b.z || 0));
     const secs = order.filter((i) => i.type === 'section'), rest = order.filter((i) => i.type !== 'section');
     for (const i of secs) {
@@ -4817,7 +4860,8 @@ const Plan = (() => {
     if (!bid) return;
     closeGallery(); closeThread();
     const pop = $('#peek'), back = $('#peekBack'), token = ++pk.token;
-    pk.open = true; pk.bid = bid; pk.from = fromEl || null;
+    pk.open = true; pk.bid = bid; pk.from = fromEl || null; pk.hist = null;
+    pop.classList.remove('hist'); $('#peekNew').hidden = false; $('#peekWorld').classList.remove('hs-diff');
     // grow out of the card that was clicked
     const r = fromEl && fromEl.getBoundingClientRect();
     pop.hidden = false; back.hidden = false; pop.classList.remove('out'); back.classList.remove('out');
@@ -4847,6 +4891,7 @@ const Plan = (() => {
   function closePeek(go) {
     if (!pk.open) return;
     pk.open = false; pk.token++;
+    if (pk.hist) { pk.hist = null; histPreviewClosed(); }
     const pop = $('#peek'), back = $('#peekBack'), from = pk.from;
     pop.classList.remove('in'); pop.classList.add('out'); back.classList.add('out');
     setTimeout(() => { if (!pk.open) { pop.hidden = true; back.hidden = true; $('#peekWorld').innerHTML = ''; } }, reduceMotion ? 0 : 200);
@@ -4854,11 +4899,12 @@ const Plan = (() => {
     else if (from && from.isConnected) { const f = from.closest('.item') ? null : from; if (f && f.focus) f.focus({ preventScroll: true }); }
   }
   $('#peekClose').addEventListener('click', () => closePeek(false));
-  $('#peekGo').addEventListener('click', () => closePeek(true));
+  $('#peekGo').addEventListener('click', () => (pk.hist ? histRestore() : closePeek(true)));
   $('#peekBack').addEventListener('pointerdown', () => closePeek(false));
   $('#peek').addEventListener('keydown', (e) => {
     e.stopPropagation();
     if (e.key === 'Escape') { e.preventDefault(); closePeek(false); return; }
+    if (pk.hist && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); histStep(e.key === 'ArrowUp' ? -1 : 1); return; } // the next older / newer version
     if (e.key === 'Tab') { // keep focus inside the dialog
       const f = [...$('#peek').querySelectorAll('button:not([disabled]), a[href]')]; if (!f.length) return;
       const i = f.indexOf(document.activeElement), n = e.shiftKey ? (i <= 0 ? f.length - 1 : i - 1) : (i + 1) % f.length;
@@ -4905,6 +4951,260 @@ const Plan = (() => {
     st.addEventListener('dblclick', () => peekFit(true));
     addEventListener('resize', () => { if (pk.open && pk.fit) peekFit(false); });
   })();
+  // ---------- version history: the server keeps every change to an item with who made it (supabase/history.sql).
+  // The list folds one person's run of changes into a version; a version opens in the preview dialog beside the list
+  // (what changed is ringed), and restoring it writes only the difference, as one ordinary undo step ----------
+  const HS_GAP = 10 * 60000, HS_PAGE = 200, HS_TOP = 60;
+  const hs = { open: false, bid: null, rows: new Map(), groups: [], more: false, cur: null, sig: '', timer: 0, soon: 0, cache: new Map(), token: 0, busy: false };
+  const HS_NOUNS = { sticky: ['стікер', 'стікери', 'стікерів'], text: ['текст', 'тексти', 'текстів'], image: ['зображення', 'зображення', 'зображень'],
+    section: ['секцію', 'секції', 'секцій'], stamp: ['штамп', 'штампи', 'штампів'], comment: ['коментар', 'коментарі', 'коментарів'],
+    link: ['зв’язок', 'зв’язки', 'зв’язків'], web: ['посилання', 'посилання', 'посилань'], node: ['блок', 'блоки', 'блоків'],
+    board: ['картку дошки', 'картки дошок', 'карток дошок'], timeline: ['таймлайн', 'таймлайни', 'таймлайнів'], table: ['таблицю', 'таблиці', 'таблиць'],
+    task: ['задачу', 'задачі', 'задач'], bar: ['смугу', 'смуги', 'смуг'] };
+  const HS_ANY = ['елемент', 'елементи', 'елементів'];
+  const HS_VERBS = { add: 'додано', edit: 'змінено', move: 'переміщено', del: 'видалено' };
+  const hsPlural = (n, f) => plural(n, f[0], f[1], f[2]);
+  const idOfPath = (p) => p.slice(p.lastIndexOf('/') + 1);
+  const hsTime = (t) => new Date(t).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+  function hsDay(t) {
+    const d = new Date(t), now = new Date(), day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+    const ago = Math.round((day(now) - day(d)) / 864e5);
+    if (ago === 0) return 'Сьогодні'; if (ago === 1) return 'Вчора';
+    return d.toLocaleDateString('uk-UA', d.getFullYear() === now.getFullYear() ? { day: 'numeric', month: 'long' } : { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  const hsWhen = (t) => { const d = hsDay(t); return (d === 'Сьогодні' || d === 'Вчора' ? d.toLowerCase() : d) + ', ' + hsTime(t); };
+  const hsStamp = (t) => new Date(t).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' }) + ', ' + hsTime(t); // stays true tomorrow
+  function hsWho(w) {
+    if (!w || typeof w !== 'object') return { key: '?', n: 'Хтось', e: '👤', c: '#8e8e93' };
+    if (w.seed) return { key: 'seed', n: 'Збережений стан', e: '🗂️', c: '#8e8e93', seed: true };
+    if (w.mcp) return { key: 'mcp', n: 'Claude', e: '✦', c: '#c2185b' };
+    const v = typeof w.v === 'string' ? w.v : '', r = typeof w.r === 'string' ? w.r.slice(0, 40) : '';
+    return { key: (v || shortStr(w.n, 32) || '?') + (r ? '/' + r : ''), n: shortStr(w.n, 32) || 'Хтось', e: typeof w.e === 'string' && w.e && w.e.length <= 8 ? w.e : '👤', c: safeColor(w.c), mine: !!v && v === myVid, r };
+  }
+  function hsGroup() {
+    const out = []; let g = null;
+    for (const r of [...hs.rows.values()].sort((a, b) => b.id - a.id)) {
+      const w = hsWho(r.who), t = Date.parse(r.at) || 0;
+      if (!g || g.who.key !== w.key || (!w.seed && Math.abs(g.t0 - t) > HS_GAP)) { g = { id: r.id, t, t0: t, who: w, rows: [] }; out.push(g); }
+      g.rows.push(r); if (t < g.t0) g.t0 = t; if (t > g.t) g.t = t;
+    }
+    hs.groups = out;
+  }
+  function hsSummary(g) {
+    if (g.who.seed) return 'Так дошка виглядала, коли ввімкнули історію';
+    if (g.who.r) return 'Відновлено версію від ' + g.who.r;
+    const per = new Map(); // each item once: what this version did to it in the end
+    for (let i = g.rows.length - 1; i >= 0; i--) {
+      const r = g.rows[i], p = per.get(r.path);
+      if (!p) per.set(r.path, { first: r.op, last: r.op, edit: r.op === 'edit', type: r.type, label: r.label });
+      else { p.last = r.op; p.edit = p.edit || r.op === 'edit'; if (r.type) p.type = r.type; if (r.label != null) p.label = r.label; }
+    }
+    const by = { add: [], edit: [], move: [], del: [] };
+    for (const p of per.values()) {
+      const op = p.first === 'add' ? (p.last === 'del' ? null : 'add') : p.last === 'del' ? 'del' : p.edit || p.first === 'del' ? 'edit' : 'move';
+      if (op) by[op].push(p);
+    }
+    const parts = [];
+    for (const op of ['add', 'edit', 'move', 'del']) {
+      const L = by[op]; if (!L.length) continue;
+      const types = new Map(); L.forEach((p) => types.set(p.type, (types.get(p.type) || 0) + 1));
+      let what;
+      if (L.length === 1) {
+        const p = L[0], lab = typeof p.label === 'string' ? p.label.replace(/\s+/g, ' ').trim() : '';
+        what = (HS_NOUNS[p.type] || HS_ANY)[0] + (lab ? ' «' + (lab.length > 36 ? lab.slice(0, 35) + '…' : lab) + '»' : '');
+      } else if (types.size <= 2) what = [...types].map(([t, n]) => n + ' ' + hsPlural(n, HS_NOUNS[t] || HS_ANY)).join(' і ');
+      else what = L.length + ' ' + hsPlural(L.length, HS_ANY);
+      parts.push(HS_VERBS[op] + ' ' + what);
+    }
+    const s = parts.join(', ') || 'дрібні зміни';
+    return s[0].toUpperCase() + s.slice(1);
+  }
+  function hsMsg(html) { $('#histMsg').innerHTML = html; }
+  function hsRender() {
+    const list = $('#histList');
+    const sig = hs.groups.map((g) => g.id + ':' + g.rows.length + ':' + g.t + ':' + g.who.key).join(',') + '|' + hs.more;
+    if (sig === hs.sig) return hsMark();
+    hs.sig = sig;
+    const top = list.scrollTop, had = document.activeElement && list.contains(document.activeElement) ? document.activeElement.dataset.id : null;
+    const frag = document.createDocumentFragment(); let day = '';
+    hs.groups.forEach((g, k) => {
+      const d = hsDay(g.t);
+      if (d !== day) { day = d; const h = document.createElement('div'); h.className = 'hs-day'; h.textContent = d; frag.appendChild(h); }
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'hs-item'; b.dataset.id = g.id;
+      const av = document.createElement('span'); av.className = 'av'; av.style.setProperty('--pc', g.who.c); av.textContent = g.who.e; av.setAttribute('aria-hidden', 'true');
+      const t = document.createElement('span'); t.className = 'hs-t';
+      const l = document.createElement('span'); l.className = 'hs-l';
+      const n = document.createElement('b'); n.textContent = g.who.n + (g.who.mine ? ' (ви)' : '');
+      const tm = document.createElement('time'); tm.dateTime = new Date(g.t).toISOString(); tm.textContent = hsTime(g.t);
+      l.append(n, tm);
+      const sm = document.createElement('small'); sm.textContent = hsSummary(g);
+      t.append(l, sm); b.append(av, t);
+      if (k === 0) { const now = document.createElement('span'); now.className = 'hs-now'; now.textContent = 'Зараз'; b.appendChild(now); }
+      b.setAttribute('aria-label', (k === 0 ? 'Поточна версія. ' : '') + n.textContent + ', ' + hsWhen(g.t) + '. ' + sm.textContent);
+      frag.appendChild(b);
+    });
+    if (hs.more) { const m = document.createElement('button'); m.type = 'button'; m.className = 'txt-btn hs-more'; m.textContent = 'Показати давніші'; frag.appendChild(m); }
+    list.textContent = ''; list.appendChild(frag); list.scrollTop = top;
+    if (had) { const f = list.querySelector(`.hs-item[data-id="${had}"]`); if (f) f.focus({ preventScroll: true }); }
+    hsMark();
+  }
+  function hsMark() { $('#histList').querySelectorAll('.hs-item').forEach((b) => { const on = +b.dataset.id === hs.cur; if ((b.getAttribute('aria-current') === 'true') !== on) b.setAttribute('aria-current', String(on)); }); }
+  const hsBtn = (id) => $('#histList').querySelector(`.hs-item[data-id="${id}"]`);
+  async function hsLoad(more) {
+    const H = db && db.history;
+    if (!H) { $('#histList').classList.remove('wait'); hsMsg(mode === 'local' ? 'Історія версій зберігається лише на спільній дошці. Тут дошка живе тільки в цьому браузері.' : 'Історія версій тут недоступна.'); return; }
+    if (hs.busy) return; hs.busy = true;
+    const bid = hs.bid, token = hs.token, fresh = !hs.rows.size;
+    const before = more ? Math.min(...hs.rows.keys()) : null, limit = more || fresh ? HS_PAGE : HS_TOP;
+    let rows;
+    try { rows = await H.list(bid, before, limit); } catch (e) { rows = e; }
+    hs.busy = false;
+    if (token !== hs.token || !hs.open) return;
+    $('#histList').classList.remove('wait');
+    if (!Array.isArray(rows)) {
+      const e = rows, missing = e && (e.code === 'PGRST202' || /jb_history/.test(e.message || ''));
+      if (!hs.rows.size) hsMsg(missing ? 'Історію версій ще не ввімкнено. Виконайте в Supabase → SQL Editor файл <code>supabase/history.sql</code> з репозиторію.' : 'Не вдалося завантажити історію. Перевірте зв’язок і спробуйте ще раз.');
+      return;
+    }
+    const known = hs.rows.size ? Math.max(...hs.rows.keys()) : 0;
+    if (!more && !fresh && rows.length >= limit && Math.min(...rows.map((r) => +r.id)) > known) { hs.rows.clear(); hs.busy = false; return hsLoad(false); } // too much is new: start over
+    for (const r of rows) hs.rows.set(+r.id, { id: +r.id, path: String(r.path), at: r.at, who: r.who, op: r.op, type: r.type, label: r.label });
+    if (more || fresh) hs.more = rows.length >= limit;
+    hsGroup();
+    hsMsg(hs.groups.length ? '' : 'Поки що змін немає. Щойно хтось щось змінить на дошці, тут з’явиться версія.');
+    hsRender();
+    if (pk.open && pk.hist) { // the version on show may have grown, or a newer one appeared above it
+      const g = hs.groups.find((x) => x.id === pk.hist.id);
+      if (g && g !== pk.hist) { pk.hist = g; hsHead(g); hsRing(g); }
+    }
+  }
+  function histSoon() { if (!hs.open) return; clearTimeout(hs.soon); hs.soon = setTimeout(() => hsLoad(false), 1200); }
+  function openHistory(open) {
+    open = open != null ? !!open : !hs.open;
+    if (open === hs.open) return;
+    const pop = $('#histPop'), btn = $('#histBtn');
+    hs.open = open; btn.setAttribute('aria-expanded', String(open)); btn.setAttribute('aria-pressed', String(open));
+    hs.token++; clearInterval(hs.timer); clearTimeout(hs.soon); hs.timer = 0;
+    if (open) {
+      closeGallery(); closeThread(); openPlan(false); openMermaid(false); closeSidePops();
+      hs.bid = boardId; hs.rows.clear(); hs.groups = []; hs.sig = ''; hs.cur = null; hs.more = false; hs.cache.clear(); hs.busy = false;
+      $('#histList').textContent = ''; $('#histList').classList.add('wait'); hsMsg('');
+      pop.classList.remove('out'); pop.hidden = false;
+      hsLoad(false);
+      hs.timer = setInterval(() => { if (!document.hidden && !hs.busy) hsLoad(false); }, 5000); // others' changes show up while the list is open
+      requestAnimationFrame(() => $('#histClose').focus({ preventScroll: true }));
+    } else {
+      if (pk.open && pk.hist) closePeek(false);
+      pop.classList.add('out');
+      setTimeout(() => { if (!hs.open) pop.hidden = true; }, reduceMotion ? 0 : 170);
+    }
+  }
+  function hsHead(g) {
+    const now = g === hs.groups[0];
+    $('#peekTitle').textContent = (now ? 'Поточна версія · ' : 'Версія · ') + hsWhen(g.t);
+    $('#peekSub').textContent = g.who.n + (g.who.mine ? ' (ви)' : '') + ': ' + hsSummary(g).replace(/^./, (c) => (g.who.seed || g.who.r ? c : c.toLowerCase()));
+    const go = $('#peekGo');
+    const off = now || viewOnly() || mode !== 'shared', had = document.activeElement === go;
+    go.textContent = now ? 'Це поточна версія' : 'Відновити цю версію'; go.disabled = off;
+    if (off && had) $('#peekClose').focus({ preventScroll: true }); // a disabled button would drop the focus, and the arrow keys with it
+  }
+  function hsRing(g) { // what this version touched, ringed; the rest of the board a little faded
+    const w = $('#peekWorld'), ids = new Set(g.who.seed ? [] : g.rows.filter((r) => r.op !== 'del').map((r) => idOfPath(r.path)));
+    let n = 0;
+    w.querySelectorAll('.pv[data-id]').forEach((e) => { const on = ids.has(e.dataset.id); if (on) n++; e.classList.toggle('hs-hit', on); });
+    w.classList.toggle('hs-diff', n > 0);
+  }
+  async function hsPreview(g, fromEl) {
+    if (!g || !db || !db.history) return;
+    hs.cur = g.id; hsMark();
+    if (pk.open && !pk.hist) closePeek(false); // a board preview was open: this one takes its place
+    const pop = $('#peek'), back = $('#peekBack'), first = !pk.open || !pk.hist, token = ++pk.token;
+    if (!pk.open) {
+      closeThread();
+      pk.open = true; pk.bid = null; pk.from = fromEl || null;
+      const r = fromEl && fromEl.getBoundingClientRect();
+      pop.classList.add('hist'); $('#peekNew').hidden = true;
+      pop.hidden = false; back.hidden = false; pop.classList.remove('out'); back.classList.remove('out');
+      const pr = pop.getBoundingClientRect();
+      pop.style.transformOrigin = r ? `${r.left + r.width / 2 - pr.left}px ${r.top + r.height / 2 - pr.top}px` : '50% 50%';
+      pop.classList.remove('in'); void pop.offsetWidth; pop.classList.add('in');
+      document.body.classList.add('hs-pv');
+    }
+    pk.hist = g; if (fromEl) pk.from = fromEl;
+    hsHead(g); $('#peekMsg').textContent = '';
+    let list = hs.cache.get(g.id);
+    if (!list) {
+      $('#peekStage').classList.add('wait');
+      try { list = await db.history.at(hs.bid, g.id); if (hs.cache.size > 24) hs.cache.delete(hs.cache.keys().next().value); hs.cache.set(g.id, list); } catch (e) { list = null; }
+      if (token !== pk.token || !pk.open || pk.hist !== g) return;
+      $('#peekStage').classList.remove('wait');
+    }
+    if (!list) { $('#peekWorld').innerHTML = ''; pk.fit = null; $('#peekMsg').textContent = 'Не вдалося завантажити цю версію. Перевірте зв’язок'; return; }
+    const its = list.map((r) => ({ ...r.data, id: idOfPath(r.path) })).filter((i) => TYPES_OK.includes(i.type))
+      .map((i) => (hiddenFor(i) ? { ...i, text: '•••', html: undefined } : i)); // hidden writing stays hidden in the past too
+    const keep = !first && pk.fit; // stepping between versions keeps the view, so the eye sees only what moved
+    pk.fit = peekBuild(its);
+    if (!pk.fit) { $('#peekMsg').textContent = 'У цій версії на дошці нічого немає'; return; }
+    hsRing(g);
+    if (keep) peekApply(false); else { peekFit(false); const w = $('#peekWorld'); w.classList.remove('show'); void w.offsetWidth; w.classList.add('show'); }
+    if (first) requestAnimationFrame(() => { if (pk.hist === g && !$('#peekGo').disabled) $('#peekGo').focus({ preventScroll: true }); else $('#peekClose').focus({ preventScroll: true }); });
+  }
+  function histPreviewClosed() {
+    const b = hs.cur != null && hsBtn(hs.cur); if (b) pk.from = b;
+    hs.cur = null; hsMark(); document.body.classList.remove('hs-pv');
+  }
+  async function histStep(d) {
+    const i = hs.groups.findIndex((g) => pk.hist && g.id === pk.hist.id);
+    if (i < 0) return;
+    if (i + d >= hs.groups.length && hs.more) { await hsLoad(true); }
+    const g = hs.groups[i + d]; if (!g) return;
+    const b = hsBtn(g.id); if (b) b.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
+    hsPreview(g, b);
+  }
+  // stable text of an item, to tell what really differs (key order, the revision and empty fields don't count)
+  const canon = (o) => JSON.stringify(o, (k, v) => (v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.keys(v).filter((x) => x !== 'rev' && v[x] !== null).sort().map((x) => [x, v[x]])) : v));
+  async function histRestore() {
+    const g = pk.hist; if (!g || viewOnly() || mode !== 'shared' || !db.history) return;
+    const go = $('#peekGo'); go.disabled = true;
+    let list = hs.cache.get(g.id);
+    if (!list) { try { list = await db.history.at(hs.bid, g.id); } catch (e) { list = null; } }
+    if (pk.hist !== g || hs.bid !== boardId) return;
+    if (!list) { toast('Не вдалося завантажити цю версію'); go.disabled = false; return; }
+    finishEdit();
+    const target = new Map();
+    for (const r of list) { const id = idOfPath(r.path); if (r.data && TYPES_OK.includes(r.data.type)) target.set(id, full(id, r.data)); }
+    const before = {};
+    items.forEach((it, id) => { if (!target.has(id) && !active.has(id)) before[id] = { ...clean(it), id }; });
+    target.forEach((t, id) => { if (active.has(id)) return; const cur = items.get(id); if (!cur || canon(clean(cur)) !== canon(clean(t))) before[id] = cur ? { ...clean(cur), id } : null; });
+    const ids = Object.keys(before);
+    if (!ids.length) { toast('Дошка вже така, як у цій версії'); closePeek(false); return; }
+    for (const id of ids) { if (target.has(id)) putItem(id, target.get(id)); else items.delete(id); }
+    selected = new Set([...selected].filter((id) => items.has(id)));
+    renderAll();
+    db.history.tagged(hsStamp(g.t), () => commit(before)); // every write of the restore says which version it brought back
+    renderAll(); coverSoon(true);
+    closePeek(false);
+    toast('Дошку відновлено до версії від ' + hsWhen(g.t) + '. Ctrl+Z поверне як було');
+    histSoon();
+  }
+  $('#histBtn').addEventListener('click', () => openHistory());
+  $('#histClose').addEventListener('click', () => { openHistory(false); $('#histBtn').focus({ preventScroll: true }); });
+  $('#histList').addEventListener('click', (e) => {
+    if (e.target.closest('.hs-more')) { hsLoad(true); return; }
+    const b = e.target.closest('.hs-item'); if (!b) return;
+    const g = hs.groups.find((x) => x.id === +b.dataset.id); if (!g) return;
+    if (pk.open && pk.hist && pk.hist.id === g.id) { closePeek(false); return; } // a second click puts it away
+    hsPreview(g, b);
+  });
+  $('#histPop').addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Escape') { e.preventDefault(); openHistory(false); $('#histBtn').focus({ preventScroll: true }); return; }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { // walk the list
+      const all = [...$('#histList').querySelectorAll('.hs-item')], i = all.indexOf(document.activeElement);
+      const n = all[i < 0 ? 0 : clamp(i + (e.key === 'ArrowDown' ? 1 : -1), 0, all.length - 1)];
+      if (n) { e.preventDefault(); n.focus(); }
+    }
+  });
   function openWeb(it) { const u = safeHttps(it.url); if (u) window.open(u, '_blank', 'noopener,noreferrer'); }
   function pasteText(text, p) {
     if (Flow.looksLike(text)) { buildMermaid(text, p, true); return; }
@@ -6531,7 +6831,7 @@ const Plan = (() => {
   function openBoard(id) {
     if (!validBoard(id)) id = 'main';
     if (!boardOk(id)) return;
-    finishEdit(); closeThread();
+    finishEdit(); closeThread(); openHistory(false);
     if (mode === 'local' && localTimer) saveLocal(true); // keep the old board's last change before leaving it
     const first = !els.size && !items.size, token = ++switchToken;
     if (first) { doOpen(id); return; }
@@ -6675,6 +6975,13 @@ const Plan = (() => {
     const getRow = (path) => sb.rpc('jb_get', { p_path: path });
     const listRows = (coll) => sb.rpc('jb_list', { p_coll: coll });
     const myPeer = 'p' + rnd() + rnd();
+    // Version history (supabase/history.sql): writes say who made them, so the board's log can show it.
+    // Until that script runs, jb_put / jb_del only take two arguments: the first refusal switches back to those.
+    let whoOk = true, whoTag = null;
+    const noFn = (e) => !!e && (e.code === 'PGRST202' || /could not find the function/i.test(e.message || ''));
+    const whoNow = () => { const w = { n: me.name, e: me.emoji, c: me.color, v: myVid }; if (whoTag) w.r = whoTag; return w; };
+    const signed = (name, args) => (!whoOk ? sb.rpc(name, args)
+      : sb.rpc(name, { ...args, p_who: whoNow() }).then((r) => { if (r.error && noFn(r.error)) { whoOk = false; return sb.rpc(name, args); } return r; }));
     // one realtime channel per board ("jb:<id>"): row changes broadcast by the database, plus presence
     const lines = new Map();
     function openLine(bid) {
@@ -6755,15 +7062,20 @@ const Plan = (() => {
         if (line) { line.L.rows.delete(onMsg); line.L.stats.delete(onStatus); line.release(); }
       };
     }
+    const rows = (p) => p.then(({ data, error }) => { if (error) throw fail(error); return data || []; });
     const sdb = {
+      // the board's version history: the latest changes (newest first), and the whole board right after one of them
+      history: { list: (bid, before, limit) => rows(sb.rpc('jb_history', { p_bid: bid, p_before: before || null, p_limit: limit || 200 })),
+        at: (bid, id) => rows(sb.rpc('jb_at', { p_bid: bid, p_id: id })),
+        tagged(tag, fn) { whoTag = tag; try { fn(); } finally { whoTag = null; } } },
       // one-off reads for the boards gallery (no live updates)
       peek: (path) => sdb.doc(path).peek(),
       peekList: (coll) => listRows(coll).then(({ data, error }) => { if (error) throw fail(error); return data || []; }),
       doc(path) {
         return {
           peek: () => getRow(path).then(({ data, error }) => { if (error) throw fail(error); return data && data[0] ? data[0].data : null; }),
-          set: (data) => sb.rpc('jb_put', { p_path: path, p_data: data }).then(({ error }) => { if (error) throw fail(error); }),
-          delete: () => sb.rpc('jb_del', { p_path: path }).then(({ error }) => { if (error) throw fail(error); }),
+          set: (data) => signed('jb_put', { p_path: path, p_data: data }).then(({ error }) => { if (error) throw fail(error); }),
+          delete: () => signed('jb_del', { p_path: path }).then(({ error }) => { if (error) throw fail(error); }),
           onSnapshot(next, onError) {
             const snap = (row) => ({ exists: !!row, data: () => (row ? row.data : undefined) });
             return watch('path', path, (rows) => next(snap(rows[0])), () => next(snap(null)), onError, (rows) => next(snap(rows[0] || null)));
