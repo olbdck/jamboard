@@ -529,24 +529,107 @@ const Plan = (() => {
     msg: ['Ретро · Mad / Sad / Glad', [['😠 Злить', 'warn'], ['😢 Засмучує', 'purple'], ['😊 Радує', 'ok']]],
     '4l': ['Ретро · 4L', [['💚 Сподобалось', 'ok'], ['📚 Навчились', 'info'], ['🕳️ Бракувало', 'warn'], ['✨ Хотілося б', 'purple']]],
     sail: ['Ретро · Вітрильник', [['🌬️ Вітер: що нас рухає', 'teal'], ['⚓ Якір: що гальмує', 'gray'], ['🪨 Скелі: ризики попереду', 'warn'], ['🏝️ Острів: наша мета', 'ok']]],
+    kalm: ['Ретро · Keep / Add / Less / More', [['✅ Залишити', 'ok'], ['➕ Додати', 'info'], ['➖ Менше', 'warn'], ['⬆️ Більше', 'purple']]],
+    wwa: ['Ретро · Що вдалось / Що покращити / Дії', [['🎉 Що вдалось', 'ok'], ['🔧 Що покращити', 'warn'], ['🚀 Дії: хто й до коли', 'info']]],
+    kanban: ['Канбан', [['📥 Беклог', 'gray'], ['📝 До роботи', 'info'], ['🚧 У роботі', 'warn'], ['👀 На перевірці', 'purple'], ['✅ Готово', 'ok']]],
+    moscow: ['Пріоритети · MoSCoW', [['🔴 Must · без цього ніяк', 'pink'], ['🟠 Should · дуже варто', 'warn'], ['🔵 Could · якщо встигнемо', 'info'], ['⚪ Won’t · не цього разу', 'gray']]],
+    pros: ['Плюси й мінуси', [['👍 За', 'ok'], ['👎 Проти', 'pink'], ['❓ Що ще треба з’ясувати', 'info']]],
   };
+  // canvases made of sections: [title, color, col, row, colSpan, rowSpan, hint] on a grid of cells cw×ch
+  const CANVAS = {
+    lean: ['Lean Canvas', 5, 3, 300, 300, [
+      ['1 · Проблема', 'pink', 0, 0, 1, 2, 'Три головні проблеми клієнта. Як їх вирішують зараз?'],
+      ['4 · Рішення', 'info', 1, 0, 1, 1, 'Найпростіше рішення кожної з проблем'],
+      ['8 · Ключові метрики', 'teal', 1, 1, 1, 1, 'Які цифри покажуть, що все працює?'],
+      ['3 · Унікальна цінність', 'purple', 2, 0, 1, 2, 'Одне речення: чому ви, а не інші'],
+      ['9 · Нечесна перевага', 'warn', 3, 0, 1, 1, 'Що не можна просто скопіювати чи купити?'],
+      ['5 · Канали', 'caution', 3, 1, 1, 1, 'Як клієнти про вас дізнаються'],
+      ['2 · Сегменти клієнтів', 'ok', 4, 0, 1, 2, 'Для кого це? Хто ранні користувачі?'],
+      ['7 · Структура витрат', 'gray', 0, 2, 2.5, 1, 'На що підуть гроші: люди, сервери, маркетинг'],
+      ['6 · Потоки доходу', 'ok', 2.5, 2, 2.5, 1, 'Як і скільки платять клієнти'],
+    ]],
+    bmc: ['Бізнес-модель (Business Model Canvas)', 5, 3, 300, 300, [
+      ['🤝 Ключові партнери', 'purple', 0, 0, 1, 2, 'Хто допомагає нам працювати?'],
+      ['⚙️ Ключові дії', 'info', 1, 0, 1, 1, 'Що ми мусимо робити щодня?'],
+      ['🧱 Ключові ресурси', 'teal', 1, 1, 1, 1, 'Люди, технології, гроші, бренд'],
+      ['💎 Ціннісні пропозиції', 'pink', 2, 0, 1, 2, 'Яку проблему клієнта ми вирішуємо?'],
+      ['💬 Відносини з клієнтами', 'caution', 3, 0, 1, 1, 'Як ми спілкуємося з клієнтами?'],
+      ['📣 Канали', 'warn', 3, 1, 1, 1, 'Як ми до них дістаємось?'],
+      ['👥 Сегменти клієнтів', 'ok', 4, 0, 1, 2, 'Для кого ми створюємо цінність?'],
+      ['💸 Структура витрат', 'gray', 0, 2, 2.5, 1, 'Найбільші витрати'],
+      ['💰 Потоки доходу', 'ok', 2.5, 2, 2.5, 1, 'За що й як платять клієнти'],
+    ]],
+    empathy: ['Карта емпатії', 2, 3, 460, 300, [
+      ['💬 Каже', 'info', 0, 0, 1, 1, 'Цитати з інтерв’ю'],
+      ['💭 Думає', 'purple', 1, 0, 1, 1, 'Що в голові, але вголос не каже?'],
+      ['🛠️ Робить', 'teal', 0, 1, 1, 1, 'Дії й поведінка'],
+      ['❤️ Відчуває', 'pink', 1, 1, 1, 1, 'Що тривожить і що надихає?'],
+      ['😣 Болі', 'warn', 0, 2, 1, 1, 'Страхи, перешкоди, розчарування'],
+      ['🌟 Здобутки', 'ok', 1, 2, 1, 1, 'Чого хоче досягти, що для нього успіх'],
+    ]],
+    persona: ['Персона', 3, 2, 400, 320, [
+      ['👤 Хто це', 'caution', 0, 0, 1, 2, 'Ім’я, вік, роль, де працює. Додайте фото'],
+      ['🎯 Цілі', 'ok', 1, 0, 1, 1, 'Чого хоче досягти?'],
+      ['😣 Болі', 'pink', 2, 0, 1, 1, 'Що заважає?'],
+      ['🧭 Поведінка й звички', 'info', 1, 1, 1, 1, 'Які сервіси використовує, як ухвалює рішення'],
+      ['💬 Цитата', 'purple', 2, 1, 1, 1, '«Те, що вона могла б сказати про себе»'],
+    ]],
+    crazy8: ['Crazy 8s · вісім ідей за вісім хвилин', 4, 2, 300, 300, [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ['Ідея ' + n, 'gray', (n - 1) % 4, (n / 4.01) | 0, 1, 1, n === 1 ? 'Хвилина на ідею: малюйте швидко, без деталей' : ''])],
+    mood: ['Мудборд', 3, 3, 400, 280, [
+      ['🖼️ Референси', 'gray', 0, 0, 2, 2, 'Перетягніть сюди картинки або вставте посилання'],
+      ['🎨 Кольори', 'pink', 2, 0, 1, 1, 'Палітра: основний, акцент, фон'],
+      ['🔤 Типографіка', 'info', 2, 1, 1, 1, 'Шрифти заголовків і тексту'],
+      ['✨ Настрій і ключові слова', 'purple', 0, 2, 2, 1, 'Три-п’ять слів про відчуття від продукту'],
+      ['🧵 Текстури й фото', 'caution', 2, 2, 1, 1, ''],
+    ]],
+    brain: ['Мозковий штурм', 3, 2, 400, 320, [
+      ['❓ Питання', 'info', 0, 0, 1, 2, 'Як ми могли б…?'],
+      ['💡 Ідеї', 'caution', 1, 0, 2, 1, 'Кількість важливіша за якість. Без критики'],
+      ['⭐ Найкращі', 'ok', 1, 1, 1, 1, 'Перенесіть сюди ідеї з найбільшою кількістю голосів'],
+      ['🧪 Що перевіримо', 'purple', 2, 1, 1, 1, 'Перший маленький експеримент'],
+    ]],
+  };
+  // [key, name, description, group]
+  const GROUPS = [['plan', 'Планування'], ['prio', 'Пріоритети'], ['product', 'Продукт і стратегія'], ['ux', 'UX і дизайн'], ['retro', 'Ретро']];
   const TEMPLATES = [
-    ['sprints', 'Таймлайн спринтів', 'Спринти по 2 тижні з доріжками команд'],
-    ['weeks', 'Таймлайн тижнів', 'Шість тижнів від поточного'],
-    ['gantt', 'Діаграма Ганта', 'Задачі-смуги з прогресом і залежностями'],
-    ['roadmap', 'Роадмап', 'Зараз · Далі · Потім'],
-    ['matrix', 'Матриця Impact / Effort', 'Пріоритети: вплив проти зусиль'],
-    ['table', 'Таблиця', 'Колонки й рядки, картки прилипають до клітинок'],
-    ['sprint', 'Спринт-планінг', 'Ціль, беклог і що беремо в спринт'],
-    ['ssc', 'Start / Stop / Continue', 'Ретро на три колонки'],
-    ['msg', 'Mad / Sad / Glad', 'Ретро про емоції команди'],
-    ['4l', '4L', 'Liked · Learned · Lacked · Longed for'],
-    ['sail', 'Вітрильник', 'Вітер, якір, скелі й острів'],
+    ['sprints', 'Таймлайн спринтів', 'Спринти по 2 тижні з доріжками команд', 'plan'],
+    ['weeks', 'Таймлайн тижнів', 'Шість тижнів від поточного', 'plan'],
+    ['gantt', 'Діаграма Ганта', 'Задачі-смуги з прогресом і залежностями', 'plan'],
+    ['roadmap', 'Роадмап', 'Зараз · Далі · Потім', 'plan'],
+    ['matrix', 'Матриця Impact / Effort', 'Пріоритети: вплив проти зусиль', 'prio'],
+    ['table', 'Таблиця', 'Колонки й рядки, картки прилипають до клітинок', 'plan'],
+    ['sprint', 'Спринт-планінг', 'Ціль, беклог і що беремо в спринт', 'plan'],
+    ['ssc', 'Start / Stop / Continue', 'Ретро на три колонки', 'retro'],
+    ['msg', 'Mad / Sad / Glad', 'Ретро про емоції команди', 'retro'],
+    ['4l', '4L', 'Liked · Learned · Lacked · Longed for', 'retro'],
+    ['sail', 'Вітрильник', 'Вітер, якір, скелі й острів', 'retro'],
+    ['kanban', 'Канбан', 'Беклог → у роботі → готово', 'plan'],
+    ['storymap', 'Story map', 'Кроки користувача й релізи під ними', 'plan'],
+    ['okr', 'OKR', 'Цілі, ключові результати й ініціативи', 'plan'],
+    ['standup', 'Дейлі', 'Вчора · сьогодні · блокери для кожного', 'plan'],
+    ['rice', 'RICE', 'Reach × Impact × Confidence ÷ Effort', 'prio'],
+    ['ice', 'ICE', 'Impact · Confidence · Ease, швидка оцінка', 'prio'],
+    ['moscow', 'MoSCoW', 'Must · Should · Could · Won’t', 'prio'],
+    ['eisen', 'Матриця Ейзенхауера', 'Термінове проти важливого', 'prio'],
+    ['lean', 'Lean Canvas', 'Модель стартапу на одному аркуші', 'product'],
+    ['bmc', 'Business Model Canvas', 'Дев’ять блоків бізнес-моделі', 'product'],
+    ['swot', 'SWOT', 'Сильні, слабкі сторони, можливості, загрози', 'product'],
+    ['pros', 'Плюси й мінуси', 'Зважити рішення разом', 'product'],
+    ['cjm', 'Карта шляху клієнта', 'Етапи, дії, емоції, болі й можливості', 'ux'],
+    ['empathy', 'Карта емпатії', 'Каже · думає · робить · відчуває', 'ux'],
+    ['persona', 'Персона', 'Хто наш користувач, його цілі й болі', 'ux'],
+    ['crazy8', 'Crazy 8s', 'Вісім ескізів за вісім хвилин', 'ux'],
+    ['mood', 'Мудборд', 'Референси, кольори, типографіка, настрій', 'ux'],
+    ['brain', 'Мозковий штурм', 'Питання, ідеї, найкращі й перший крок', 'ux'],
+    ['kalm', 'Keep / Add / Less / More', 'Ретро про те, що змінити в процесі', 'retro'],
+    ['wwa', 'Що вдалось · що покращити', 'Ретро з діями: хто й до коли', 'retro'],
   ];
   function template(key, ox, oy, makeId, by, nowMs) {
     const out = [], mk = (o) => { const it = { id: makeId(), by, ...o }; out.push(it); return it; };
     const table = (o, cw, lh) => { const t = { type: 'table', x: ox, y: oy, color: 'gray', ...o }; Object.assign(t, sizeFor({ ...t, w: 0, h: 0 }, cw, lh)); return mk(t); };
     const tl = (o, cw, lh) => { const t = { type: 'timeline', x: ox, y: oy, color: 'gray', start: thisMonday(nowMs || Date.now()), ...o }; Object.assign(t, sizeFor({ ...t, w: 0, h: 0 }, cw, lh)); return mk(t); };
+    const cols = (title, cs, cw, lh, rows) => table({ title, cols: cs.map((c) => c[0]), rows: rows || [], tint: cs.map((c) => c[1]) }, cw, lh);
+    const hint = (t, x, y, w, color, extra) => mk({ type: 'sticky', x, y, w, h: 120, color, text: t, ...extra });
     if (key === 'sprints') tl({ title: 'Спринти', unit: 'sprint', len: 14, k: 1, n: 4, lanes: ['Дизайн', 'Фронтенд', 'Бекенд'] }, 340, 250);
     else if (key === 'weeks') tl({ title: 'План на шість тижнів', unit: 'week', n: 6, lanes: [] }, 300, 420);
     else if (key === 'gantt') {
@@ -562,14 +645,34 @@ const Plan = (() => {
     }
     else if (key === 'roadmap') table({ title: 'Роадмап', cols: ['Зараз', 'Далі', 'Потім'], rows: ['Продукт', 'Дизайн', 'Розробка'], tint: ['ok', 'info', 'purple'] }, 380, 260);
     else if (key === 'matrix') table({ title: 'Пріоритети · Impact / Effort', kind: 'matrix', cols: ['Мало зусиль', 'Багато зусиль'], rows: ['Великий вплив', 'Малий вплив'], cells: ['Швидкі перемоги', 'Великі проєкти', 'Дрібниці', 'Не варто зусиль'], ax: ['Зусилля', 'Вплив'], tint: ['ok', 'warn'] }, 480, 380);
+    else if (key === 'eisen') table({ title: 'Матриця Ейзенхауера', kind: 'matrix', cols: ['Термінове', 'Не термінове'], rows: ['Важливе', 'Неважливе'], cells: ['🔥 Зробити зараз', '📅 Запланувати', '🤝 Делегувати', '🗑️ Прибрати'], ax: ['Терміновість', 'Важливість'], tint: ['warn', 'info'] }, 480, 380);
+    else if (key === 'swot') table({ title: 'SWOT', kind: 'matrix', cols: ['Допомагає', 'Заважає'], rows: ['Всередині', 'Ззовні'], cells: ['💪 Сильні сторони', '⚠️ Слабкі сторони', '🚀 Можливості', '🌩️ Загрози'], ax: ['Вплив', 'Джерело'], tint: ['ok', 'pink'] }, 480, 380);
     else if (key === 'table') table({ title: 'Таблиця', cols: ['Колонка 1', 'Колонка 2', 'Колонка 3'], rows: ['Рядок 1', 'Рядок 2'] }, 320, 260);
     else if (key === 'sprint') {
       mk({ type: 'sticky', x: ox, y: oy, w: 300, h: 220, color: 'pink', text: '🎯 Ціль спринту\n\nЗа що ми хочемо, щоб нас похвалили наприкінці?' });
       mk({ type: 'sticky', x: ox, y: oy + 250, w: 300, h: 160, color: 'caution', text: '👥 Ємність команди\n\n… сторіпоінтів' });
       table({ title: 'Спринт-планінг', x: ox + 340, cols: ['📥 Беклог', '✅ Беремо в спринт', '🚧 Ризики й залежності'], rows: [], tint: ['gray', 'ok', 'warn'] }, 360, 640);
-    } else if (RETRO[key]) {
-      const [title, cols] = RETRO[key];
-      table({ title, cols: cols.map((c) => c[0]), rows: [], tint: cols.map((c) => c[1]) }, cols.length > 3 ? 330 : 380, 620);
+    }
+    else if (key === 'storymap') table({ title: 'Story map', cols: ['🔍 Знайти', '🛒 Вибрати', '💳 Оплатити', '📦 Отримати', '🔁 Повернутися'], rows: ['🧭 Що робить користувач', '🚀 Реліз 1 · MVP', '📦 Реліз 2', '✨ Колись потім'], tint: ['info', 'teal', 'ok', 'caution', 'purple'] }, 300, 220);
+    else if (key === 'okr') table({ title: 'OKR на квартал', cols: ['📈 Ключовий результат 1', '📈 Ключовий результат 2', '📈 Ключовий результат 3', '🧩 Ініціативи'], rows: ['🎯 Ціль 1', '🎯 Ціль 2', '🎯 Ціль 3'], tint: ['ok', 'ok', 'ok', 'info'] }, 300, 220);
+    else if (key === 'standup') table({ title: 'Дейлі', cols: ['✅ Вчора', '🛠️ Сьогодні', '🚧 Блокери'], rows: ['Учасник 1', 'Учасник 2', 'Учасник 3', 'Учасник 4'], tint: ['ok', 'info', 'pink'] }, 320, 170);
+    else if (key === 'cjm') table({ title: 'Карта шляху клієнта', cols: ['👀 Дізнається', '🤔 Обирає', '🛒 Купує', '📱 Користується', '💬 Рекомендує'], rows: ['🎬 Дії', '📍 Точки контакту', '💭 Думки', '😊 Емоції', '😣 Болі', '💡 Можливості'], tint: ['info', 'teal', 'ok', 'caution', 'purple'] }, 300, 170);
+    else if (key === 'rice' || key === 'ice') {
+      const rice = key === 'rice';
+      const t = table({ title: rice ? 'Пріоритети · RICE' : 'Пріоритети · ICE', cols: rice ? ['👥 Reach', '💥 Impact', '🎯 Confidence', '⏱️ Effort', '🏆 RICE'] : ['💥 Impact', '🎯 Confidence', '🪶 Ease', '🏆 ICE'], rows: ['Ідея 1', 'Ідея 2', 'Ідея 3', 'Ідея 4', 'Ідея 5'], tint: rice ? ['info', 'pink', 'purple', 'warn', 'ok'] : ['pink', 'purple', 'teal', 'ok'] }, 200, 130);
+      hint(rice ? '🧮 RICE = Reach × Impact × Confidence ÷ Effort\n\nReach: скільки людей за квартал\nImpact: 3 · 2 · 1 · 0,5 · 0,25\nConfidence: 100 · 80 · 50 %\nEffort: людино-тижні' : '🧮 ICE = Impact × Confidence × Ease\n\nКожне від 1 до 10. Назви ідей пишіть у рядках зліва', ox + t.w + 40, oy, 300, 'caution', { h: rice ? 250 : 190 });
+    }
+    else if (RETRO[key]) {
+      const [title, cs] = RETRO[key];
+      cols(title, cs, cs.length > 4 ? 300 : cs.length > 3 ? 330 : 380, 620);
+    } else if (CANVAS[key]) {
+      const [title, nc, nr, cw, ch, parts] = CANVAS[key], gx = 24, gy = 64, top = 90;
+      mk({ type: 'text', x: ox, y: oy, w: Math.min(900, nc * cw), h: 48, ts: 'h1', text: title });
+      for (const [name, color, c, r, cs, rs, tip] of parts) {
+        const x = ox + c * (cw + gx), y = oy + top + r * (ch + gy), w = cs * cw + (cs - 1) * gx, h = rs * ch + (rs - 1) * gy;
+        const s = mk({ type: 'section', x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h), title: name, color, autofit: false });
+        if (tip) hint(tip, s.x + 24, s.y + 24, Math.min(240, s.w - 48), color, { h: 110, sec: s.id });
+      }
     } else throw new Error('Unknown template: ' + key);
     return out;
   }
@@ -727,7 +830,7 @@ const Plan = (() => {
   };
   const source = (u) => { for (const k in SOURCES) { const m = SOURCES[k].match(String(u || '')); if (m) return m; } return null; };
 
-  return { TOP, SIDE, PAD, GAP, BAR_H, TRACK, UNITS, STATUSES, STATUS_NAMES, TEMPLATES, SOURCES, isGrid, isBar, dayOf, isoOf, localDay, thisMonday, fmtD, range, dims, sizeFor, column, nowAt, rowName, cellRect, cellAt, cellOf, snap, slotIn, readOrder, flow, cellTop, reflow, xOfDay, dayAtX, barSpan, barBox, barDates, laneY, trackOf, barY, nextTrack, colOfDay, placeBar, workdays, template, sortByVotes, markdown, source };
+  return { TOP, SIDE, PAD, GAP, BAR_H, TRACK, UNITS, STATUSES, STATUS_NAMES, TEMPLATES, GROUPS, SOURCES, isGrid, isBar, dayOf, isoOf, localDay, thisMonday, fmtD, range, dims, sizeFor, column, nowAt, rowName, cellRect, cellAt, cellOf, snap, slotIn, readOrder, flow, cellTop, reflow, xOfDay, dayAtX, barSpan, barBox, barDates, laneY, trackOf, barY, nextTrack, colOfDay, placeBar, workdays, template, sortByVotes, markdown, source };
 })();
 // </plan>
 
@@ -1082,7 +1185,7 @@ const TOOLS = [
   { name: 'create_board', description: 'Create a new empty board and return its id.', inputSchema: { type: 'object', required: ['title'], properties: { title: { type: 'string' } } } },
   {
     name: 'add_template',
-    description: 'Put a ready-made planning or retro template on the board (placed to the right of existing content unless x/y are given): sprints (timeline of 2-week sprints with team lanes), weeks (6-week timeline), roadmap (Now/Next/Later table), matrix (Impact/Effort 2×2), table (3×2), sprint (sprint goal + backlog/commit/risks), gantt (a project timeline with Gantt bars, progress and dependencies), ssc (Start/Stop/Continue retro), msg (Mad/Sad/Glad), 4l (Liked/Learned/Lacked/Longed for), sail (sailboat retro). Returns the ids; fill it with add_items using grid + column/lane.',
+    description: 'Put a ready-made template on the board (placed to the right of existing content unless x/y are given). Templates: ' + Plan.TEMPLATES.map((t) => `${t[0]} (${t[1]}: ${t[2]})`).join('; ') + '. Tables and timelines take cards with add_items using grid + column/lane; canvases (lean, bmc, empathy, persona, crazy8, mood, brain) are sections with hint stickies. Returns the ids.',
     inputSchema: { type: 'object', required: ['template'], properties: { board: boardArg, template: { type: 'string', enum: Plan.TEMPLATES.map((t) => t[0]) }, title: { type: 'string', description: 'Optional title for the main timeline/table.' }, x: { type: 'number' }, y: { type: 'number' } } },
   },
   {
@@ -1165,7 +1268,7 @@ async function callTool(name, a, scope) {
     const key = String(a.template || '');
     if (!Plan.TEMPLATES.some((t) => t[0] === key)) throw new Error('template: ' + Plan.TEMPLATES.map((t) => t[0]).join(', '));
     const list = Plan.template(key, 0, 0, uid, BY, Date.now());
-    const main = list.find(isGrid); if (main && typeof a.title === 'string' && a.title.trim()) main.title = a.title.trim().slice(0, 120);
+    const main = list.find(isGrid) || list.find((i) => i.type === 'text'); if (main && typeof a.title === 'string' && a.title.trim()) main[isGrid(main) ? 'title' : 'text'] = a.title.trim().slice(0, 120);
     const nb = bbox(list.filter((i) => i.type !== 'link')), b0 = bbox(all.filter((i) => i.type !== 'link' && i.type !== 'comment'));
     const ox = num(a.x) ?? (b0 ? b0.x2 + 200 : 0), oy = num(a.y) ?? (b0 ? b0.y1 + 60 : 0);
     for (const it of list) { if (it.type !== 'link') { it.x += ox - nb.x1; it.y += oy - nb.y1; } it.z = ++z; }

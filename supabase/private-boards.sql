@@ -1,5 +1,5 @@
 -- JamBoard: private boards ("anyone with the link"). Run once in Supabase → SQL Editor,
--- after schema.sql and security.sql (safe to run again).
+-- after schema.sql and security.sql (safe to run again). Then readonly-boards.sql and history.sql, in that order.
 --
 -- What it does:
 --   1. The browser key can no longer read or write the `docs` table directly. It goes through four

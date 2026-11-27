@@ -6,6 +6,7 @@ Runs the board in headless Chromium against an in-memory stand-in for Supabase (
     node tools/perf/bench.js <site dir> <label> [scale]   # e.g. node tools/perf/bench.js . after
     THR=4 node tools/perf/bench.js . after                 # with 4x CPU throttling
     node tools/perf/e2e.js .                               # quick check of hover ports, ropes, undo, drag, remote edits, zoom
+    node tools/perf/history.js . [shots dir]               # version history: list, preview, restore, undo, without history.sql
 
 Each scenario prints main-thread CPU per second (`cpuPerSec_ms`), script / layout / style time and frame gaps.
 In the cloud container there is no GPU, so frame gaps are bound by software compositing; compare the main-thread numbers.
