@@ -1,6 +1,8 @@
 // JamBoard MCP server: lets Claude read and edit boards.
 // Runs as a Supabase Edge Function (Deno), speaks MCP over Streamable HTTP (stateless JSON responses).
-// Connector URL: https://<project>.supabase.co/functions/v1/jamboard-mcp?key=<JAMBOARD_MCP_KEY>
+// Connector URL: https://<project>.supabase.co/functions/v1/jamboard-mcp?key=<JAMBOARD_MCP_KEY> (admin: every board)
+//            or …/jamboard-mcp?token=jbt_… (a personal token from «Налаштування» in the app: only its own boards,
+//            see supabase/mcp-tokens.sql)
 // Needs: function secret JAMBOARD_MCP_KEY, and "Verify JWT" turned off for this function.
 // Plain JS syntax on purpose (no type annotations), so the same file also runs under Node for tests.
 
@@ -1034,6 +1036,63 @@ async function webMeta(url, yt) {
   } catch { return {}; }
 }
 
+// width × height of a PNG, JPEG, GIF or WebP from its first bytes (so image cards keep their shape)
+async function imageSize(url) {
+  try {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 6000);
+    const r = await fetch(url, { signal: ctl.signal, headers: { Range: 'bytes=0-65535' } });
+    if (!r.ok || !r.body) { clearTimeout(t); return null; }
+    const rd = r.body.getReader(), parts = []; let n = 0;
+    while (n < 65536) { const { done, value } = await rd.read(); if (done) break; parts.push(value); n += value.length; }
+    rd.cancel().catch(() => {}); clearTimeout(t);
+    const b = new Uint8Array(n); let o = 0; for (const p of parts) { b.set(p.subarray(0, Math.min(p.length, n - o)), o); o += p.length; if (o >= n) break; }
+    return sniffSize(b);
+  } catch { return null; }
+}
+function sniffSize(b) {
+  const u16 = (i) => (b[i] << 8) | b[i + 1], l16 = (i) => b[i] | (b[i + 1] << 8), u32 = (i) => u16(i) * 65536 + u16(i + 2);
+  if (b.length > 24 && b[0] === 0x89 && b[1] === 0x50) return { w: u32(16), h: u32(20) };
+  if (b.length > 10 && b[0] === 0x47 && b[1] === 0x49) return { w: l16(6), h: l16(8) };
+  if (b.length > 30 && b[0] === 0x52 && b[8] === 0x57) { // RIFF…WEBP
+    const k = String.fromCharCode(b[12], b[13], b[14], b[15]);
+    if (k === 'VP8 ') return { w: l16(26) & 0x3fff, h: l16(28) & 0x3fff };
+    if (k === 'VP8L') { const v = b[21] | (b[22] << 8) | (b[23] << 16) | (b[24] << 24); return { w: (v & 0x3fff) + 1, h: ((v >> 14) & 0x3fff) + 1 }; }
+    if (k === 'VP8X') return { w: 1 + (b[24] | (b[25] << 8) | (b[26] << 16)), h: 1 + (b[27] | (b[28] << 8) | (b[29] << 16)) };
+  }
+  if (b[0] === 0xff && b[1] === 0xd8) {
+    for (let i = 2; i + 9 < b.length;) {
+      if (b[i] !== 0xff) { i++; continue; }
+      const m = b[i + 1];
+      if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) return { w: u16(i + 7), h: u16(i + 5) };
+      i += 2 + u16(i + 2);
+    }
+  }
+  return null;
+}
+
+// ---------- personal tokens (supabase/mcp-tokens.sql): a token reaches only its own boards ----------
+const TOKEN_RE = /^jbt_[A-Za-z0-9]{40}$/;
+const TOKEN_DAYS = 90; // unused and not refreshed for this long: the token stops working
+async function sha256hex(s) {
+  const d = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)));
+  return [...d].map((x) => x.toString(16).padStart(2, '0')).join('');
+}
+async function tokenScope(token) {
+  const hash = await sha256hex(token);
+  const rows = await rest(`mcp_tokens?select=hash,boards,updated_at,used_at&hash=eq.${hash}`);
+  const t = rows && rows[0]; if (!t) return null;
+  const last = Math.max(Date.parse(t.updated_at) || 0, Date.parse(t.used_at) || 0);
+  if (Date.now() - last > TOKEN_DAYS * 864e5) return null;
+  if (Date.now() - (Date.parse(t.used_at) || 0) > 600000) // remember the last use, at most every 10 minutes
+    rest(`mcp_tokens?hash=eq.${hash}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ used_at: new Date().toISOString() }) }).catch(() => null);
+  return { hash, boards: new Set(t.boards || []) };
+}
+// tools (and actions) that only read; everything else changes the board
+const readsOnly = (name, a) => name === 'get_board' || name === 'export_markdown'
+  || (name === 'timer' && (a.action === 'status' || !a.action))
+  || (name === 'hidden_writing' && a.action !== 'on' && a.action !== 'off')
+  || (name === 'voting' && !['start', 'stop', 'clear', 'sort'].includes(a.action));
+
 // keeps an auto-fitting section snug around its cards (same rule as the board: 40px padding, min 200×140)
 function refit(sec, all) {
   if (sec.autofit === false) return false;
@@ -1051,7 +1110,7 @@ const TOOLS = [
   { name: 'get_board', description: 'Read everything on a board: stickies, text, sections, timelines, tables and 2×2 matrices, task cards, Gantt bars (start, due, progress, after = the bars they wait for), diagram nodes, ropes (links), link cards, stamps, comments, plus the retro state (hidden writing, dot voting with vote counts). Coordinates are board pixels; a sticky is 200×200. A card\'s "section" is the id of the section it belongs to; "grid" and "cell" say which timeline/table cell it sits in.', inputSchema: { type: 'object', properties: { board: boardArg } } },
   {
     name: 'add_items',
-    description: 'Add items to a board in one go. Planning types: timeline (title, unit day|week|sprint|month, start YYYY-MM-DD, columns: a count or a list of names, sprint_days, first_sprint, lanes: team or stream names), table (title, columns, rows; matrix: true with cells: the 4 quadrant names and axes [x, y] makes a 2×2 prioritisation matrix), task (text, status todo|doing|review|done, who, estimate, due YYYY-MM-DD, tags, url: a Jira/Linear/GitHub issue link; GitHub issues fill themselves in), bar (a Gantt task bar on a timeline: text, grid: the timeline, lane, start and due YYYY-MM-DD (or days), progress 0–100, who, milestone, after: bars it depends on; x and width follow the dates). Cards in a table or timeline cell line up in rows, side by side as far as the column is wide. Put any card into a timeline or table cell with grid (ref or id) plus column (1-based number, header name, or a YYYY-MM-DD date on a timeline) and lane/row (number or name); in a matrix, cell can be the quadrant name. Other types: node (a diagram block for flows and architecture: text, shape rect|round|pill|circle|diamond|cyl|hex, icon service|db|cache|queue|api|user|web|mobile|cloud|storage|fn|lock|mail|none; ropes between two nodes are drawn straight with an arrow), stamp (emoji, on: a card to stamp, size), comment (text: a comment pin, on: a card), sticky (text, color), text (text, style h1|h2|p|s), section (title, color; give other items "section": its ref to put them inside — the section grows to fit), link (a rope from "from" to "to", optional label and color), web (url: a link card with preview; YouTube shows the video thumbnail). Leave x/y out to let the board lay items out in a tidy grid (inside their section if given). Use "ref" to name a new item so links and "section" can point at it in the same call; existing ids work too.',
+    description: 'Add items to a board in one go. Planning types: timeline (title, unit day|week|sprint|month, start YYYY-MM-DD, columns: a count or a list of names, sprint_days, first_sprint, lanes: team or stream names), table (title, columns, rows; matrix: true with cells: the 4 quadrant names and axes [x, y] makes a 2×2 prioritisation matrix), task (text, status todo|doing|review|done, who, estimate, due YYYY-MM-DD, tags, url: a Jira/Linear/GitHub issue link; GitHub issues fill themselves in), bar (a Gantt task bar on a timeline: text, grid: the timeline, lane, start and due YYYY-MM-DD (or days), progress 0–100, who, milestone, after: bars it depends on; x and width follow the dates). Cards in a table or timeline cell line up in rows, side by side as far as the column is wide. Put any card into a timeline or table cell with grid (ref or id) plus column (1-based number, header name, or a YYYY-MM-DD date on a timeline) and lane/row (number or name); in a matrix, cell can be the quadrant name. Other types: node (a diagram block for flows and architecture: text, shape rect|round|pill|circle|diamond|cyl|hex, icon service|db|cache|queue|api|user|web|mobile|cloud|storage|fn|lock|mail|none; ropes between two nodes are drawn straight with an arrow), stamp (emoji, on: a card to stamp, size), comment (text: a comment pin, on: a card), sticky (text, color), text (text, style h1|h2|p|s), section (title, color; give other items "section": its ref to put them inside — the section grows to fit), link (a rope from "from" to "to", optional label and color), web (url: a link card with preview; YouTube shows the video thumbnail), image (url: an https picture, e.g. a screenshot or reference found with another tool; w sets its width, the height follows the picture). Leave x/y out to let the board lay items out in a tidy grid (inside their section if given). Use "ref" to name a new item so links and "section" can point at it in the same call; existing ids work too.',
     inputSchema: {
       type: 'object', required: ['items'],
       properties: {
@@ -1061,7 +1120,7 @@ const TOOLS = [
           items: {
             type: 'object', required: ['type'],
             properties: {
-              type: { type: 'string', enum: ['sticky', 'text', 'section', 'link', 'web', 'stamp', 'comment', 'node', 'timeline', 'table', 'task', 'bar'] },
+              type: { type: 'string', enum: ['sticky', 'text', 'section', 'link', 'web', 'image', 'stamp', 'comment', 'node', 'timeline', 'table', 'task', 'bar'] },
               progress: { type: 'number', description: 'Bar: percent done, 0–100.' },
               days: { type: 'number', description: 'Bar: length in days when due is left out (default 5).' },
               milestone: { type: 'boolean', description: 'Bar: a milestone, one date shown as a diamond.' },
@@ -1152,7 +1211,12 @@ const TOOLS = [
   { name: 'timer', description: 'Control the board\'s shared timer that everyone sees: start (with minutes), pause, resume, reset, or status.', inputSchema: { type: 'object', required: ['action'], properties: { board: boardArg, action: { type: 'string', enum: ['start', 'pause', 'resume', 'reset', 'status'] }, minutes: { type: 'number', description: 'For start: 0.1 to 120.' } } } },
 ];
 
-async function callTool(name, a) {
+async function callTool(name, a, scope) {
+  if (name === 'list_boards' && scope) { // a personal token: only the boards it was given
+    const ids = [...scope.boards].filter(validBoard);
+    const rows = ids.length ? (await rest(`docs?select=path,data&path=in.(${ids.map((b) => '"boards/' + b + '"').join(',')})`)) || [] : [];
+    return rows.map((r) => ({ id: r.path.slice(7), title: r.data && r.data.title || 'Без назви', link: '#b=' + r.path.slice(7), view_only: r.data && r.data.ro === true || undefined }));
+  }
   if (name === 'list_boards') {
     const rows = (await listColl('boards')) || [];
     return rows.map((r) => ({ id: r.path.slice(7), title: r.data && r.data.title || 'Без назви', link: '#b=' + r.path.slice(7) }));
@@ -1160,10 +1224,18 @@ async function callTool(name, a) {
   if (name === 'create_board') {
     const id = secretId();
     await putDocs([{ path: 'boards/' + id, data: { title: String(a.title || 'Нова дошка').slice(0, 120), at: Date.now(), by: BY } }]);
+    if (scope) { // the new board joins this token, so the same Claude can keep working on it
+      scope.boards.add(id);
+      await rest(`mcp_tokens?hash=eq.${scope.hash}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ boards: [...scope.boards].slice(-300), updated_at: new Date().toISOString() }) });
+    }
     return { id, note: 'Boards are private: open it by adding #b=' + id + ' to the JamBoard address and share that link. It is not listed anywhere else.' };
   }
   const board = a.board;
   if (!validBoard(board)) throw new Error('Pass board: an id from list_boards');
+  if (scope) {
+    if (!scope.boards.has(board)) throw new Error('This board is not open to this token. In JamBoard open «Налаштування» → Claude and tick the board (or open the board once in that browser).');
+    if (!readsOnly(name, a)) { const meta = await getDoc('boards/' + board); if (meta && meta.ro === true) throw new Error('This board is view-only.'); }
+  }
   if (name === 'get_board') {
     const [all, r] = await Promise.all([loadItems(board), retroState(board)]);
     const back = (i) => (i.type === 'section' || isGrid(i) ? -1 : 0);
@@ -1331,7 +1403,7 @@ async function callTool(name, a) {
         if (spec.arrow === false) it.flow = false;
         if (spec.dash === true) it.dash = true;
         if (spec.thick === true) it.thick = true;
-      } else if (t === 'sticky' || t === 'text' || t === 'web' || t === 'node' || t === 'task') {
+      } else if (t === 'sticky' || t === 'text' || t === 'web' || t === 'image' || t === 'node' || t === 'task') {
         if (t === 'task') {
           it = { id: uid(), type: 'task', w: num(spec.w) ?? 280, h: 120, text: '', status: 'todo' };
           taskFields(it, spec);
@@ -1353,6 +1425,12 @@ async function callTool(name, a) {
             it = { id: uid(), type: 'board', bid: linked, w: num(spec.w) ?? 300, h: 250 };
             if (meta && typeof meta.title === 'string') it.title = meta.title.slice(0, 120);
           }
+        }
+        if (t === 'image') {
+          const url = safeHttps(spec.url); if (!url) throw new Error('image needs an https url');
+          const sz = await imageSize(url), ar = sz && sz.w > 0 && sz.h > 0 ? sz.h / sz.w : 0.75;
+          const w = clampN(spec.w, 60, 2000, sz ? Math.min(360, sz.w) : 320);
+          it = { id: uid(), type: 'image', url, w, h: num(spec.h) ?? Math.round(w * ar) };
         }
         if (t === 'web' && !it) {
           const url = safeHttps(spec.url);
@@ -1509,19 +1587,19 @@ const PROTOCOLS = ['2025-06-18', '2025-03-26', '2024-11-05'];
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'content-type, mcp-protocol-version, mcp-session-id, authorization', 'Access-Control-Allow-Methods': 'POST, GET, OPTIONS' };
 const json = (body, status = 200) => new Response(body == null ? null : JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
-async function handleRpc(m) {
+async function handleRpc(m, scope) {
   if (!m || m.jsonrpc !== '2.0' || typeof m.method !== 'string') return { jsonrpc: '2.0', id: m && m.id != null ? m.id : null, error: { code: -32600, message: 'Invalid request' } };
   const reply = (result) => (m.id == null ? null : { jsonrpc: '2.0', id: m.id, result });
   switch (m.method) {
     case 'initialize': {
       const want = m.params && m.params.protocolVersion;
-      return reply({ protocolVersion: PROTOCOLS.includes(want) ? want : PROTOCOLS[0], capabilities: { tools: {} }, serverInfo: { name: 'jamboard', version: '1.0.0' }, instructions: 'JamBoard is a shared whiteboard. Read a board with get_board before editing it. Prefer add_items with refs to build sections, stickies and ropes in one call; leave x/y out for automatic layout.' });
+      return reply({ protocolVersion: PROTOCOLS.includes(want) ? want : PROTOCOLS[0], capabilities: { tools: {} }, serverInfo: { name: 'jamboard', version: '1.1.0' }, instructions: 'JamBoard is a shared whiteboard. Read a board with get_board before editing it. Prefer add_items with refs to build sections, stickies and ropes in one call; leave x/y out for automatic layout. Pictures found with other tools (design references, screenshots) go on the board as image items with their https url.' + (scope ? ' This connection reaches only the boards its owner shared with it (list_boards).' : '') });
     }
     case 'ping': return reply({});
     case 'tools/list': return reply({ tools: TOOLS });
     case 'tools/call': {
       const name = m.params && m.params.name, args = (m.params && m.params.arguments) || {};
-      try { const out = await callTool(name, args); return reply({ content: [{ type: 'text', text: JSON.stringify(out) }] }); }
+      try { const out = await callTool(name, args, scope); return reply({ content: [{ type: 'text', text: JSON.stringify(out) }] }); }
       catch (e) { return reply({ content: [{ type: 'text', text: 'Error: ' + (e && e.message || e) }], isError: true }); }
     }
     default:
@@ -1538,12 +1616,19 @@ async function eq(a, b) { // constant-time-ish compare
 export async function handler(req) {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   const url = new URL(req.url);
-  const key = url.searchParams.get('key') || (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
-  if (!MCP_KEY || !(await eq(key, MCP_KEY))) return json({ error: 'unauthorized' }, 401);
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+  const token = url.searchParams.get('token') || (TOKEN_RE.test(bearer) ? bearer : '');
+  const key = url.searchParams.get('key') || (token ? '' : bearer);
+  let scope = null; // null = admin key: every board
+  if (token) {
+    if (!TOKEN_RE.test(token)) return json({ error: 'unauthorized' }, 401);
+    try { scope = await tokenScope(token); } catch { return json({ error: 'token check failed' }, 503); }
+    if (!scope) return json({ error: 'unauthorized: this token was revoked or has expired. Make a new one in JamBoard → Налаштування.' }, 401);
+  } else if (!MCP_KEY || !(await eq(key, MCP_KEY))) return json({ error: 'unauthorized' }, 401);
   if (req.method !== 'POST') return new Response('Use POST', { status: 405, headers: { ...CORS, Allow: 'POST, OPTIONS' } });
   let body; try { body = await req.json(); } catch { return json({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } }, 400); }
-  if (Array.isArray(body)) { const out = (await Promise.all(body.map(handleRpc))).filter(Boolean); return out.length ? json(out) : new Response(null, { status: 202, headers: CORS }); }
-  const out = await handleRpc(body);
+  if (Array.isArray(body)) { const out = (await Promise.all(body.map((m) => handleRpc(m, scope)))).filter(Boolean); return out.length ? json(out) : new Response(null, { status: 202, headers: CORS }); }
+  const out = await handleRpc(body, scope);
   return out ? json(out) : new Response(null, { status: 202, headers: CORS });
 }
 
