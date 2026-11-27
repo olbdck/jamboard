@@ -410,6 +410,43 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
 .pv-stamp { display: grid; place-items: center; line-height: 1; }
 .pv-pin { display: grid; place-items: center; border-radius: 50% 50% 50% 4px; background: color-mix(in srgb, var(--pc) 30%, var(--surface)); box-shadow: 0 0 0 2px var(--pc), var(--note-shadow); font-size: 18px; }
 @media (max-width: 520px) { .panel.peek { width: calc(100vw - 16px); height: calc(100vh - 16px); } .peek-head { flex-wrap: wrap; padding: 12px 10px 10px 16px; } .peek-hd { flex-basis: 100%; } .peek-head .peek-new { margin-left: auto; } }
+/* version history: a list on the right; a version opens in the preview dialog beside it */
+.panel.hist-pop { position: fixed; top: calc(72px + env(safe-area-inset-top, 0px)); right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(88px + env(safe-area-inset-bottom, 0px)); width: 340px; max-width: calc(100vw - 24px); box-sizing: border-box; z-index: 22; display: flex; flex-direction: column; background: var(--surface); border-radius: var(--r-xl); box-shadow: var(--shadow-lg); overflow: hidden; animation: hsIn var(--slow) var(--ease-em) both; }
+.panel.hist-pop.out { animation: hsOut 170ms var(--ease) both; pointer-events: none; }
+@keyframes hsIn { from { opacity: 0; translate: 24px 0; } }
+@keyframes hsOut { to { opacity: 0; translate: 16px 0; } }
+.hs-head { display: flex; align-items: flex-start; gap: 10px; padding: 16px 14px 10px 18px; }
+.hs-hd { flex: 1; min-width: 0; }
+.hs-hd h2 { margin: 0; font: 600 18px/1.25 var(--f-display); letter-spacing: -0.02em; }
+.hs-hd p { margin: 3px 0 0; font-size: 12.5px; line-height: 1.35; color: var(--muted); }
+.hs-head .close { flex: none; border: 0; background: var(--chip); color: var(--muted); cursor: pointer; font-size: 15px; line-height: 1; width: 26px; height: 26px; border-radius: 50%; transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease); }
+.hs-head .close:hover { color: var(--text); background: color-mix(in srgb, var(--text) 10%, transparent); }
+.hs-head .close:focus-visible { outline: none; box-shadow: var(--focus); }
+.hs-list { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 0 8px 10px; contain: content; }
+.hs-day { position: sticky; top: 0; z-index: 1; padding: 10px 10px 6px; font: 600 12px var(--f-text); color: var(--muted); background: var(--surface); }
+.hs-item { display: flex; align-items: flex-start; gap: 10px; width: 100%; box-sizing: border-box; border: 0; background: transparent; color: var(--text); text-align: left; padding: 9px 10px; border-radius: var(--r-md); cursor: pointer; font: inherit; position: relative; transition: background-color var(--fast) var(--ease); }
+.hs-item:hover { background: var(--chip); }
+.hs-item:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+.hs-item[aria-current="true"] { background: var(--accent-soft); }
+.hs-item[aria-current="true"]::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 2px; background: var(--accent); }
+.hs-item .av { flex: none; width: 28px; height: 28px; margin: 1px 0 0; border: 0; font-size: 15px; animation: none; }
+.hs-t { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.hs-l { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.hs-l b { font-weight: 600; font-size: 14px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hs-l time { margin-left: auto; flex: none; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.hs-t small { font-size: 12.5px; line-height: 1.35; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.hs-now { flex: none; align-self: center; padding: 2px 8px; border-radius: var(--r-pill); background: var(--accent); color: var(--accent-fg); font: 600 11px/1.4 var(--f-text); }
+.hs-more { display: block; margin: 6px auto 4px; }
+.hs-msg { padding: 18px 22px 22px; font-size: 13.5px; line-height: 1.45; color: var(--muted); }
+.hs-msg:empty { display: none; }
+.hs-msg code { font: 500 12.5px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text); background: var(--chip); padding: 1px 5px; border-radius: 5px; }
+.hs-list.wait::after { content: ""; display: block; height: 220px; margin: 0 4px; border-radius: var(--r-md); background: linear-gradient(100deg, var(--chip) 30%, color-mix(in srgb, var(--surface) 45%, transparent) 50%, var(--chip) 70%) -100% 0 / 200% 100% no-repeat; animation: shimmer 1.3s var(--ease) infinite; }
+body.view-only #histBtn { display: none !important; }
+/* the preview of a version sits left of the list; what changed in it is ringed, the rest a little faded */
+.panel.peek.hist { left: calc((100vw - 372px) / 2); top: calc(72px + env(safe-area-inset-top, 0px)); translate: -50% 0; width: min(1080px, calc(100vw - 404px)); height: calc(100vh - 160px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
+.peek-world.hs-diff .pv:not(.pv-sec):not(.hs-hit) { opacity: .5; }
+.pv.hs-hit { outline: 5px solid var(--accent); outline-offset: 6px; }
+@media (max-width: 760px) { .panel.peek.hist { left: 50%; top: 8px; width: calc(100vw - 16px); height: calc(100vh - 16px); } body.hs-pv #histPop { visibility: hidden; } .panel.hist-pop { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); } }
 /* view-only boards (the demo): pan, zoom and read; every editing control is gone */
 body.view-only .rail [data-tool]:not([data-tool="select"]):not([data-tool="hand"]), body.view-only #mermaidBtn, body.view-only #imageBtn, body.view-only #undoBtn, body.view-only #redoBtn, body.view-only .rail .rule, body.view-only #palette, body.view-only #ctx, body.view-only #timerPill, body.view-only #timerPill + .vsep, body.view-only .port, body.view-only .handle { display: none !important; }
 body.view-only #viewport, body.view-only #viewport .item { cursor: grab; }
@@ -642,6 +679,36 @@ body.view-only .ro-note { display: flex; animation: palIn var(--base) var(--ease
   pointer-events: none; max-width: calc(100vw - 32px); text-align: center; z-index: 9; border: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
 }
 #toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+/* follow & present: a pill at the top centre says who leads; a frame in their colour rims the screen while you follow */
+.pres-bar { position: fixed; left: 50%; top: calc(66px + env(safe-area-inset-top, 0px)); width: max-content; z-index: 6; display: flex; align-items: center; gap: 8px; height: 44px; box-sizing: border-box; padding: 4px 4px 4px 8px; border-radius: var(--r-pill); translate: -50% 0; font: 500 14px var(--f-text); color: var(--text); white-space: nowrap; max-width: calc(100vw - 24px);
+  transition: opacity var(--base) var(--ease-em), transform var(--base) var(--ease-spring); }
+.pres-bar[hidden] { display: flex !important; opacity: 0; transform: translateY(-10px) scale(.96); pointer-events: none; visibility: hidden; transition: opacity var(--fast) var(--ease), transform var(--fast) var(--ease), visibility 0s linear var(--fast); }
+.pres-bar .av { width: 28px; height: 28px; font-size: 15px; margin: 0; border: 0; box-shadow: 0 0 0 2px var(--pc); animation: none; flex: none; }
+.pres-bar .pb-live { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); margin: 0 4px 0 6px; flex: none; box-shadow: 0 0 0 0 var(--accent-soft); animation: pbLive 1.8s var(--ease) infinite; }
+@keyframes pbLive { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent); } 70%, 100% { box-shadow: 0 0 0 8px transparent; } }
+.pres-bar .pb-text { overflow: hidden; text-overflow: ellipsis; min-width: 0; padding-right: 2px; }
+.pres-bar .pb-text b { font-weight: 600; }
+.pres-bar .pb-sub { color: var(--muted); }
+.pres-bar .pb-nav { display: flex; align-items: center; gap: 0; padding: 0 2px; border-radius: var(--r-pill); background: var(--chip); }
+.pres-bar .pb-nav[hidden] { display: none; }
+.pres-bar .pb-nav .icon-btn { width: 32px; height: 32px; }
+.pres-bar .pb-nav .icon-btn svg { width: 18px; height: 18px; }
+.pres-bar .pb-count { min-width: 44px; text-align: center; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text); padding: 0 4px; }
+.pres-bar .pb-act { height: 36px; padding: 0 14px; font-size: 14px; }
+.pres-bar .pb-act.ghost { background: var(--chip); color: var(--text); }
+.pres-bar .pb-act.ghost:hover { background: color-mix(in srgb, var(--text) 12%, var(--surface)); }
+#folFrame { position: fixed; inset: 0; z-index: 4; pointer-events: none; border: 3px solid var(--pc, var(--accent)); border-radius: 14px; opacity: 0; transition: opacity var(--base) var(--ease-em), border-color var(--base) var(--ease); }
+#folFrame.on { opacity: 1; }
+#folFrame.mine { border-width: 2px; border-color: color-mix(in srgb, var(--accent) 70%, transparent); }
+.avatars button.av { cursor: pointer; transition: scale var(--fast) var(--ease-spring), box-shadow var(--fast) var(--ease); }
+.avatars button.av:not(.me):hover { scale: 1.12; z-index: 2; }
+.avatars .av.fol { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--pc); z-index: 1; }
+.avatars .av .pin { position: absolute; right: -3px; bottom: -3px; width: 13px; height: 13px; border-radius: 50%; background: var(--accent); color: var(--accent-fg); display: grid; place-items: center; box-shadow: 0 0 0 2px var(--surface); }
+.avatars .av .pin svg { width: 8px; height: 8px; }
+.people-list .txt-btn { margin-left: auto; padding: 4px 10px; font-size: 13px; }
+#presentBtn[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+@media (max-width: 520px) { .pres-bar .pb-sub { display: none; } }
+@media (prefers-reduced-motion: reduce) { .pres-bar .pb-live { animation: none !important; } }
 #dropzone { position: fixed; inset: 10px; border: 2px dashed var(--accent); border-radius: var(--r-xl); background: var(--accent-soft); pointer-events: none; display: grid; place-items: center; font: 600 21px var(--f-display); color: var(--accent); }
 :focus-visible { outline: none; box-shadow: var(--focus); }
 /* timelines and tables: a frame with a header band, lane names and cells; cards dropped in stick to a cell */
@@ -926,6 +993,13 @@ select.field.sm { padding-right: 8px; }
   <p class="hint">Дошку бачать лише ті, у кого є це посилання, і вони можуть її редагувати.</p>
 </div>
 
+<div class="panel pres-bar" id="presBar" role="status" aria-live="polite" hidden>
+  <span class="pb-live" id="presLive"></span><span class="av" id="presAv" hidden></span>
+  <span class="pb-text" id="presText"></span>
+  <span class="pb-nav" id="presNav" hidden><button class="icon-btn" id="presPrev" aria-label="Попередня секція"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6l-6 6 6 6"/></svg><span class="tip">Попередня секція<kbd>←</kbd></span></button><span class="pb-count" id="presCount"></span><button class="icon-btn" id="presNext" aria-label="Наступна секція"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6l6 6-6 6"/></svg><span class="tip">Наступна секція<kbd>→</kbd></span></button></span>
+  <button class="primary pb-act" id="presAct"></button>
+</div>
+<div id="folFrame" aria-hidden="true"></div>
 <div class="top-right">
   <div class="panel people">
     <div class="status" id="status" data-s="warn"><i></i><span>Підключення…</span></div>
@@ -935,6 +1009,7 @@ select.field.sm { padding-right: 8px; }
     <button class="chip" id="hideChip" hidden title="Приховане писання: чужі картки не видно. Натисніть, щоб відкрити всі"><span aria-hidden="true">🙈</span><span class="st">Відкрити всі</span></button>
     <button class="chip" id="voteChip" hidden aria-haspopup="dialog" aria-expanded="false"><span aria-hidden="true">🗳️</span><span class="vc-dots" id="voteDots"></span><span class="st" id="voteText"></span></button>
     <button id="timerPill" data-s="idle" aria-label="Таймер для всіх" aria-haspopup="dialog" aria-expanded="false" title="Таймер для всіх"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7"/><path d="M12 10v3.8l2.4 1.6M9.5 3.5h5M18.6 6.4l1.2-1.2"/></svg><span class="ring"></span><span class="tm digits" id="tmText">00:00</span><span class="st" id="tmState"></span></button>
+    <button class="icon-btn" id="presentBtn" aria-label="Презентувати" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12.5" rx="2"/><path d="M12 16.5V20M8.5 20.5h7"/><path d="M10.4 7.9v5l4.1-2.5z" fill="currentColor"/></svg><span class="tip" id="presentTip">Презентувати: усі бачать те, що й ви<kbd>Shift+P</kbd></span></button>
     <button class="primary" id="shareBtn" title="Скопіювати посилання на цю дошку"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg><span>Поділитися</span></button>
   </div>
 </div>
@@ -987,6 +1062,12 @@ select.field.sm { padding-right: 8px; }
   <div class="rule"></div>
   <button class="icon-btn" id="undoBtn" aria-label="Скасувати"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L4.5 11.5 9 16"/><path d="M5 11.5h9a5 5 0 010 10h-2"/></svg><span class="tip">Скасувати<kbd>Ctrl+Z</kbd></span></button>
   <button class="icon-btn" id="redoBtn" aria-label="Повторити"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7l4.5 4.5L15 16"/><path d="M19 11.5h-9a5 5 0 000 10h2"/></svg><span class="tip">Повторити<kbd>Ctrl+Shift+Z</kbd></span></button>
+  <button class="icon-btn" id="histBtn" aria-label="Історія версій" aria-haspopup="dialog" aria-expanded="false" aria-controls="histPop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.6 13.2A7.5 7.5 0 106.4 6.6"/><path d="M3.8 4.6v3.6h3.6"/><path d="M12 8.2V12l2.6 1.7"/></svg><span class="tip">Історія версій: хто, що й коли змінив</span></button>
+</div>
+<div class="panel hist-pop" id="histPop" role="dialog" aria-labelledby="histTitle" hidden>
+  <div class="hs-head"><div class="hs-hd"><h2 id="histTitle">Історія версій</h2><p>Хто, що й коли змінив. Натисніть версію, щоб переглянути або відновити її</p></div><button class="close" id="histClose" aria-label="Закрити">×</button></div>
+  <div class="hs-list" id="histList" role="list"></div>
+  <div class="hs-msg" id="histMsg" role="status"></div>
 </div>
 <div class="panel palette" id="palette" hidden></div>
 <div class="panel popover" id="mmPop" role="dialog" aria-label="Схема з Mermaid" hidden>
@@ -1172,6 +1253,8 @@ select.field.sm { padding-right: 8px; }
     <li>Таймлайн, матриця, ретро <b>P</b></li>
     <li>Перейменувати колонку <b>Подвійний клік на назві</b></li>
     <li>Змінити своє ім’я <b>Клік на аватарці</b></li>
+    <li>Стежити за кимось <b>Клік на його аватарці</b></li>
+    <li>Презентувати секції по черзі <b>Shift + P · ← →</b></li>
   </ul>
 </div>
 <div id="toast" role="status"></div>
@@ -2467,7 +2550,7 @@ const Plan = (() => {
     const after = snapIds(Object.keys(before));
     undoStack.push({ before, after }); if (undoStack.length > 120) undoStack.shift();
     redoStack.length = 0; updateHistoryButtons();
-    persist(after); coverSoon(true);
+    persist(after); coverSoon(true); histSoon();
     if (ripArmed && newIds.length) { // the first thing created after a paste gets the ripple
       const fresh = performance.now() - ripArmed < 10000; ripArmed = 0;
       const made = newIds.map((id) => items.get(id)).filter((i) => i && !isLink(i));
@@ -2484,7 +2567,7 @@ const Plan = (() => {
   function applyMap(map) {
     for (const id in map) map[id] ? putItem(id, { ...map[id] }) : items.delete(id);
     selected = new Set([...selected].filter((id) => items.has(id)));
-    persist(map); renderAll(); coverSoon(true);
+    persist(map); renderAll(); coverSoon(true); histSoon();
   }
   function undo() { finishEdit(); const op = undoStack.pop(); if (!op) return; applyMap(op.before); redoStack.push(op); updateHistoryButtons(); }
   function redo() { finishEdit(); const op = redoStack.pop(); if (!op) return; applyMap(op.after); undoStack.push(op); updateHistoryButtons(); }
@@ -2524,6 +2607,7 @@ const Plan = (() => {
     const g = gridCell, mx = (((view.x + 100) % g) + g) % g, my = (((view.y + 100) % g) + g) % g;
     gridEl.style.transform = `translate3d(${mx}px, ${my}px, 0)`;
     if (rip) ripPlace();
+    shareVp();
     clearTimeout(paintView.t); const vk = viewKey(); paintView.t = setTimeout(() => store.set(vk, JSON.stringify(view)), 400);
   }
   function applyView() { schedule('view'); }
@@ -2614,7 +2698,7 @@ const Plan = (() => {
   let zTarget = null, zAnchor = null, zRaf = 0, zLast = 0;
   function smoothZoom(sx, sy, factor) { smoothZoomTo(sx, sy, (zTarget || view.z) * factor); }
   function smoothZoomTo(sx, sy, z) {
-    stopGlide(); cancelFly();
+    breakFollow(); stopGlide(); cancelFly();
     zTarget = clamp(z, 0.1, 4); zAnchor = { sx, sy };
     if (reduceMotion) { zoomAt(sx, sy, zTarget / view.z); zTarget = null; return; }
     if (!zRaf) { zLast = performance.now(); zRaf = requestAnimationFrame(zoomStep); }
@@ -2632,7 +2716,7 @@ const Plan = (() => {
   let flyRaf = 0;
   function cancelFly() { if (flyRaf) cancelAnimationFrame(flyRaf); flyRaf = 0; }
   function flyTo(t, dur = 420) {
-    stopZoom(); stopGlide(); cancelFly();
+    breakFollow(); stopZoom(); stopGlide(); cancelFly(); announceFly(t, reduceMotion ? 0 : dur);
     if (reduceMotion) { Object.assign(view, t); applyView(); return; }
     const W = innerWidth / 2, H = innerHeight / 2;
     const c0 = toWorld(W, H), z0 = view.z, c1 = { x: (W - t.x) / t.z, y: (H - t.y) / t.z }, t0 = performance.now();
@@ -4859,7 +4943,7 @@ const Plan = (() => {
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     for (const i of cards) { x0 = Math.min(x0, i.x); y0 = Math.min(y0, i.y - (i.type === 'section' ? 40 : 0)); x1 = Math.max(x1, i.x + W(i)); y1 = Math.max(y1, i.y + H(i)); }
     const T = (c, d) => `var(--t-${COLORS.includes(c) ? c : d})`;
-    const box = (i, cls) => { const e = document.createElement('div'); e.className = 'pv ' + cls; e.style.cssText = `left:${i.x}px;top:${i.y}px;width:${W(i)}px;height:${H(i)}px`; return e; };
+    const box = (i, cls) => { const e = document.createElement('div'); e.className = 'pv ' + cls; e.style.cssText = `left:${i.x}px;top:${i.y}px;width:${W(i)}px;height:${H(i)}px`; if (i.id) e.dataset.id = i.id; return e; };
     const order = cards.sort((a, b) => rank(a) - rank(b) || (a.z || 0) - (b.z || 0));
     const secs = order.filter((i) => i.type === 'section'), rest = order.filter((i) => i.type !== 'section');
     for (const i of secs) {
@@ -4917,7 +5001,8 @@ const Plan = (() => {
     if (!bid) return;
     closeGallery(); closeThread();
     const pop = $('#peek'), back = $('#peekBack'), token = ++pk.token;
-    pk.open = true; pk.bid = bid; pk.from = fromEl || null;
+    pk.open = true; pk.bid = bid; pk.from = fromEl || null; pk.hist = null;
+    pop.classList.remove('hist'); $('#peekNew').hidden = false; $('#peekWorld').classList.remove('hs-diff');
     // grow out of the card that was clicked
     const r = fromEl && fromEl.getBoundingClientRect();
     pop.hidden = false; back.hidden = false; pop.classList.remove('out'); back.classList.remove('out');
@@ -4947,6 +5032,7 @@ const Plan = (() => {
   function closePeek(go) {
     if (!pk.open) return;
     pk.open = false; pk.token++;
+    if (pk.hist) { pk.hist = null; histPreviewClosed(); }
     const pop = $('#peek'), back = $('#peekBack'), from = pk.from;
     pop.classList.remove('in'); pop.classList.add('out'); back.classList.add('out');
     setTimeout(() => { if (!pk.open) { pop.hidden = true; back.hidden = true; $('#peekWorld').innerHTML = ''; } }, reduceMotion ? 0 : 200);
@@ -4954,11 +5040,12 @@ const Plan = (() => {
     else if (from && from.isConnected) { const f = from.closest('.item') ? null : from; if (f && f.focus) f.focus({ preventScroll: true }); }
   }
   $('#peekClose').addEventListener('click', () => closePeek(false));
-  $('#peekGo').addEventListener('click', () => closePeek(true));
+  $('#peekGo').addEventListener('click', () => (pk.hist ? histRestore() : closePeek(true)));
   $('#peekBack').addEventListener('pointerdown', () => closePeek(false));
   $('#peek').addEventListener('keydown', (e) => {
     e.stopPropagation();
     if (e.key === 'Escape') { e.preventDefault(); closePeek(false); return; }
+    if (pk.hist && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); histStep(e.key === 'ArrowUp' ? -1 : 1); return; } // the next older / newer version
     if (e.key === 'Tab') { // keep focus inside the dialog
       const f = [...$('#peek').querySelectorAll('button:not([disabled]), a[href]')]; if (!f.length) return;
       const i = f.indexOf(document.activeElement), n = e.shiftKey ? (i <= 0 ? f.length - 1 : i - 1) : (i + 1) % f.length;
@@ -5005,6 +5092,260 @@ const Plan = (() => {
     st.addEventListener('dblclick', () => peekFit(true));
     addEventListener('resize', () => { if (pk.open && pk.fit) peekFit(false); });
   })();
+  // ---------- version history: the server keeps every change to an item with who made it (supabase/history.sql).
+  // The list folds one person's run of changes into a version; a version opens in the preview dialog beside the list
+  // (what changed is ringed), and restoring it writes only the difference, as one ordinary undo step ----------
+  const HS_GAP = 10 * 60000, HS_PAGE = 200, HS_TOP = 60;
+  const hs = { open: false, bid: null, rows: new Map(), groups: [], more: false, cur: null, sig: '', timer: 0, soon: 0, cache: new Map(), token: 0, busy: false };
+  const HS_NOUNS = { sticky: ['стікер', 'стікери', 'стікерів'], text: ['текст', 'тексти', 'текстів'], image: ['зображення', 'зображення', 'зображень'],
+    section: ['секцію', 'секції', 'секцій'], stamp: ['штамп', 'штампи', 'штампів'], comment: ['коментар', 'коментарі', 'коментарів'],
+    link: ['зв’язок', 'зв’язки', 'зв’язків'], web: ['посилання', 'посилання', 'посилань'], node: ['блок', 'блоки', 'блоків'],
+    board: ['картку дошки', 'картки дошок', 'карток дошок'], timeline: ['таймлайн', 'таймлайни', 'таймлайнів'], table: ['таблицю', 'таблиці', 'таблиць'],
+    task: ['задачу', 'задачі', 'задач'], bar: ['смугу', 'смуги', 'смуг'] };
+  const HS_ANY = ['елемент', 'елементи', 'елементів'];
+  const HS_VERBS = { add: 'додано', edit: 'змінено', move: 'переміщено', del: 'видалено' };
+  const hsPlural = (n, f) => plural(n, f[0], f[1], f[2]);
+  const idOfPath = (p) => p.slice(p.lastIndexOf('/') + 1);
+  const hsTime = (t) => new Date(t).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+  function hsDay(t) {
+    const d = new Date(t), now = new Date(), day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+    const ago = Math.round((day(now) - day(d)) / 864e5);
+    if (ago === 0) return 'Сьогодні'; if (ago === 1) return 'Вчора';
+    return d.toLocaleDateString('uk-UA', d.getFullYear() === now.getFullYear() ? { day: 'numeric', month: 'long' } : { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  const hsWhen = (t) => { const d = hsDay(t); return (d === 'Сьогодні' || d === 'Вчора' ? d.toLowerCase() : d) + ', ' + hsTime(t); };
+  const hsStamp = (t) => new Date(t).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' }) + ', ' + hsTime(t); // stays true tomorrow
+  function hsWho(w) {
+    if (!w || typeof w !== 'object') return { key: '?', n: 'Хтось', e: '👤', c: '#8e8e93' };
+    if (w.seed) return { key: 'seed', n: 'Збережений стан', e: '🗂️', c: '#8e8e93', seed: true };
+    if (w.mcp) return { key: 'mcp', n: 'Claude', e: '✦', c: '#c2185b' };
+    const v = typeof w.v === 'string' ? w.v : '', r = typeof w.r === 'string' ? w.r.slice(0, 40) : '';
+    return { key: (v || shortStr(w.n, 32) || '?') + (r ? '/' + r : ''), n: shortStr(w.n, 32) || 'Хтось', e: typeof w.e === 'string' && w.e && w.e.length <= 8 ? w.e : '👤', c: safeColor(w.c), mine: !!v && v === myVid, r };
+  }
+  function hsGroup() {
+    const out = []; let g = null;
+    for (const r of [...hs.rows.values()].sort((a, b) => b.id - a.id)) {
+      const w = hsWho(r.who), t = Date.parse(r.at) || 0;
+      if (!g || g.who.key !== w.key || (!w.seed && Math.abs(g.t0 - t) > HS_GAP)) { g = { id: r.id, t, t0: t, who: w, rows: [] }; out.push(g); }
+      g.rows.push(r); if (t < g.t0) g.t0 = t; if (t > g.t) g.t = t;
+    }
+    hs.groups = out;
+  }
+  function hsSummary(g) {
+    if (g.who.seed) return 'Так дошка виглядала, коли ввімкнули історію';
+    if (g.who.r) return 'Відновлено версію від ' + g.who.r;
+    const per = new Map(); // each item once: what this version did to it in the end
+    for (let i = g.rows.length - 1; i >= 0; i--) {
+      const r = g.rows[i], p = per.get(r.path);
+      if (!p) per.set(r.path, { first: r.op, last: r.op, edit: r.op === 'edit', type: r.type, label: r.label });
+      else { p.last = r.op; p.edit = p.edit || r.op === 'edit'; if (r.type) p.type = r.type; if (r.label != null) p.label = r.label; }
+    }
+    const by = { add: [], edit: [], move: [], del: [] };
+    for (const p of per.values()) {
+      const op = p.first === 'add' ? (p.last === 'del' ? null : 'add') : p.last === 'del' ? 'del' : p.edit || p.first === 'del' ? 'edit' : 'move';
+      if (op) by[op].push(p);
+    }
+    const parts = [];
+    for (const op of ['add', 'edit', 'move', 'del']) {
+      const L = by[op]; if (!L.length) continue;
+      const types = new Map(); L.forEach((p) => types.set(p.type, (types.get(p.type) || 0) + 1));
+      let what;
+      if (L.length === 1) {
+        const p = L[0], lab = typeof p.label === 'string' ? p.label.replace(/\s+/g, ' ').trim() : '';
+        what = (HS_NOUNS[p.type] || HS_ANY)[0] + (lab ? ' «' + (lab.length > 36 ? lab.slice(0, 35) + '…' : lab) + '»' : '');
+      } else if (types.size <= 2) what = [...types].map(([t, n]) => n + ' ' + hsPlural(n, HS_NOUNS[t] || HS_ANY)).join(' і ');
+      else what = L.length + ' ' + hsPlural(L.length, HS_ANY);
+      parts.push(HS_VERBS[op] + ' ' + what);
+    }
+    const s = parts.join(', ') || 'дрібні зміни';
+    return s[0].toUpperCase() + s.slice(1);
+  }
+  function hsMsg(html) { $('#histMsg').innerHTML = html; }
+  function hsRender() {
+    const list = $('#histList');
+    const sig = hs.groups.map((g) => g.id + ':' + g.rows.length + ':' + g.t + ':' + g.who.key).join(',') + '|' + hs.more;
+    if (sig === hs.sig) return hsMark();
+    hs.sig = sig;
+    const top = list.scrollTop, had = document.activeElement && list.contains(document.activeElement) ? document.activeElement.dataset.id : null;
+    const frag = document.createDocumentFragment(); let day = '';
+    hs.groups.forEach((g, k) => {
+      const d = hsDay(g.t);
+      if (d !== day) { day = d; const h = document.createElement('div'); h.className = 'hs-day'; h.textContent = d; frag.appendChild(h); }
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'hs-item'; b.dataset.id = g.id;
+      const av = document.createElement('span'); av.className = 'av'; av.style.setProperty('--pc', g.who.c); av.textContent = g.who.e; av.setAttribute('aria-hidden', 'true');
+      const t = document.createElement('span'); t.className = 'hs-t';
+      const l = document.createElement('span'); l.className = 'hs-l';
+      const n = document.createElement('b'); n.textContent = g.who.n + (g.who.mine ? ' (ви)' : '');
+      const tm = document.createElement('time'); tm.dateTime = new Date(g.t).toISOString(); tm.textContent = hsTime(g.t);
+      l.append(n, tm);
+      const sm = document.createElement('small'); sm.textContent = hsSummary(g);
+      t.append(l, sm); b.append(av, t);
+      if (k === 0) { const now = document.createElement('span'); now.className = 'hs-now'; now.textContent = 'Зараз'; b.appendChild(now); }
+      b.setAttribute('aria-label', (k === 0 ? 'Поточна версія. ' : '') + n.textContent + ', ' + hsWhen(g.t) + '. ' + sm.textContent);
+      frag.appendChild(b);
+    });
+    if (hs.more) { const m = document.createElement('button'); m.type = 'button'; m.className = 'txt-btn hs-more'; m.textContent = 'Показати давніші'; frag.appendChild(m); }
+    list.textContent = ''; list.appendChild(frag); list.scrollTop = top;
+    if (had) { const f = list.querySelector(`.hs-item[data-id="${had}"]`); if (f) f.focus({ preventScroll: true }); }
+    hsMark();
+  }
+  function hsMark() { $('#histList').querySelectorAll('.hs-item').forEach((b) => { const on = +b.dataset.id === hs.cur; if ((b.getAttribute('aria-current') === 'true') !== on) b.setAttribute('aria-current', String(on)); }); }
+  const hsBtn = (id) => $('#histList').querySelector(`.hs-item[data-id="${id}"]`);
+  async function hsLoad(more) {
+    const H = db && db.history;
+    if (!H) { $('#histList').classList.remove('wait'); hsMsg(mode === 'local' ? 'Історія версій зберігається лише на спільній дошці. Тут дошка живе тільки в цьому браузері.' : 'Історія версій тут недоступна.'); return; }
+    if (hs.busy) return; hs.busy = true;
+    const bid = hs.bid, token = hs.token, fresh = !hs.rows.size;
+    const before = more ? Math.min(...hs.rows.keys()) : null, limit = more || fresh ? HS_PAGE : HS_TOP;
+    let rows;
+    try { rows = await H.list(bid, before, limit); } catch (e) { rows = e; }
+    hs.busy = false;
+    if (token !== hs.token || !hs.open) return;
+    $('#histList').classList.remove('wait');
+    if (!Array.isArray(rows)) {
+      const e = rows, missing = e && (e.code === 'PGRST202' || /jb_history/.test(e.message || ''));
+      if (!hs.rows.size) hsMsg(missing ? 'Історію версій ще не ввімкнено. Виконайте в Supabase → SQL Editor файл <code>supabase/history.sql</code> з репозиторію.' : 'Не вдалося завантажити історію. Перевірте зв’язок і спробуйте ще раз.');
+      return;
+    }
+    const known = hs.rows.size ? Math.max(...hs.rows.keys()) : 0;
+    if (!more && !fresh && rows.length >= limit && Math.min(...rows.map((r) => +r.id)) > known) { hs.rows.clear(); hs.busy = false; return hsLoad(false); } // too much is new: start over
+    for (const r of rows) hs.rows.set(+r.id, { id: +r.id, path: String(r.path), at: r.at, who: r.who, op: r.op, type: r.type, label: r.label });
+    if (more || fresh) hs.more = rows.length >= limit;
+    hsGroup();
+    hsMsg(hs.groups.length ? '' : 'Поки що змін немає. Щойно хтось щось змінить на дошці, тут з’явиться версія.');
+    hsRender();
+    if (pk.open && pk.hist) { // the version on show may have grown, or a newer one appeared above it
+      const g = hs.groups.find((x) => x.id === pk.hist.id);
+      if (g && g !== pk.hist) { pk.hist = g; hsHead(g); hsRing(g); }
+    }
+  }
+  function histSoon() { if (!hs.open) return; clearTimeout(hs.soon); hs.soon = setTimeout(() => hsLoad(false), 1200); }
+  function openHistory(open) {
+    open = open != null ? !!open : !hs.open;
+    if (open === hs.open) return;
+    const pop = $('#histPop'), btn = $('#histBtn');
+    hs.open = open; btn.setAttribute('aria-expanded', String(open)); btn.setAttribute('aria-pressed', String(open));
+    hs.token++; clearInterval(hs.timer); clearTimeout(hs.soon); hs.timer = 0;
+    if (open) {
+      closeGallery(); closeThread(); openPlan(false); openMermaid(false); closeSidePops();
+      hs.bid = boardId; hs.rows.clear(); hs.groups = []; hs.sig = ''; hs.cur = null; hs.more = false; hs.cache.clear(); hs.busy = false;
+      $('#histList').textContent = ''; $('#histList').classList.add('wait'); hsMsg('');
+      pop.classList.remove('out'); pop.hidden = false;
+      hsLoad(false);
+      hs.timer = setInterval(() => { if (!document.hidden && !hs.busy) hsLoad(false); }, 5000); // others' changes show up while the list is open
+      requestAnimationFrame(() => $('#histClose').focus({ preventScroll: true }));
+    } else {
+      if (pk.open && pk.hist) closePeek(false);
+      pop.classList.add('out');
+      setTimeout(() => { if (!hs.open) pop.hidden = true; }, reduceMotion ? 0 : 170);
+    }
+  }
+  function hsHead(g) {
+    const now = g === hs.groups[0];
+    $('#peekTitle').textContent = (now ? 'Поточна версія · ' : 'Версія · ') + hsWhen(g.t);
+    $('#peekSub').textContent = g.who.n + (g.who.mine ? ' (ви)' : '') + ': ' + hsSummary(g).replace(/^./, (c) => (g.who.seed || g.who.r ? c : c.toLowerCase()));
+    const go = $('#peekGo');
+    const off = now || viewOnly() || mode !== 'shared', had = document.activeElement === go;
+    go.textContent = now ? 'Це поточна версія' : 'Відновити цю версію'; go.disabled = off;
+    if (off && had) $('#peekClose').focus({ preventScroll: true }); // a disabled button would drop the focus, and the arrow keys with it
+  }
+  function hsRing(g) { // what this version touched, ringed; the rest of the board a little faded
+    const w = $('#peekWorld'), ids = new Set(g.who.seed ? [] : g.rows.filter((r) => r.op !== 'del').map((r) => idOfPath(r.path)));
+    let n = 0;
+    w.querySelectorAll('.pv[data-id]').forEach((e) => { const on = ids.has(e.dataset.id); if (on) n++; e.classList.toggle('hs-hit', on); });
+    w.classList.toggle('hs-diff', n > 0);
+  }
+  async function hsPreview(g, fromEl) {
+    if (!g || !db || !db.history) return;
+    hs.cur = g.id; hsMark();
+    if (pk.open && !pk.hist) closePeek(false); // a board preview was open: this one takes its place
+    const pop = $('#peek'), back = $('#peekBack'), first = !pk.open || !pk.hist, token = ++pk.token;
+    if (!pk.open) {
+      closeThread();
+      pk.open = true; pk.bid = null; pk.from = fromEl || null;
+      const r = fromEl && fromEl.getBoundingClientRect();
+      pop.classList.add('hist'); $('#peekNew').hidden = true;
+      pop.hidden = false; back.hidden = false; pop.classList.remove('out'); back.classList.remove('out');
+      const pr = pop.getBoundingClientRect();
+      pop.style.transformOrigin = r ? `${r.left + r.width / 2 - pr.left}px ${r.top + r.height / 2 - pr.top}px` : '50% 50%';
+      pop.classList.remove('in'); void pop.offsetWidth; pop.classList.add('in');
+      document.body.classList.add('hs-pv');
+    }
+    pk.hist = g; if (fromEl) pk.from = fromEl;
+    hsHead(g); $('#peekMsg').textContent = '';
+    let list = hs.cache.get(g.id);
+    if (!list) {
+      $('#peekStage').classList.add('wait');
+      try { list = await db.history.at(hs.bid, g.id); if (hs.cache.size > 24) hs.cache.delete(hs.cache.keys().next().value); hs.cache.set(g.id, list); } catch (e) { list = null; }
+      if (token !== pk.token || !pk.open || pk.hist !== g) return;
+      $('#peekStage').classList.remove('wait');
+    }
+    if (!list) { $('#peekWorld').innerHTML = ''; pk.fit = null; $('#peekMsg').textContent = 'Не вдалося завантажити цю версію. Перевірте зв’язок'; return; }
+    const its = list.map((r) => ({ ...r.data, id: idOfPath(r.path) })).filter((i) => TYPES_OK.includes(i.type))
+      .map((i) => (hiddenFor(i) ? { ...i, text: '•••', html: undefined } : i)); // hidden writing stays hidden in the past too
+    const keep = !first && pk.fit; // stepping between versions keeps the view, so the eye sees only what moved
+    pk.fit = peekBuild(its);
+    if (!pk.fit) { $('#peekMsg').textContent = 'У цій версії на дошці нічого немає'; return; }
+    hsRing(g);
+    if (keep) peekApply(false); else { peekFit(false); const w = $('#peekWorld'); w.classList.remove('show'); void w.offsetWidth; w.classList.add('show'); }
+    if (first) requestAnimationFrame(() => { if (pk.hist === g && !$('#peekGo').disabled) $('#peekGo').focus({ preventScroll: true }); else $('#peekClose').focus({ preventScroll: true }); });
+  }
+  function histPreviewClosed() {
+    const b = hs.cur != null && hsBtn(hs.cur); if (b) pk.from = b;
+    hs.cur = null; hsMark(); document.body.classList.remove('hs-pv');
+  }
+  async function histStep(d) {
+    const i = hs.groups.findIndex((g) => pk.hist && g.id === pk.hist.id);
+    if (i < 0) return;
+    if (i + d >= hs.groups.length && hs.more) { await hsLoad(true); }
+    const g = hs.groups[i + d]; if (!g) return;
+    const b = hsBtn(g.id); if (b) b.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
+    hsPreview(g, b);
+  }
+  // stable text of an item, to tell what really differs (key order, the revision and empty fields don't count)
+  const canon = (o) => JSON.stringify(o, (k, v) => (v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.keys(v).filter((x) => x !== 'rev' && v[x] !== null).sort().map((x) => [x, v[x]])) : v));
+  async function histRestore() {
+    const g = pk.hist; if (!g || viewOnly() || mode !== 'shared' || !db.history) return;
+    const go = $('#peekGo'); go.disabled = true;
+    let list = hs.cache.get(g.id);
+    if (!list) { try { list = await db.history.at(hs.bid, g.id); } catch (e) { list = null; } }
+    if (pk.hist !== g || hs.bid !== boardId) return;
+    if (!list) { toast('Не вдалося завантажити цю версію'); go.disabled = false; return; }
+    finishEdit();
+    const target = new Map();
+    for (const r of list) { const id = idOfPath(r.path); if (r.data && TYPES_OK.includes(r.data.type)) target.set(id, full(id, r.data)); }
+    const before = {};
+    items.forEach((it, id) => { if (!target.has(id) && !active.has(id)) before[id] = { ...clean(it), id }; });
+    target.forEach((t, id) => { if (active.has(id)) return; const cur = items.get(id); if (!cur || canon(clean(cur)) !== canon(clean(t))) before[id] = cur ? { ...clean(cur), id } : null; });
+    const ids = Object.keys(before);
+    if (!ids.length) { toast('Дошка вже така, як у цій версії'); closePeek(false); return; }
+    for (const id of ids) { if (target.has(id)) putItem(id, target.get(id)); else items.delete(id); }
+    selected = new Set([...selected].filter((id) => items.has(id)));
+    renderAll();
+    db.history.tagged(hsStamp(g.t), () => commit(before)); // every write of the restore says which version it brought back
+    renderAll(); coverSoon(true);
+    closePeek(false);
+    toast('Дошку відновлено до версії від ' + hsWhen(g.t) + '. Ctrl+Z поверне як було');
+    histSoon();
+  }
+  $('#histBtn').addEventListener('click', () => openHistory());
+  $('#histClose').addEventListener('click', () => { openHistory(false); $('#histBtn').focus({ preventScroll: true }); });
+  $('#histList').addEventListener('click', (e) => {
+    if (e.target.closest('.hs-more')) { hsLoad(true); return; }
+    const b = e.target.closest('.hs-item'); if (!b) return;
+    const g = hs.groups.find((x) => x.id === +b.dataset.id); if (!g) return;
+    if (pk.open && pk.hist && pk.hist.id === g.id) { closePeek(false); return; } // a second click puts it away
+    hsPreview(g, b);
+  });
+  $('#histPop').addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Escape') { e.preventDefault(); openHistory(false); $('#histBtn').focus({ preventScroll: true }); return; }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { // walk the list
+      const all = [...$('#histList').querySelectorAll('.hs-item')], i = all.indexOf(document.activeElement);
+      const n = all[i < 0 ? 0 : clamp(i + (e.key === 'ArrowDown' ? 1 : -1), 0, all.length - 1)];
+      if (n) { e.preventDefault(); n.focus(); }
+    }
+  });
   function openWeb(it) { const u = safeHttps(it.url); if (u) window.open(u, '_blank', 'noopener,noreferrer'); }
   function pasteText(text, p) {
     if (Flow.looksLike(text)) { buildMermaid(text, p, true); return; }
@@ -5207,19 +5548,28 @@ const Plan = (() => {
     if (sig !== boardSig) { boardSig = sig; schedule('boxes'); updateCtx(); }
     else if (touched.size) { schedule('boxes'); updateCtx(); }
     renderPeople(); renderCursors(); if (!$('#boardMenu').hidden) renderBoardMenu();
+    folPeers();
   }
   let peopleSig = '';
   function renderPeople() {
-    const list = [{ me: true, color: me.color, name: me.name, emoji: me.emoji }].concat(others().map((p) => ({ color: peerColor(p), name: peerName(p), emoji: peerEmoji(p), other: p.isMe })));
+    const list = [{ me: true, color: me.color, name: me.name, emoji: me.emoji }].concat(others().map((p) => ({ color: peerColor(p), name: peerName(p), emoji: peerEmoji(p), other: p.isMe, peer: p.peer, f: fol.peer === p.peer })));
     const sig = JSON.stringify(list);
     if (sig === peopleSig) return;
     peopleSig = sig;
     const box = $('#avatars'); box.innerHTML = '';
-    list.slice(0, 5).forEach((u) => {
-      const b = document.createElement(u.me ? 'button' : 'div');
-      b.className = 'av' + (u.me ? ' me' : ''); b.style.setProperty('--pc', u.color);
-      b.textContent = u.emoji; b.title = u.me ? `${u.name} (ви) · змінити ім’я` : u.name + (u.other ? ' (ваша інша вкладка)' : '');
-      if (u.me) { b.setAttribute('aria-label', 'Змінити ім’я'); b.addEventListener('click', openMe); }
+    // the one I follow comes right after me, so it is never hidden behind «+N»
+    const shown = list.slice(0, 1).concat(list.slice(1).sort((a, b) => b.f - a.f)).slice(0, 5);
+    shown.forEach((u) => {
+      const b = document.createElement('button');
+      b.className = 'av' + (u.me ? ' me' : '') + (u.f ? ' fol' : ''); b.style.setProperty('--pc', u.color);
+      b.textContent = u.emoji;
+      if (u.me) { b.title = `${u.name} (ви) · змінити ім’я`; b.setAttribute('aria-label', 'Змінити ім’я'); b.addEventListener('click', openMe); }
+      else {
+        b.title = (u.f ? 'Перестати стежити за ' : 'Стежити за ') + u.name + (u.other ? ' (ваша інша вкладка)' : '');
+        b.setAttribute('aria-label', b.title); b.setAttribute('aria-pressed', String(u.f));
+        b.addEventListener('click', () => toggleFollow(u.peer));
+        if (u.f) b.insertAdjacentHTML('beforeend', '<span class="pin" aria-hidden="true"><svg viewBox="0 0 12 12" fill="currentColor"><path d="M1 6s2-3.6 5-3.6S11 6 11 6 9 9.6 6 9.6 1 6 1 6z"/></svg></span>');
+      }
       box.appendChild(b);
     });
     if (list.length > 5) { const m = document.createElement('div'); m.className = 'av more'; m.textContent = '+' + (list.length - 5); m.title = 'Ще ' + (list.length - 5); box.appendChild(m); }
@@ -5231,6 +5581,7 @@ const Plan = (() => {
       const nm = document.createElement('span'); nm.textContent = u.name;
       row.append(av, nm);
       if (u.me || u.other) { const em = document.createElement('em'); em.textContent = u.me ? 'ви' : 'ваша інша вкладка'; row.append(em); }
+      if (!u.me) { const fb = document.createElement('button'); fb.className = 'txt-btn'; fb.textContent = u.f ? 'Не стежити' : 'Стежити'; fb.addEventListener('click', () => toggleFollow(u.peer)); row.append(fb); }
       pl.appendChild(row);
     });
     $('#peopleLabel').textContent = `Зараз на дошці · ${list.length}`;
@@ -5298,6 +5649,209 @@ const Plan = (() => {
     }
     for (const [k, b] of peerBoxEls) if (!seen.has(k)) { b.remove(); peerBoxEls.delete(k); }
   }
+  // ---------- follow & present: watch someone's view, or lead everyone through the board, section by section ----------
+  // Everyone shares the area they see (vp: world centre x, y and visible w, h). A follower fits that area into their own
+  // screen, and the camera eases towards it every frame, so ~14 updates a second still glide at 60+. A camera flight
+  // (a slide, «Показати все») is announced up front as `go`, so followers fly the same curve instead of chasing samples.
+  // Any touch of the canvas breaks away. Presenting (pres {at, i, n}) makes everyone follow; the newest presenter leads.
+  const fol = { peer: null, why: '', name: '', color: '', emoji: '', t: null, fly: null, go: 0, raf: 0, last: 0 };
+  const pres = { on: false, at: 0, i: -1, n: 0 };
+  let presSeen = '', presAway = null, vpSent = '', goSeq = 0;
+  const r1 = (v) => Math.round(v * 10) / 10;
+  function vpOf(v) { return [r1((innerWidth / 2 - v.x) / v.z), r1((innerHeight / 2 - v.y) / v.z), r1(innerWidth / v.z), r1(innerHeight / v.z)]; }
+  function shareVp() {
+    if (!room) return;
+    const v = vpOf(view), k = v.join(); if (k === vpSent) return;
+    vpSent = k; sendPresence({ vp: v });
+  }
+  // a flight about to start: followers get its end and length now
+  function announceFly(t, dur) { if (room && !fol.peer) sendPresence({ go: [...vpOf(t), dur, Date.now() * 1000 + (++goSeq % 1000)] }); }
+  const okVp = (v) => Array.isArray(v) && v.length >= 4 && v.slice(0, 4).every((n) => isFinite(n)) && v[2] > 1 && v[3] > 1;
+  function fitTarget(v) { // their visible area fitted into mine
+    const z = clamp(Math.min(innerWidth / v[2], innerHeight / v[3]), 0.1, 4);
+    return { cx: +v[0], cy: +v[1], z };
+  }
+  const myId = () => { const p = peers.find((q) => q.sameTab); return p ? p.peer : null; };
+  function startFollow(peer, why) {
+    const p = others().find((q) => q.peer === peer); if (!p) return;
+    if (pres.on) stopPresent();
+    stopZoom(); stopGlide(); cancelFly();
+    fol.peer = peer; fol.why = why; fol.t = null; fol.fly = null; fol.k = '';
+    const g = p.presence && p.presence.go; fol.go = Array.isArray(g) ? g[5] : 0; // an earlier flight is not replayed
+    folUpdate(p, true);
+    sendPresence({ fol: peer });
+    renderPeople(); renderPresBar();
+  }
+  function toggleFollow(peer) {
+    if (fol.peer === peer) { breakFollow(); return; }
+    const p = others().find((q) => q.peer === peer); if (!p) return;
+    startFollow(peer, p.presence && p.presence.pres && presSeen.startsWith(peer + '@') ? 'pres' : 'pick');
+    toast('Ви стежите за ' + peerName(p) + '. Торкніться дошки, щоб піти своїм шляхом');
+  }
+  function endFollow() {
+    if (!fol.peer) return;
+    if (fol.raf) cancelAnimationFrame(fol.raf);
+    fol.peer = null; fol.why = ''; fol.t = null; fol.fly = null; fol.raf = 0;
+    sendPresence({ fol: null }); renderPeople(); renderPresBar();
+  }
+  // the follower touched the canvas, zoomed or flew somewhere: stop following (a presentation can be rejoined from the bar)
+  function breakFollow() {
+    if (!fol.peer) return;
+    const n = fol.name, why = fol.why;
+    if (why === 'pres') presAway = fol.peer;
+    endFollow();
+    if (why !== 'pres') toast('Ви більше не стежите за ' + n);
+  }
+  function folUpdate(p, first) {
+    const pr = p.presence || {};
+    fol.name = peerName(p); fol.color = peerColor(p); fol.emoji = peerEmoji(p);
+    const g = pr.go, now = performance.now();
+    if (!first && Array.isArray(g) && g.length >= 6 && g[5] !== fol.go && okVp(g)) { // they started a flight: fly the same one
+      fol.go = g[5];
+      const d = clamp(+g[4] || 420, 120, 1500);
+      fol.fly = { t0: now, dur: d, from: camNow(), to: fitTarget(g) };
+    }
+    if (okVp(pr.vp)) {
+      const t = fitTarget(pr.vp), c = camNow();
+      fol.t = t;
+      // a far jump with no flight announced (or the first look): fly there instead of snapping
+      const far = Math.hypot(t.cx - c.cx, t.cy - c.cy) * c.z > Math.max(innerWidth, innerHeight) * 0.9 || Math.abs(Math.log(t.z / c.z)) > 0.9;
+      if (!fol.fly && (first || far)) fol.fly = { t0: now, dur: first ? 520 : 420, from: c, to: null };
+    }
+    const k = fol.t ? fol.t.cx + ',' + fol.t.cy + ',' + fol.t.z : '';
+    if (!fol.raf && (fol.fly || (fol.t && k !== fol.k))) { fol.last = now; fol.raf = requestAnimationFrame(folStep); }
+    fol.k = k;
+  }
+  function camNow() { return { cx: (innerWidth / 2 - view.x) / view.z, cy: (innerHeight / 2 - view.y) / view.z, z: view.z }; }
+  function setCam(cx, cy, z) { view.z = z; view.x = innerWidth / 2 - cx * z; view.y = innerHeight / 2 - cy * z; applyView(); }
+  function folStep(t) {
+    fol.raf = 0; if (!fol.peer) return;
+    const dt = Math.min(50, Math.max(1, t - fol.last)); fol.last = t;
+    if (fol.fly) { // an eased flight, zoom even in log space (like flyTo); its end follows the latest target
+      const F = fol.fly, to = F.to || fol.t;
+      const k = reduceMotion ? 1 : Math.min(1, (t - F.t0) / F.dur), e = 1 - Math.pow(1 - k, 3);
+      if (to) setCam(F.from.cx + (to.cx - F.from.cx) * e, F.from.cy + (to.cy - F.from.cy) * e, F.from.z * Math.pow(to.z / F.from.z, e));
+      if (k >= 1) fol.fly = null;
+      fol.raf = requestAnimationFrame(folStep); return;
+    }
+    const T = fol.t; if (!T) return;
+    const f = reduceMotion ? 1 : 1 - Math.exp(-dt / 90), c = camNow();
+    const z = Math.exp(Math.log(c.z) + (Math.log(T.z) - Math.log(c.z)) * f), x = c.cx + (T.cx - c.cx) * f, y = c.cy + (T.cy - c.cy) * f;
+    const done = Math.abs(T.cx - x) * z < 0.25 && Math.abs(T.cy - y) * z < 0.25 && Math.abs(Math.log(T.z / z)) < 0.0015;
+    if (done) setCam(T.cx, T.cy, T.z); else setCam(x, y, z);
+    if (!done) fol.raf = requestAnimationFrame(folStep);
+  }
+  // who leads: called on every presence change, so it only touches the DOM when something it shows changed
+  function folPeers() {
+    const list = others();
+    let lead = null;
+    for (const p of list) { const q = p.presence && p.presence.pres; if (q && isFinite(q.at) && (!lead || q.at > lead.presence.pres.at)) lead = p; }
+    if (lead && pres.on && lead.presence.pres.at > pres.at) { stopPresent(); toast(peerName(lead) + ' тепер презентує'); }
+    if (pres.on) lead = null;
+    const key = lead ? lead.peer + '@' + lead.presence.pres.at : '';
+    if (key !== presSeen) {
+      const was = presSeen; presSeen = key; presAway = null;
+      if (lead) startFollow(lead.peer, 'pres');
+      else if (was && fol.why === 'pres') { endFollow(); toast('Презентацію завершено'); }
+      else if (was) toast('Презентацію завершено');
+    }
+    if (fol.peer) {
+      const p = list.find((q) => q.peer === fol.peer);
+      if (p) folUpdate(p, false); else { const n = fol.name; endFollow(); toast(n + ' вийшов з дошки'); }
+    }
+    renderPresBar();
+  }
+  // ---- presenting: sections are the slides, in reading order (rows top to bottom, then left to right) ----
+  function slides() {
+    const secs = [...items.values()].filter(isSec);
+    const inside = (s, o) => o !== s && o.x <= s.x && o.y <= s.y && o.x + o.w >= s.x + s.w && o.y + o.h >= s.y + s.h && o.w * o.h > s.w * s.h;
+    const top = secs.filter((s) => !secs.some((o) => inside(s, o))).sort((a, b) => a.y - b.y || a.x - b.x);
+    const rows = [];
+    for (const s of top) { const r = rows[rows.length - 1]; if (r && s.y < r.y + r.h * 0.5) { r.list.push(s); r.h = Math.min(r.h, s.h); } else rows.push({ y: s.y, h: s.h, list: [s] }); }
+    return rows.flatMap((r) => r.list.sort((a, b) => a.x - b.x));
+  }
+  function startPresent() {
+    if (fol.peer) endFollow();
+    presAway = null;
+    pres.on = true; pres.at = Date.now(); pres.i = -1; pres.n = slides().length;
+    if (pres.n) goSlide(0); else publishPres();
+    renderPresBar();
+  }
+  function stopPresent() {
+    if (!pres.on) return;
+    pres.on = false; publishPres(); renderPresBar();
+  }
+  function publishPres() { sendPresence({ pres: pres.on ? { at: pres.at, i: pres.i, n: pres.n } : null }); }
+  function goSlide(i) {
+    const sl = slides(); pres.n = sl.length;
+    if (!sl.length) { pres.i = -1; publishPres(); renderPresBar(); return; }
+    pres.i = clamp(i, 0, sl.length - 1);
+    const s = sl[pres.i], pad = Math.min(96, innerWidth * 0.05 + 16), top = 116, bottom = 84; // clear of the top panels, this bar and the toolbar
+    const z = clamp(Math.min((innerWidth - pad * 2) / s.w, (innerHeight - top - bottom - pad) / s.h), 0.1, 2);
+    flyTo({ z, x: innerWidth / 2 - (s.x + s.w / 2) * z, y: (top + innerHeight - bottom) / 2 - (s.y + s.h / 2) * z }, 560);
+    publishPres(); renderPresBar();
+  }
+  function stepSlide(d) { if (!pres.on) return; const n = slides().length; if (!n) return; goSlide(pres.i < 0 ? (d > 0 ? 0 : n - 1) : pres.i + d); }
+  // the keys a presenter (or follower) needs; true when the key was taken
+  function presKey(e) {
+    if (e.shiftKey && e.code === 'KeyP') { e.preventDefault(); pres.on ? stopPresent() : startPresent(); return true; }
+    if (pres.on) {
+      const next = e.key === 'PageDown' || (!selected.size && (e.key === 'ArrowRight' || e.key === 'ArrowDown'));
+      const prev = e.key === 'PageUp' || (!selected.size && (e.key === 'ArrowLeft' || e.key === 'ArrowUp'));
+      if (next || prev) { e.preventDefault(); stepSlide(next ? 1 : -1); return true; }
+      if (e.key === 'Escape' && !selected.size && !document.querySelector('.popover:not([hidden]), #planPop:not([hidden]), #timerPop:not([hidden])')) { e.preventDefault(); stopPresent(); return true; }
+    }
+    if (fol.peer && e.key === 'Escape') { e.preventDefault(); breakFollow(); return true; }
+    return false;
+  }
+  let presSig = '';
+  function renderPresBar() {
+    const lead = presSeen ? others().find((p) => p.peer === presSeen.slice(0, presSeen.indexOf('@'))) : null;
+    const lp = lead && lead.presence.pres;
+    const me_ = myId(), watchers = pres.on && me_ ? others().filter((p) => p.presence && p.presence.fol === me_).length : 0;
+    let st = null;
+    if (pres.on) st = { k: 'me', n: watchers, i: pres.i, c: pres.n };
+    else if (fol.peer && fol.why === 'pres' && lead) st = { k: 'lead', who: fol.name, col: fol.color, em: fol.emoji, i: lp.i, c: lp.n };
+    else if (lead && presAway === lead.peer) st = { k: 'away', who: peerName(lead), col: peerColor(lead), em: peerEmoji(lead), i: lp.i, c: lp.n };
+    else if (fol.peer) st = { k: 'pick', who: fol.name, col: fol.color, em: fol.emoji };
+    const sig = JSON.stringify(st);
+    if (sig === presSig) return; presSig = sig;
+    const bar = $('#presBar'), fr = $('#folFrame'), btn = $('#presentBtn');
+    btn.setAttribute('aria-pressed', String(!!pres.on));
+    btn.setAttribute('aria-label', pres.on ? 'Завершити презентацію' : 'Презентувати');
+    $('#presentTip').firstChild.textContent = pres.on ? 'Завершити презентацію' : 'Презентувати: усі бачать те, що й ви';
+    fr.classList.toggle('on', !!st && st.k !== 'away'); fr.classList.toggle('mine', !!st && st.k === 'me');
+    if (st && st.col) fr.style.setProperty('--pc', st.col);
+    if (!st) { bar.hidden = true; return; }
+    bar.hidden = false;
+    $('#presLive').hidden = st.k !== 'me';
+    const av = $('#presAv'); av.hidden = st.k === 'me';
+    if (st.k !== 'me') { av.textContent = st.em; av.style.setProperty('--pc', st.col); }
+    const tx = $('#presText'); tx.textContent = '';
+    const b = document.createElement('b'), sub = document.createElement('span'); sub.className = 'pb-sub';
+    if (st.k === 'me') { b.textContent = 'Ви презентуєте'; sub.textContent = ' · ' + (st.n ? st.n + ' ' + plural(st.n, 'стежить', 'стежать', 'стежать') : 'поки ніхто не стежить'); tx.append(b, sub); }
+    else if (st.k === 'pick') { b.textContent = st.who; tx.append('Ви стежите за ', b); }
+    else { b.textContent = st.who; sub.textContent = ' презентує'; tx.append(b, sub); }
+    const nav = $('#presNav'), slide = st.k !== 'pick' && st.c > 0;
+    nav.hidden = !slide;
+    if (slide) $('#presCount').textContent = (st.i >= 0 ? st.i + 1 : '–') + ' / ' + st.c;
+    $('#presPrev').hidden = $('#presNext').hidden = st.k !== 'me';
+    const act = $('#presAct');
+    act.textContent = st.k === 'me' ? 'Завершити' : st.k === 'away' ? 'Повернутися' : st.k === 'lead' ? 'Не стежити' : 'Перестати';
+    act.classList.toggle('ghost', st.k === 'lead' || st.k === 'pick');
+  }
+  $('#presentBtn').addEventListener('click', () => (pres.on ? stopPresent() : startPresent()));
+  $('#presPrev').addEventListener('click', () => stepSlide(-1));
+  $('#presNext').addEventListener('click', () => stepSlide(1));
+  $('#presAct').addEventListener('click', () => {
+    if (pres.on) stopPresent();
+    else if (fol.peer) breakFollow();
+    else if (presAway && others().some((p) => p.peer === presAway)) { const id = presAway; presAway = null; startFollow(id, 'pres'); }
+  });
+  // touching the canvas (a press, a wheel or pinch) takes the camera back
+  vp.addEventListener('pointerdown', () => { if (fol.peer) breakFollow(); }, true);
+  vp.addEventListener('wheel', () => { if (fol.peer) breakFollow(); }, { capture: true, passive: true });
+  addEventListener('resize', () => { if (fol.peer && fol.t) { const p = others().find((q) => q.peer === fol.peer); if (p) folUpdate(p, false); } shareVp(); });
   function setStatus(s, text) { const el = $('#status'); el.dataset.s = s; el.lastChild.textContent = text; el.title = text; }
 
   // ---------- me popover ----------
@@ -5334,6 +5888,7 @@ const Plan = (() => {
     if (editingId && mod && e.code === 'KeyB') { e.preventDefault(); toggleBold(); return; }
     if (editingId) { if (e.key === 'Escape' || (mod && e.key === 'Enter') || (e.key === 'Enter' && items.get(editingId) && (titled(items.get(editingId)) || items.get(editingId).type === 'task' || isBar(items.get(editingId))))) { e.preventDefault(); els.get(editingId).firstChild.blur(); } return; }
     if (isTyping(e.target)) { if (e.key === 'Enter' || e.key === 'Escape') { if (e.target.classList && e.target.classList.contains('rope-label')) e.preventDefault(); if (e.key === 'Escape' && ropeEditId && e.target.classList.contains('rope-label')) { const l = items.get(ropeEditId); e.target.textContent = (l && l.label) || ''; } e.target.blur(); if (e.target.id === 'nameInput') $('#mePop').hidden = true; } return; }
+    if (!mod && presKey(e)) return;
     const k = e.key.toLowerCase();
     if (viewOnly() && (mod ? !['=', '+', '-', '0'].includes(k) : !(e.code === 'Space' || e.key === 'Escape' || e.code === 'KeyV' || e.code === 'KeyH' || e.code === 'KeyP' || (e.shiftKey && e.code === 'Digit1')))) {
       if (e.key === 'Delete' || e.key === 'Backspace' || (mod && 'zyda'.includes(k))) e.preventDefault();
@@ -6498,7 +7053,7 @@ const Plan = (() => {
   function openBoard(id) {
     if (!validBoard(id)) id = 'main';
     if (!boardOk(id)) return;
-    finishEdit(); closeThread();
+    finishEdit(); closeThread(); openHistory(false);
     if (mode === 'local' && localTimer) saveLocal(true); // keep the old board's last change before leaving it
     const first = !els.size && !items.size, token = ++switchToken;
     if (first) { doOpen(id); return; }
@@ -6516,6 +7071,7 @@ const Plan = (() => {
     for (const d of els.values()) d.remove(); els.clear();
     for (const r of ropes.values()) { r.g.remove(); if (r.lab) r.lab.remove(); } ropes.clear(); tempRope = null; ropeEditId = null;
     booted = false; loadingBoard = true; ctx.hidden = true;
+    endFollow(); stopPresent(); presSeen = ''; presAway = null; renderPresBar();
     showTitle(); sendPresence({ board: id, sel: [], drag: null, resize: null, editing: null });
     boardSig = ''; renderPeople(); renderCursors(); renderAll();
     if (mode === 'shared') subscribeItems(); else loadLocalBoard();
@@ -6641,6 +7197,13 @@ const Plan = (() => {
     const getRow = (path) => sb.rpc('jb_get', { p_path: path });
     const listRows = (coll) => sb.rpc('jb_list', { p_coll: coll });
     const myPeer = 'p' + rnd() + rnd();
+    // Version history (supabase/history.sql): writes say who made them, so the board's log can show it.
+    // Until that script runs, jb_put / jb_del only take two arguments: the first refusal switches back to those.
+    let whoOk = true, whoTag = null;
+    const noFn = (e) => !!e && (e.code === 'PGRST202' || /could not find the function/i.test(e.message || ''));
+    const whoNow = () => { const w = { n: me.name, e: me.emoji, c: me.color, v: myVid }; if (whoTag) w.r = whoTag; return w; };
+    const signed = (name, args) => (!whoOk ? sb.rpc(name, args)
+      : sb.rpc(name, { ...args, p_who: whoNow() }).then((r) => { if (r.error && noFn(r.error)) { whoOk = false; return sb.rpc(name, args); } return r; }));
     // one realtime channel per board ("jb:<id>"): row changes broadcast by the database, plus presence
     const lines = new Map();
     function openLine(bid) {
@@ -6721,15 +7284,20 @@ const Plan = (() => {
         if (line) { line.L.rows.delete(onMsg); line.L.stats.delete(onStatus); line.release(); }
       };
     }
+    const rows = (p) => p.then(({ data, error }) => { if (error) throw fail(error); return data || []; });
     const sdb = {
+      // the board's version history: the latest changes (newest first), and the whole board right after one of them
+      history: { list: (bid, before, limit) => rows(sb.rpc('jb_history', { p_bid: bid, p_before: before || null, p_limit: limit || 200 })),
+        at: (bid, id) => rows(sb.rpc('jb_at', { p_bid: bid, p_id: id })),
+        tagged(tag, fn) { whoTag = tag; try { fn(); } finally { whoTag = null; } } },
       // one-off reads for the boards gallery (no live updates)
       peek: (path) => sdb.doc(path).peek(),
       peekList: (coll) => listRows(coll).then(({ data, error }) => { if (error) throw fail(error); return data || []; }),
       doc(path) {
         return {
           peek: () => getRow(path).then(({ data, error }) => { if (error) throw fail(error); return data && data[0] ? data[0].data : null; }),
-          set: (data) => sb.rpc('jb_put', { p_path: path, p_data: data }).then(({ error }) => { if (error) throw fail(error); }),
-          delete: () => sb.rpc('jb_del', { p_path: path }).then(({ error }) => { if (error) throw fail(error); }),
+          set: (data) => signed('jb_put', { p_path: path, p_data: data }).then(({ error }) => { if (error) throw fail(error); }),
+          delete: () => signed('jb_del', { p_path: path }).then(({ error }) => { if (error) throw fail(error); }),
           onSnapshot(next, onError) {
             const snap = (row) => ({ exists: !!row, data: () => (row ? row.data : undefined) });
             return watch('path', path, (rows) => next(snap(rows[0])), () => next(snap(null)), onError, (rows) => next(snap(rows[0] || null)));
