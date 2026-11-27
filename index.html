@@ -7321,6 +7321,10 @@ const Plan = (() => {
       requestAnimationFrame(() => { const q = $('#tpQ'); if (q.offsetParent) q.focus({ preventScroll: true }); });
     }
   }
+  $('#planBtn').addEventListener('click', () => openPlan());
+  $('#plClose').addEventListener('click', () => openPlan(false));
+  $('#planPop').addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); openPlan(false); $('#planBtn').focus(); } });
+  addEventListener('pointerdown', (e) => { if (!$('#planPop').hidden && !e.target.closest('#planPop, #planBtn')) openPlan(false); }, true);
   const TPL_NAMES = Object.fromEntries(Plan.TEMPLATES.map(([k, n]) => [k, n]));
   // a spot near c where a box the size of b overlaps nothing: step right past whatever is in the way
   function freeSpot(b, c) {
