@@ -1,6 +1,8 @@
 // JamBoard MCP server: lets Claude read and edit boards.
 // Runs as a Supabase Edge Function (Deno), speaks MCP over Streamable HTTP (stateless JSON responses).
-// Connector URL: https://<project>.supabase.co/functions/v1/jamboard-mcp?key=<JAMBOARD_MCP_KEY>
+// Connector URL: https://<project>.supabase.co/functions/v1/jamboard-mcp?key=<JAMBOARD_MCP_KEY> (admin: every board)
+//            or …/jamboard-mcp?token=jbt_… (a personal token from «Налаштування» in the app: only its own boards,
+//            see supabase/mcp-tokens.sql)
 // Needs: function secret JAMBOARD_MCP_KEY, and "Verify JWT" turned off for this function.
 // Plain JS syntax on purpose (no type annotations), so the same file also runs under Node for tests.
 
@@ -527,24 +529,107 @@ const Plan = (() => {
     msg: ['Ретро · Mad / Sad / Glad', [['😠 Злить', 'warn'], ['😢 Засмучує', 'purple'], ['😊 Радує', 'ok']]],
     '4l': ['Ретро · 4L', [['💚 Сподобалось', 'ok'], ['📚 Навчились', 'info'], ['🕳️ Бракувало', 'warn'], ['✨ Хотілося б', 'purple']]],
     sail: ['Ретро · Вітрильник', [['🌬️ Вітер: що нас рухає', 'teal'], ['⚓ Якір: що гальмує', 'gray'], ['🪨 Скелі: ризики попереду', 'warn'], ['🏝️ Острів: наша мета', 'ok']]],
+    kalm: ['Ретро · Keep / Add / Less / More', [['✅ Залишити', 'ok'], ['➕ Додати', 'info'], ['➖ Менше', 'warn'], ['⬆️ Більше', 'purple']]],
+    wwa: ['Ретро · Що вдалось / Що покращити / Дії', [['🎉 Що вдалось', 'ok'], ['🔧 Що покращити', 'warn'], ['🚀 Дії: хто й до коли', 'info']]],
+    kanban: ['Канбан', [['📥 Беклог', 'gray'], ['📝 До роботи', 'info'], ['🚧 У роботі', 'warn'], ['👀 На перевірці', 'purple'], ['✅ Готово', 'ok']]],
+    moscow: ['Пріоритети · MoSCoW', [['🔴 Must · без цього ніяк', 'pink'], ['🟠 Should · дуже варто', 'warn'], ['🔵 Could · якщо встигнемо', 'info'], ['⚪ Won’t · не цього разу', 'gray']]],
+    pros: ['Плюси й мінуси', [['👍 За', 'ok'], ['👎 Проти', 'pink'], ['❓ Що ще треба з’ясувати', 'info']]],
   };
+  // canvases made of sections: [title, color, col, row, colSpan, rowSpan, hint] on a grid of cells cw×ch
+  const CANVAS = {
+    lean: ['Lean Canvas', 5, 3, 300, 300, [
+      ['1 · Проблема', 'pink', 0, 0, 1, 2, 'Три головні проблеми клієнта. Як їх вирішують зараз?'],
+      ['4 · Рішення', 'info', 1, 0, 1, 1, 'Найпростіше рішення кожної з проблем'],
+      ['8 · Ключові метрики', 'teal', 1, 1, 1, 1, 'Які цифри покажуть, що все працює?'],
+      ['3 · Унікальна цінність', 'purple', 2, 0, 1, 2, 'Одне речення: чому ви, а не інші'],
+      ['9 · Нечесна перевага', 'warn', 3, 0, 1, 1, 'Що не можна просто скопіювати чи купити?'],
+      ['5 · Канали', 'caution', 3, 1, 1, 1, 'Як клієнти про вас дізнаються'],
+      ['2 · Сегменти клієнтів', 'ok', 4, 0, 1, 2, 'Для кого це? Хто ранні користувачі?'],
+      ['7 · Структура витрат', 'gray', 0, 2, 2.5, 1, 'На що підуть гроші: люди, сервери, маркетинг'],
+      ['6 · Потоки доходу', 'ok', 2.5, 2, 2.5, 1, 'Як і скільки платять клієнти'],
+    ]],
+    bmc: ['Бізнес-модель (Business Model Canvas)', 5, 3, 300, 300, [
+      ['🤝 Ключові партнери', 'purple', 0, 0, 1, 2, 'Хто допомагає нам працювати?'],
+      ['⚙️ Ключові дії', 'info', 1, 0, 1, 1, 'Що ми мусимо робити щодня?'],
+      ['🧱 Ключові ресурси', 'teal', 1, 1, 1, 1, 'Люди, технології, гроші, бренд'],
+      ['💎 Ціннісні пропозиції', 'pink', 2, 0, 1, 2, 'Яку проблему клієнта ми вирішуємо?'],
+      ['💬 Відносини з клієнтами', 'caution', 3, 0, 1, 1, 'Як ми спілкуємося з клієнтами?'],
+      ['📣 Канали', 'warn', 3, 1, 1, 1, 'Як ми до них дістаємось?'],
+      ['👥 Сегменти клієнтів', 'ok', 4, 0, 1, 2, 'Для кого ми створюємо цінність?'],
+      ['💸 Структура витрат', 'gray', 0, 2, 2.5, 1, 'Найбільші витрати'],
+      ['💰 Потоки доходу', 'ok', 2.5, 2, 2.5, 1, 'За що й як платять клієнти'],
+    ]],
+    empathy: ['Карта емпатії', 2, 3, 460, 300, [
+      ['💬 Каже', 'info', 0, 0, 1, 1, 'Цитати з інтерв’ю'],
+      ['💭 Думає', 'purple', 1, 0, 1, 1, 'Що в голові, але вголос не каже?'],
+      ['🛠️ Робить', 'teal', 0, 1, 1, 1, 'Дії й поведінка'],
+      ['❤️ Відчуває', 'pink', 1, 1, 1, 1, 'Що тривожить і що надихає?'],
+      ['😣 Болі', 'warn', 0, 2, 1, 1, 'Страхи, перешкоди, розчарування'],
+      ['🌟 Здобутки', 'ok', 1, 2, 1, 1, 'Чого хоче досягти, що для нього успіх'],
+    ]],
+    persona: ['Персона', 3, 2, 400, 320, [
+      ['👤 Хто це', 'caution', 0, 0, 1, 2, 'Ім’я, вік, роль, де працює. Додайте фото'],
+      ['🎯 Цілі', 'ok', 1, 0, 1, 1, 'Чого хоче досягти?'],
+      ['😣 Болі', 'pink', 2, 0, 1, 1, 'Що заважає?'],
+      ['🧭 Поведінка й звички', 'info', 1, 1, 1, 1, 'Які сервіси використовує, як ухвалює рішення'],
+      ['💬 Цитата', 'purple', 2, 1, 1, 1, '«Те, що вона могла б сказати про себе»'],
+    ]],
+    crazy8: ['Crazy 8s · вісім ідей за вісім хвилин', 4, 2, 300, 300, [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ['Ідея ' + n, 'gray', (n - 1) % 4, (n / 4.01) | 0, 1, 1, n === 1 ? 'Хвилина на ідею: малюйте швидко, без деталей' : ''])],
+    mood: ['Мудборд', 3, 3, 400, 280, [
+      ['🖼️ Референси', 'gray', 0, 0, 2, 2, 'Перетягніть сюди картинки або вставте посилання'],
+      ['🎨 Кольори', 'pink', 2, 0, 1, 1, 'Палітра: основний, акцент, фон'],
+      ['🔤 Типографіка', 'info', 2, 1, 1, 1, 'Шрифти заголовків і тексту'],
+      ['✨ Настрій і ключові слова', 'purple', 0, 2, 2, 1, 'Три-п’ять слів про відчуття від продукту'],
+      ['🧵 Текстури й фото', 'caution', 2, 2, 1, 1, ''],
+    ]],
+    brain: ['Мозковий штурм', 3, 2, 400, 320, [
+      ['❓ Питання', 'info', 0, 0, 1, 2, 'Як ми могли б…?'],
+      ['💡 Ідеї', 'caution', 1, 0, 2, 1, 'Кількість важливіша за якість. Без критики'],
+      ['⭐ Найкращі', 'ok', 1, 1, 1, 1, 'Перенесіть сюди ідеї з найбільшою кількістю голосів'],
+      ['🧪 Що перевіримо', 'purple', 2, 1, 1, 1, 'Перший маленький експеримент'],
+    ]],
+  };
+  // [key, name, description, group]
+  const GROUPS = [['plan', 'Планування'], ['prio', 'Пріоритети'], ['product', 'Продукт і стратегія'], ['ux', 'UX і дизайн'], ['retro', 'Ретро']];
   const TEMPLATES = [
-    ['sprints', 'Таймлайн спринтів', 'Спринти по 2 тижні з доріжками команд'],
-    ['weeks', 'Таймлайн тижнів', 'Шість тижнів від поточного'],
-    ['gantt', 'Діаграма Ганта', 'Задачі-смуги з прогресом і залежностями'],
-    ['roadmap', 'Роадмап', 'Зараз · Далі · Потім'],
-    ['matrix', 'Матриця Impact / Effort', 'Пріоритети: вплив проти зусиль'],
-    ['table', 'Таблиця', 'Колонки й рядки, картки прилипають до клітинок'],
-    ['sprint', 'Спринт-планінг', 'Ціль, беклог і що беремо в спринт'],
-    ['ssc', 'Start / Stop / Continue', 'Ретро на три колонки'],
-    ['msg', 'Mad / Sad / Glad', 'Ретро про емоції команди'],
-    ['4l', '4L', 'Liked · Learned · Lacked · Longed for'],
-    ['sail', 'Вітрильник', 'Вітер, якір, скелі й острів'],
+    ['sprints', 'Таймлайн спринтів', 'Спринти по 2 тижні з доріжками команд', 'plan'],
+    ['weeks', 'Таймлайн тижнів', 'Шість тижнів від поточного', 'plan'],
+    ['gantt', 'Діаграма Ганта', 'Задачі-смуги з прогресом і залежностями', 'plan'],
+    ['roadmap', 'Роадмап', 'Зараз · Далі · Потім', 'plan'],
+    ['matrix', 'Матриця Impact / Effort', 'Пріоритети: вплив проти зусиль', 'prio'],
+    ['table', 'Таблиця', 'Колонки й рядки, картки прилипають до клітинок', 'plan'],
+    ['sprint', 'Спринт-планінг', 'Ціль, беклог і що беремо в спринт', 'plan'],
+    ['ssc', 'Start / Stop / Continue', 'Ретро на три колонки', 'retro'],
+    ['msg', 'Mad / Sad / Glad', 'Ретро про емоції команди', 'retro'],
+    ['4l', '4L', 'Liked · Learned · Lacked · Longed for', 'retro'],
+    ['sail', 'Вітрильник', 'Вітер, якір, скелі й острів', 'retro'],
+    ['kanban', 'Канбан', 'Беклог → у роботі → готово', 'plan'],
+    ['storymap', 'Story map', 'Кроки користувача й релізи під ними', 'plan'],
+    ['okr', 'OKR', 'Цілі, ключові результати й ініціативи', 'plan'],
+    ['standup', 'Дейлі', 'Вчора · сьогодні · блокери для кожного', 'plan'],
+    ['rice', 'RICE', 'Reach × Impact × Confidence ÷ Effort', 'prio'],
+    ['ice', 'ICE', 'Impact · Confidence · Ease, швидка оцінка', 'prio'],
+    ['moscow', 'MoSCoW', 'Must · Should · Could · Won’t', 'prio'],
+    ['eisen', 'Матриця Ейзенхауера', 'Термінове проти важливого', 'prio'],
+    ['lean', 'Lean Canvas', 'Модель стартапу на одному аркуші', 'product'],
+    ['bmc', 'Business Model Canvas', 'Дев’ять блоків бізнес-моделі', 'product'],
+    ['swot', 'SWOT', 'Сильні, слабкі сторони, можливості, загрози', 'product'],
+    ['pros', 'Плюси й мінуси', 'Зважити рішення разом', 'product'],
+    ['cjm', 'Карта шляху клієнта', 'Етапи, дії, емоції, болі й можливості', 'ux'],
+    ['empathy', 'Карта емпатії', 'Каже · думає · робить · відчуває', 'ux'],
+    ['persona', 'Персона', 'Хто наш користувач, його цілі й болі', 'ux'],
+    ['crazy8', 'Crazy 8s', 'Вісім ескізів за вісім хвилин', 'ux'],
+    ['mood', 'Мудборд', 'Референси, кольори, типографіка, настрій', 'ux'],
+    ['brain', 'Мозковий штурм', 'Питання, ідеї, найкращі й перший крок', 'ux'],
+    ['kalm', 'Keep / Add / Less / More', 'Ретро про те, що змінити в процесі', 'retro'],
+    ['wwa', 'Що вдалось · що покращити', 'Ретро з діями: хто й до коли', 'retro'],
   ];
   function template(key, ox, oy, makeId, by, nowMs) {
     const out = [], mk = (o) => { const it = { id: makeId(), by, ...o }; out.push(it); return it; };
     const table = (o, cw, lh) => { const t = { type: 'table', x: ox, y: oy, color: 'gray', ...o }; Object.assign(t, sizeFor({ ...t, w: 0, h: 0 }, cw, lh)); return mk(t); };
     const tl = (o, cw, lh) => { const t = { type: 'timeline', x: ox, y: oy, color: 'gray', start: thisMonday(nowMs || Date.now()), ...o }; Object.assign(t, sizeFor({ ...t, w: 0, h: 0 }, cw, lh)); return mk(t); };
+    const cols = (title, cs, cw, lh, rows) => table({ title, cols: cs.map((c) => c[0]), rows: rows || [], tint: cs.map((c) => c[1]) }, cw, lh);
+    const hint = (t, x, y, w, color, extra) => mk({ type: 'sticky', x, y, w, h: 120, color, text: t, ...extra });
     if (key === 'sprints') tl({ title: 'Спринти', unit: 'sprint', len: 14, k: 1, n: 4, lanes: ['Дизайн', 'Фронтенд', 'Бекенд'] }, 340, 250);
     else if (key === 'weeks') tl({ title: 'План на шість тижнів', unit: 'week', n: 6, lanes: [] }, 300, 420);
     else if (key === 'gantt') {
@@ -560,14 +645,34 @@ const Plan = (() => {
     }
     else if (key === 'roadmap') table({ title: 'Роадмап', cols: ['Зараз', 'Далі', 'Потім'], rows: ['Продукт', 'Дизайн', 'Розробка'], tint: ['ok', 'info', 'purple'] }, 380, 260);
     else if (key === 'matrix') table({ title: 'Пріоритети · Impact / Effort', kind: 'matrix', cols: ['Мало зусиль', 'Багато зусиль'], rows: ['Великий вплив', 'Малий вплив'], cells: ['Швидкі перемоги', 'Великі проєкти', 'Дрібниці', 'Не варто зусиль'], ax: ['Зусилля', 'Вплив'], tint: ['ok', 'warn'] }, 480, 380);
+    else if (key === 'eisen') table({ title: 'Матриця Ейзенхауера', kind: 'matrix', cols: ['Термінове', 'Не термінове'], rows: ['Важливе', 'Неважливе'], cells: ['🔥 Зробити зараз', '📅 Запланувати', '🤝 Делегувати', '🗑️ Прибрати'], ax: ['Терміновість', 'Важливість'], tint: ['warn', 'info'] }, 480, 380);
+    else if (key === 'swot') table({ title: 'SWOT', kind: 'matrix', cols: ['Допомагає', 'Заважає'], rows: ['Всередині', 'Ззовні'], cells: ['💪 Сильні сторони', '⚠️ Слабкі сторони', '🚀 Можливості', '🌩️ Загрози'], ax: ['Вплив', 'Джерело'], tint: ['ok', 'pink'] }, 480, 380);
     else if (key === 'table') table({ title: 'Таблиця', cols: ['Колонка 1', 'Колонка 2', 'Колонка 3'], rows: ['Рядок 1', 'Рядок 2'] }, 320, 260);
     else if (key === 'sprint') {
       mk({ type: 'sticky', x: ox, y: oy, w: 300, h: 220, color: 'pink', text: '🎯 Ціль спринту\n\nЗа що ми хочемо, щоб нас похвалили наприкінці?' });
       mk({ type: 'sticky', x: ox, y: oy + 250, w: 300, h: 160, color: 'caution', text: '👥 Ємність команди\n\n… сторіпоінтів' });
       table({ title: 'Спринт-планінг', x: ox + 340, cols: ['📥 Беклог', '✅ Беремо в спринт', '🚧 Ризики й залежності'], rows: [], tint: ['gray', 'ok', 'warn'] }, 360, 640);
-    } else if (RETRO[key]) {
-      const [title, cols] = RETRO[key];
-      table({ title, cols: cols.map((c) => c[0]), rows: [], tint: cols.map((c) => c[1]) }, cols.length > 3 ? 330 : 380, 620);
+    }
+    else if (key === 'storymap') table({ title: 'Story map', cols: ['🔍 Знайти', '🛒 Вибрати', '💳 Оплатити', '📦 Отримати', '🔁 Повернутися'], rows: ['🧭 Що робить користувач', '🚀 Реліз 1 · MVP', '📦 Реліз 2', '✨ Колись потім'], tint: ['info', 'teal', 'ok', 'caution', 'purple'] }, 300, 220);
+    else if (key === 'okr') table({ title: 'OKR на квартал', cols: ['📈 Ключовий результат 1', '📈 Ключовий результат 2', '📈 Ключовий результат 3', '🧩 Ініціативи'], rows: ['🎯 Ціль 1', '🎯 Ціль 2', '🎯 Ціль 3'], tint: ['ok', 'ok', 'ok', 'info'] }, 300, 220);
+    else if (key === 'standup') table({ title: 'Дейлі', cols: ['✅ Вчора', '🛠️ Сьогодні', '🚧 Блокери'], rows: ['Учасник 1', 'Учасник 2', 'Учасник 3', 'Учасник 4'], tint: ['ok', 'info', 'pink'] }, 320, 170);
+    else if (key === 'cjm') table({ title: 'Карта шляху клієнта', cols: ['👀 Дізнається', '🤔 Обирає', '🛒 Купує', '📱 Користується', '💬 Рекомендує'], rows: ['🎬 Дії', '📍 Точки контакту', '💭 Думки', '😊 Емоції', '😣 Болі', '💡 Можливості'], tint: ['info', 'teal', 'ok', 'caution', 'purple'] }, 300, 170);
+    else if (key === 'rice' || key === 'ice') {
+      const rice = key === 'rice';
+      const t = table({ title: rice ? 'Пріоритети · RICE' : 'Пріоритети · ICE', cols: rice ? ['👥 Reach', '💥 Impact', '🎯 Confidence', '⏱️ Effort', '🏆 RICE'] : ['💥 Impact', '🎯 Confidence', '🪶 Ease', '🏆 ICE'], rows: ['Ідея 1', 'Ідея 2', 'Ідея 3', 'Ідея 4', 'Ідея 5'], tint: rice ? ['info', 'pink', 'purple', 'warn', 'ok'] : ['pink', 'purple', 'teal', 'ok'] }, 200, 130);
+      hint(rice ? '🧮 RICE = Reach × Impact × Confidence ÷ Effort\n\nReach: скільки людей за квартал\nImpact: 3 · 2 · 1 · 0,5 · 0,25\nConfidence: 100 · 80 · 50 %\nEffort: людино-тижні' : '🧮 ICE = Impact × Confidence × Ease\n\nКожне від 1 до 10. Назви ідей пишіть у рядках зліва', ox + t.w + 40, oy, 300, 'caution', { h: rice ? 250 : 190 });
+    }
+    else if (RETRO[key]) {
+      const [title, cs] = RETRO[key];
+      cols(title, cs, cs.length > 4 ? 300 : cs.length > 3 ? 330 : 380, 620);
+    } else if (CANVAS[key]) {
+      const [title, nc, nr, cw, ch, parts] = CANVAS[key], gx = 24, gy = 64, top = 90;
+      mk({ type: 'text', x: ox, y: oy, w: Math.min(900, nc * cw), h: 48, ts: 'h1', text: title });
+      for (const [name, color, c, r, cs, rs, tip] of parts) {
+        const x = ox + c * (cw + gx), y = oy + top + r * (ch + gy), w = cs * cw + (cs - 1) * gx, h = rs * ch + (rs - 1) * gy;
+        const s = mk({ type: 'section', x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h), title: name, color, autofit: false });
+        if (tip) hint(tip, s.x + 24, s.y + 24, Math.min(240, s.w - 48), color, { h: 110, sec: s.id });
+      }
     } else throw new Error('Unknown template: ' + key);
     return out;
   }
@@ -725,7 +830,7 @@ const Plan = (() => {
   };
   const source = (u) => { for (const k in SOURCES) { const m = SOURCES[k].match(String(u || '')); if (m) return m; } return null; };
 
-  return { TOP, SIDE, PAD, GAP, BAR_H, TRACK, UNITS, STATUSES, STATUS_NAMES, TEMPLATES, SOURCES, isGrid, isBar, dayOf, isoOf, localDay, thisMonday, fmtD, range, dims, sizeFor, column, nowAt, rowName, cellRect, cellAt, cellOf, snap, slotIn, readOrder, flow, cellTop, reflow, xOfDay, dayAtX, barSpan, barBox, barDates, laneY, trackOf, barY, nextTrack, colOfDay, placeBar, workdays, template, sortByVotes, markdown, source };
+  return { TOP, SIDE, PAD, GAP, BAR_H, TRACK, UNITS, STATUSES, STATUS_NAMES, TEMPLATES, GROUPS, SOURCES, isGrid, isBar, dayOf, isoOf, localDay, thisMonday, fmtD, range, dims, sizeFor, column, nowAt, rowName, cellRect, cellAt, cellOf, snap, slotIn, readOrder, flow, cellTop, reflow, xOfDay, dayAtX, barSpan, barBox, barDates, laneY, trackOf, barY, nextTrack, colOfDay, placeBar, workdays, template, sortByVotes, markdown, source };
 })();
 // </plan>
 
@@ -931,6 +1036,63 @@ async function webMeta(url, yt) {
   } catch { return {}; }
 }
 
+// width × height of a PNG, JPEG, GIF or WebP from its first bytes (so image cards keep their shape)
+async function imageSize(url) {
+  try {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 6000);
+    const r = await fetch(url, { signal: ctl.signal, headers: { Range: 'bytes=0-65535' } });
+    if (!r.ok || !r.body) { clearTimeout(t); return null; }
+    const rd = r.body.getReader(), parts = []; let n = 0;
+    while (n < 65536) { const { done, value } = await rd.read(); if (done) break; parts.push(value); n += value.length; }
+    rd.cancel().catch(() => {}); clearTimeout(t);
+    const b = new Uint8Array(n); let o = 0; for (const p of parts) { b.set(p.subarray(0, Math.min(p.length, n - o)), o); o += p.length; if (o >= n) break; }
+    return sniffSize(b);
+  } catch { return null; }
+}
+function sniffSize(b) {
+  const u16 = (i) => (b[i] << 8) | b[i + 1], l16 = (i) => b[i] | (b[i + 1] << 8), u32 = (i) => u16(i) * 65536 + u16(i + 2);
+  if (b.length > 24 && b[0] === 0x89 && b[1] === 0x50) return { w: u32(16), h: u32(20) };
+  if (b.length > 10 && b[0] === 0x47 && b[1] === 0x49) return { w: l16(6), h: l16(8) };
+  if (b.length > 30 && b[0] === 0x52 && b[8] === 0x57) { // RIFF…WEBP
+    const k = String.fromCharCode(b[12], b[13], b[14], b[15]);
+    if (k === 'VP8 ') return { w: l16(26) & 0x3fff, h: l16(28) & 0x3fff };
+    if (k === 'VP8L') { const v = b[21] | (b[22] << 8) | (b[23] << 16) | (b[24] << 24); return { w: (v & 0x3fff) + 1, h: ((v >> 14) & 0x3fff) + 1 }; }
+    if (k === 'VP8X') return { w: 1 + (b[24] | (b[25] << 8) | (b[26] << 16)), h: 1 + (b[27] | (b[28] << 8) | (b[29] << 16)) };
+  }
+  if (b[0] === 0xff && b[1] === 0xd8) {
+    for (let i = 2; i + 9 < b.length;) {
+      if (b[i] !== 0xff) { i++; continue; }
+      const m = b[i + 1];
+      if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) return { w: u16(i + 7), h: u16(i + 5) };
+      i += 2 + u16(i + 2);
+    }
+  }
+  return null;
+}
+
+// ---------- personal tokens (supabase/mcp-tokens.sql): a token reaches only its own boards ----------
+const TOKEN_RE = /^jbt_[A-Za-z0-9]{40}$/;
+const TOKEN_DAYS = 90; // unused and not refreshed for this long: the token stops working
+async function sha256hex(s) {
+  const d = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)));
+  return [...d].map((x) => x.toString(16).padStart(2, '0')).join('');
+}
+async function tokenScope(token) {
+  const hash = await sha256hex(token);
+  const rows = await rest(`mcp_tokens?select=hash,boards,updated_at,used_at&hash=eq.${hash}`);
+  const t = rows && rows[0]; if (!t) return null;
+  const last = Math.max(Date.parse(t.updated_at) || 0, Date.parse(t.used_at) || 0);
+  if (Date.now() - last > TOKEN_DAYS * 864e5) return null;
+  if (Date.now() - (Date.parse(t.used_at) || 0) > 600000) // remember the last use, at most every 10 minutes
+    rest(`mcp_tokens?hash=eq.${hash}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ used_at: new Date().toISOString() }) }).catch(() => null);
+  return { hash, boards: new Set(t.boards || []) };
+}
+// tools (and actions) that only read; everything else changes the board
+const readsOnly = (name, a) => name === 'get_board' || name === 'export_markdown'
+  || (name === 'timer' && (a.action === 'status' || !a.action))
+  || (name === 'hidden_writing' && a.action !== 'on' && a.action !== 'off')
+  || (name === 'voting' && !['start', 'stop', 'clear', 'sort'].includes(a.action));
+
 // keeps an auto-fitting section snug around its cards (same rule as the board: 40px padding, min 200×140)
 function refit(sec, all) {
   if (sec.autofit === false) return false;
@@ -948,7 +1110,7 @@ const TOOLS = [
   { name: 'get_board', description: 'Read everything on a board: stickies, text, sections, timelines, tables and 2×2 matrices, task cards, Gantt bars (start, due, progress, after = the bars they wait for), diagram nodes, ropes (links), link cards, stamps, comments, plus the retro state (hidden writing, dot voting with vote counts). Coordinates are board pixels; a sticky is 200×200. A card\'s "section" is the id of the section it belongs to; "grid" and "cell" say which timeline/table cell it sits in.', inputSchema: { type: 'object', properties: { board: boardArg } } },
   {
     name: 'add_items',
-    description: 'Add items to a board in one go. Planning types: timeline (title, unit day|week|sprint|month, start YYYY-MM-DD, columns: a count or a list of names, sprint_days, first_sprint, lanes: team or stream names), table (title, columns, rows; matrix: true with cells: the 4 quadrant names and axes [x, y] makes a 2×2 prioritisation matrix), task (text, status todo|doing|review|done, who, estimate, due YYYY-MM-DD, tags, url: a Jira/Linear/GitHub issue link; GitHub issues fill themselves in), bar (a Gantt task bar on a timeline: text, grid: the timeline, lane, start and due YYYY-MM-DD (or days), progress 0–100, who, milestone, after: bars it depends on; x and width follow the dates). Cards in a table or timeline cell line up in rows, side by side as far as the column is wide. Put any card into a timeline or table cell with grid (ref or id) plus column (1-based number, header name, or a YYYY-MM-DD date on a timeline) and lane/row (number or name); in a matrix, cell can be the quadrant name. Other types: node (a diagram block for flows and architecture: text, shape rect|round|pill|circle|diamond|cyl|hex, icon service|db|cache|queue|api|user|web|mobile|cloud|storage|fn|lock|mail|none; ropes between two nodes are drawn straight with an arrow), stamp (emoji, on: a card to stamp, size), comment (text: a comment pin, on: a card), sticky (text, color), text (text, style h1|h2|p|s), section (title, color; give other items "section": its ref to put them inside — the section grows to fit), link (a rope from "from" to "to", optional label and color), web (url: a link card with preview; YouTube shows the video thumbnail). Leave x/y out to let the board lay items out in a tidy grid (inside their section if given). Use "ref" to name a new item so links and "section" can point at it in the same call; existing ids work too.',
+    description: 'Add items to a board in one go. Planning types: timeline (title, unit day|week|sprint|month, start YYYY-MM-DD, columns: a count or a list of names, sprint_days, first_sprint, lanes: team or stream names), table (title, columns, rows; matrix: true with cells: the 4 quadrant names and axes [x, y] makes a 2×2 prioritisation matrix), task (text, status todo|doing|review|done, who, estimate, due YYYY-MM-DD, tags, url: a Jira/Linear/GitHub issue link; GitHub issues fill themselves in), bar (a Gantt task bar on a timeline: text, grid: the timeline, lane, start and due YYYY-MM-DD (or days), progress 0–100, who, milestone, after: bars it depends on; x and width follow the dates). Cards in a table or timeline cell line up in rows, side by side as far as the column is wide. Put any card into a timeline or table cell with grid (ref or id) plus column (1-based number, header name, or a YYYY-MM-DD date on a timeline) and lane/row (number or name); in a matrix, cell can be the quadrant name. Other types: node (a diagram block for flows and architecture: text, shape rect|round|pill|circle|diamond|cyl|hex, icon service|db|cache|queue|api|user|web|mobile|cloud|storage|fn|lock|mail|none; ropes between two nodes are drawn straight with an arrow), stamp (emoji, on: a card to stamp, size), comment (text: a comment pin, on: a card), sticky (text, color), text (text, style h1|h2|p|s), section (title, color; give other items "section": its ref to put them inside — the section grows to fit), link (a rope from "from" to "to", optional label and color), web (url: a link card with preview; YouTube shows the video thumbnail), image (url: an https picture, e.g. a screenshot or reference found with another tool; w sets its width, the height follows the picture). Leave x/y out to let the board lay items out in a tidy grid (inside their section if given). Use "ref" to name a new item so links and "section" can point at it in the same call; existing ids work too.',
     inputSchema: {
       type: 'object', required: ['items'],
       properties: {
@@ -958,7 +1120,7 @@ const TOOLS = [
           items: {
             type: 'object', required: ['type'],
             properties: {
-              type: { type: 'string', enum: ['sticky', 'text', 'section', 'link', 'web', 'stamp', 'comment', 'node', 'timeline', 'table', 'task', 'bar'] },
+              type: { type: 'string', enum: ['sticky', 'text', 'section', 'link', 'web', 'image', 'stamp', 'comment', 'node', 'timeline', 'table', 'task', 'bar'] },
               progress: { type: 'number', description: 'Bar: percent done, 0–100.' },
               days: { type: 'number', description: 'Bar: length in days when due is left out (default 5).' },
               milestone: { type: 'boolean', description: 'Bar: a milestone, one date shown as a diamond.' },
@@ -1023,7 +1185,7 @@ const TOOLS = [
   { name: 'create_board', description: 'Create a new empty board and return its id.', inputSchema: { type: 'object', required: ['title'], properties: { title: { type: 'string' } } } },
   {
     name: 'add_template',
-    description: 'Put a ready-made planning or retro template on the board (placed to the right of existing content unless x/y are given): sprints (timeline of 2-week sprints with team lanes), weeks (6-week timeline), roadmap (Now/Next/Later table), matrix (Impact/Effort 2×2), table (3×2), sprint (sprint goal + backlog/commit/risks), gantt (a project timeline with Gantt bars, progress and dependencies), ssc (Start/Stop/Continue retro), msg (Mad/Sad/Glad), 4l (Liked/Learned/Lacked/Longed for), sail (sailboat retro). Returns the ids; fill it with add_items using grid + column/lane.',
+    description: 'Put a ready-made template on the board (placed to the right of existing content unless x/y are given). Templates: ' + Plan.TEMPLATES.map((t) => `${t[0]} (${t[1]}: ${t[2]})`).join('; ') + '. Tables and timelines take cards with add_items using grid + column/lane; canvases (lean, bmc, empathy, persona, crazy8, mood, brain) are sections with hint stickies. Returns the ids.',
     inputSchema: { type: 'object', required: ['template'], properties: { board: boardArg, template: { type: 'string', enum: Plan.TEMPLATES.map((t) => t[0]) }, title: { type: 'string', description: 'Optional title for the main timeline/table.' }, x: { type: 'number' }, y: { type: 'number' } } },
   },
   {
@@ -1049,7 +1211,12 @@ const TOOLS = [
   { name: 'timer', description: 'Control the board\'s shared timer that everyone sees: start (with minutes), pause, resume, reset, or status.', inputSchema: { type: 'object', required: ['action'], properties: { board: boardArg, action: { type: 'string', enum: ['start', 'pause', 'resume', 'reset', 'status'] }, minutes: { type: 'number', description: 'For start: 0.1 to 120.' } } } },
 ];
 
-async function callTool(name, a) {
+async function callTool(name, a, scope) {
+  if (name === 'list_boards' && scope) { // a personal token: only the boards it was given
+    const ids = [...scope.boards].filter(validBoard);
+    const rows = ids.length ? (await rest(`docs?select=path,data&path=in.(${ids.map((b) => '"boards/' + b + '"').join(',')})`)) || [] : [];
+    return rows.map((r) => ({ id: r.path.slice(7), title: r.data && r.data.title || 'Без назви', link: '#b=' + r.path.slice(7), view_only: r.data && r.data.ro === true || undefined }));
+  }
   if (name === 'list_boards') {
     const rows = (await listColl('boards')) || [];
     return rows.map((r) => ({ id: r.path.slice(7), title: r.data && r.data.title || 'Без назви', link: '#b=' + r.path.slice(7) }));
@@ -1057,10 +1224,18 @@ async function callTool(name, a) {
   if (name === 'create_board') {
     const id = secretId();
     await putDocs([{ path: 'boards/' + id, data: { title: String(a.title || 'Нова дошка').slice(0, 120), at: Date.now(), by: BY } }]);
+    if (scope) { // the new board joins this token, so the same Claude can keep working on it
+      scope.boards.add(id);
+      await rest(`mcp_tokens?hash=eq.${scope.hash}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ boards: [...scope.boards].slice(-300), updated_at: new Date().toISOString() }) });
+    }
     return { id, note: 'Boards are private: open it by adding #b=' + id + ' to the JamBoard address and share that link. It is not listed anywhere else.' };
   }
   const board = a.board;
   if (!validBoard(board)) throw new Error('Pass board: an id from list_boards');
+  if (scope) {
+    if (!scope.boards.has(board)) throw new Error('This board is not open to this token. In JamBoard open «Налаштування» → Claude and tick the board (or open the board once in that browser).');
+    if (!readsOnly(name, a)) { const meta = await getDoc('boards/' + board); if (meta && meta.ro === true) throw new Error('This board is view-only.'); }
+  }
   if (name === 'get_board') {
     const [all, r] = await Promise.all([loadItems(board), retroState(board)]);
     const back = (i) => (i.type === 'section' || isGrid(i) ? -1 : 0);
@@ -1093,7 +1268,7 @@ async function callTool(name, a) {
     const key = String(a.template || '');
     if (!Plan.TEMPLATES.some((t) => t[0] === key)) throw new Error('template: ' + Plan.TEMPLATES.map((t) => t[0]).join(', '));
     const list = Plan.template(key, 0, 0, uid, BY, Date.now());
-    const main = list.find(isGrid); if (main && typeof a.title === 'string' && a.title.trim()) main.title = a.title.trim().slice(0, 120);
+    const main = list.find(isGrid) || list.find((i) => i.type === 'text'); if (main && typeof a.title === 'string' && a.title.trim()) main[isGrid(main) ? 'title' : 'text'] = a.title.trim().slice(0, 120);
     const nb = bbox(list.filter((i) => i.type !== 'link')), b0 = bbox(all.filter((i) => i.type !== 'link' && i.type !== 'comment'));
     const ox = num(a.x) ?? (b0 ? b0.x2 + 200 : 0), oy = num(a.y) ?? (b0 ? b0.y1 + 60 : 0);
     for (const it of list) { if (it.type !== 'link') { it.x += ox - nb.x1; it.y += oy - nb.y1; } it.z = ++z; }
@@ -1228,7 +1403,7 @@ async function callTool(name, a) {
         if (spec.arrow === false) it.flow = false;
         if (spec.dash === true) it.dash = true;
         if (spec.thick === true) it.thick = true;
-      } else if (t === 'sticky' || t === 'text' || t === 'web' || t === 'node' || t === 'task') {
+      } else if (t === 'sticky' || t === 'text' || t === 'web' || t === 'image' || t === 'node' || t === 'task') {
         if (t === 'task') {
           it = { id: uid(), type: 'task', w: num(spec.w) ?? 280, h: 120, text: '', status: 'todo' };
           taskFields(it, spec);
@@ -1250,6 +1425,12 @@ async function callTool(name, a) {
             it = { id: uid(), type: 'board', bid: linked, w: num(spec.w) ?? 300, h: 250 };
             if (meta && typeof meta.title === 'string') it.title = meta.title.slice(0, 120);
           }
+        }
+        if (t === 'image') {
+          const url = safeHttps(spec.url); if (!url) throw new Error('image needs an https url');
+          const sz = await imageSize(url), ar = sz && sz.w > 0 && sz.h > 0 ? sz.h / sz.w : 0.75;
+          const w = clampN(spec.w, 60, 2000, sz ? Math.min(360, sz.w) : 320);
+          it = { id: uid(), type: 'image', url, w, h: num(spec.h) ?? Math.round(w * ar) };
         }
         if (t === 'web' && !it) {
           const url = safeHttps(spec.url);
@@ -1406,19 +1587,19 @@ const PROTOCOLS = ['2025-06-18', '2025-03-26', '2024-11-05'];
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'content-type, mcp-protocol-version, mcp-session-id, authorization', 'Access-Control-Allow-Methods': 'POST, GET, OPTIONS' };
 const json = (body, status = 200) => new Response(body == null ? null : JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
-async function handleRpc(m) {
+async function handleRpc(m, scope) {
   if (!m || m.jsonrpc !== '2.0' || typeof m.method !== 'string') return { jsonrpc: '2.0', id: m && m.id != null ? m.id : null, error: { code: -32600, message: 'Invalid request' } };
   const reply = (result) => (m.id == null ? null : { jsonrpc: '2.0', id: m.id, result });
   switch (m.method) {
     case 'initialize': {
       const want = m.params && m.params.protocolVersion;
-      return reply({ protocolVersion: PROTOCOLS.includes(want) ? want : PROTOCOLS[0], capabilities: { tools: {} }, serverInfo: { name: 'jamboard', version: '1.0.0' }, instructions: 'JamBoard is a shared whiteboard. Read a board with get_board before editing it. Prefer add_items with refs to build sections, stickies and ropes in one call; leave x/y out for automatic layout.' });
+      return reply({ protocolVersion: PROTOCOLS.includes(want) ? want : PROTOCOLS[0], capabilities: { tools: {} }, serverInfo: { name: 'jamboard', version: '1.1.0' }, instructions: 'JamBoard is a shared whiteboard. Read a board with get_board before editing it. Prefer add_items with refs to build sections, stickies and ropes in one call; leave x/y out for automatic layout. Pictures found with other tools (design references, screenshots) go on the board as image items with their https url.' + (scope ? ' This connection reaches only the boards its owner shared with it (list_boards).' : '') });
     }
     case 'ping': return reply({});
     case 'tools/list': return reply({ tools: TOOLS });
     case 'tools/call': {
       const name = m.params && m.params.name, args = (m.params && m.params.arguments) || {};
-      try { const out = await callTool(name, args); return reply({ content: [{ type: 'text', text: JSON.stringify(out) }] }); }
+      try { const out = await callTool(name, args, scope); return reply({ content: [{ type: 'text', text: JSON.stringify(out) }] }); }
       catch (e) { return reply({ content: [{ type: 'text', text: 'Error: ' + (e && e.message || e) }], isError: true }); }
     }
     default:
@@ -1435,12 +1616,19 @@ async function eq(a, b) { // constant-time-ish compare
 export async function handler(req) {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   const url = new URL(req.url);
-  const key = url.searchParams.get('key') || (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
-  if (!MCP_KEY || !(await eq(key, MCP_KEY))) return json({ error: 'unauthorized' }, 401);
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+  const token = url.searchParams.get('token') || (TOKEN_RE.test(bearer) ? bearer : '');
+  const key = url.searchParams.get('key') || (token ? '' : bearer);
+  let scope = null; // null = admin key: every board
+  if (token) {
+    if (!TOKEN_RE.test(token)) return json({ error: 'unauthorized' }, 401);
+    try { scope = await tokenScope(token); } catch { return json({ error: 'token check failed' }, 503); }
+    if (!scope) return json({ error: 'unauthorized: this token was revoked or has expired. Make a new one in JamBoard → Налаштування.' }, 401);
+  } else if (!MCP_KEY || !(await eq(key, MCP_KEY))) return json({ error: 'unauthorized' }, 401);
   if (req.method !== 'POST') return new Response('Use POST', { status: 405, headers: { ...CORS, Allow: 'POST, OPTIONS' } });
   let body; try { body = await req.json(); } catch { return json({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } }, 400); }
-  if (Array.isArray(body)) { const out = (await Promise.all(body.map(handleRpc))).filter(Boolean); return out.length ? json(out) : new Response(null, { status: 202, headers: CORS }); }
-  const out = await handleRpc(body);
+  if (Array.isArray(body)) { const out = (await Promise.all(body.map((m) => handleRpc(m, scope)))).filter(Boolean); return out.length ? json(out) : new Response(null, { status: 202, headers: CORS }); }
+  const out = await handleRpc(body, scope);
   return out ? json(out) : new Response(null, { status: 202, headers: CORS });
 }
 

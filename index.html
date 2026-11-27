@@ -427,6 +427,43 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
 .pv-stamp { display: grid; place-items: center; line-height: 1; }
 .pv-pin { display: grid; place-items: center; border-radius: 50% 50% 50% 4px; background: color-mix(in srgb, var(--pc) 30%, var(--surface)); box-shadow: 0 0 0 2px var(--pc), var(--note-shadow); font-size: 18px; }
 @media (max-width: 520px) { .panel.peek { width: calc(100vw - 16px); height: calc(100vh - 16px); } .peek-head { flex-wrap: wrap; padding: 12px 10px 10px 16px; } .peek-hd { flex-basis: 100%; } .peek-head .peek-new { margin-left: auto; } }
+/* version history: a list on the right; a version opens in the preview dialog beside it */
+.panel.hist-pop { position: fixed; top: calc(72px + env(safe-area-inset-top, 0px)); right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(88px + env(safe-area-inset-bottom, 0px)); width: 340px; max-width: calc(100vw - 24px); box-sizing: border-box; z-index: 22; display: flex; flex-direction: column; background: var(--surface); border-radius: var(--r-xl); box-shadow: var(--shadow-lg); overflow: hidden; animation: hsIn var(--slow) var(--ease-em) both; }
+.panel.hist-pop.out { animation: hsOut 170ms var(--ease) both; pointer-events: none; }
+@keyframes hsIn { from { opacity: 0; translate: 24px 0; } }
+@keyframes hsOut { to { opacity: 0; translate: 16px 0; } }
+.hs-head { display: flex; align-items: flex-start; gap: 10px; padding: 16px 14px 10px 18px; }
+.hs-hd { flex: 1; min-width: 0; }
+.hs-hd h2 { margin: 0; font: 600 18px/1.25 var(--f-display); letter-spacing: -0.02em; }
+.hs-hd p { margin: 3px 0 0; font-size: 12.5px; line-height: 1.35; color: var(--muted); }
+.hs-head .close { flex: none; border: 0; background: var(--chip); color: var(--muted); cursor: pointer; font-size: 15px; line-height: 1; width: 26px; height: 26px; border-radius: 50%; transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease); }
+.hs-head .close:hover { color: var(--text); background: color-mix(in srgb, var(--text) 10%, transparent); }
+.hs-head .close:focus-visible { outline: none; box-shadow: var(--focus); }
+.hs-list { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 0 8px 10px; contain: content; }
+.hs-day { position: sticky; top: 0; z-index: 1; padding: 10px 10px 6px; font: 600 12px var(--f-text); color: var(--muted); background: var(--surface); }
+.hs-item { display: flex; align-items: flex-start; gap: 10px; width: 100%; box-sizing: border-box; border: 0; background: transparent; color: var(--text); text-align: left; padding: 9px 10px; border-radius: var(--r-md); cursor: pointer; font: inherit; position: relative; transition: background-color var(--fast) var(--ease); }
+.hs-item:hover { background: var(--chip); }
+.hs-item:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+.hs-item[aria-current="true"] { background: var(--accent-soft); }
+.hs-item[aria-current="true"]::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 2px; background: var(--accent); }
+.hs-item .av { flex: none; width: 28px; height: 28px; margin: 1px 0 0; border: 0; font-size: 15px; animation: none; }
+.hs-t { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.hs-l { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.hs-l b { font-weight: 600; font-size: 14px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hs-l time { margin-left: auto; flex: none; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.hs-t small { font-size: 12.5px; line-height: 1.35; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.hs-now { flex: none; align-self: center; padding: 2px 8px; border-radius: var(--r-pill); background: var(--accent); color: var(--accent-fg); font: 600 11px/1.4 var(--f-text); }
+.hs-more { display: block; margin: 6px auto 4px; }
+.hs-msg { padding: 18px 22px 22px; font-size: 13.5px; line-height: 1.45; color: var(--muted); }
+.hs-msg:empty { display: none; }
+.hs-msg code { font: 500 12.5px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text); background: var(--chip); padding: 1px 5px; border-radius: 5px; }
+.hs-list.wait::after { content: ""; display: block; height: 220px; margin: 0 4px; border-radius: var(--r-md); background: linear-gradient(100deg, var(--chip) 30%, color-mix(in srgb, var(--surface) 45%, transparent) 50%, var(--chip) 70%) -100% 0 / 200% 100% no-repeat; animation: shimmer 1.3s var(--ease) infinite; }
+body.view-only #histBtn { display: none !important; }
+/* the preview of a version sits left of the list; what changed in it is ringed, the rest a little faded */
+.panel.peek.hist { left: calc((100vw - 372px) / 2); top: calc(72px + env(safe-area-inset-top, 0px)); translate: -50% 0; width: min(1080px, calc(100vw - 404px)); height: calc(100vh - 160px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
+.peek-world.hs-diff .pv:not(.pv-sec):not(.hs-hit) { opacity: .5; }
+.pv.hs-hit { outline: 5px solid var(--accent); outline-offset: 6px; }
+@media (max-width: 760px) { .panel.peek.hist { left: 50%; top: 8px; width: calc(100vw - 16px); height: calc(100vh - 16px); } body.hs-pv #histPop { visibility: hidden; } .panel.hist-pop { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); } }
 /* view-only boards (the demo): pan, zoom and read; every editing control is gone */
 body.view-only .rail [data-tool]:not([data-tool="select"]):not([data-tool="hand"]), body.view-only #mermaidBtn, body.view-only #imageBtn, body.view-only #undoBtn, body.view-only #redoBtn, body.view-only .rail .rule, body.view-only #palette, body.view-only #ctx, body.view-only #timerPill, body.view-only #timerPill + .vsep, body.view-only .port, body.view-only .handle { display: none !important; }
 body.view-only #viewport, body.view-only #viewport .item { cursor: grab; }
@@ -848,10 +885,41 @@ body.voting #viewport.tool-select .item:is(.sticky, .text, .image, .web, .node, 
 .vc-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); transition: background-color var(--base) var(--ease), scale var(--base) var(--ease-spring); }
 .vc-dots i.used { background: color-mix(in srgb, var(--accent) 24%, transparent); scale: .75; }
 .vc-dots.big { gap: 6px; } .vc-dots.big i { width: 16px; height: 16px; }
-/* the «Планінг і ретро» popover: tiles for templates and facilitation tools */
-.panel.popover.plan-pop { top: auto; right: auto; left: 50%; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); translate: -50% 0; width: 660px; max-width: calc(100vw - 24px); max-height: calc(100vh - 160px); overflow: auto; overscroll-behavior: contain; box-sizing: border-box; transform-origin: 50% 100%; display: flex; flex-direction: column; gap: 14px; padding: 16px 16px 18px; }
-.plan-pop .tm-head { display: flex; align-items: center; justify-content: space-between; }
-.pl-sec h3 { margin: 0 0 8px; font: 600 12px var(--f-text); color: var(--muted); letter-spacing: -0.01em; }
+/* the templates library (P): preview cards by group, search, and the facilitation tools */
+.panel.popover.plan-pop { top: auto; right: auto; left: 50%; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); translate: -50% 0; width: 900px; max-width: calc(100vw - 24px); height: min(680px, calc(100vh - 150px)); overflow: hidden; box-sizing: border-box; transform-origin: 50% 100%; display: flex; flex-direction: column; gap: 12px; padding: 16px 0 0; }
+.tp-head { display: flex; align-items: center; gap: 12px; padding: 0 16px; }
+.tp-head .label { flex: none; font-size: 15px; font-weight: 600; color: var(--text); }
+.tp-search { position: relative; flex: 1; min-width: 0; max-width: 320px; margin-left: auto; }
+.tp-search svg { position: absolute; left: 11px; top: 50%; width: 16px; height: 16px; translate: 0 -50%; color: var(--muted); pointer-events: none; }
+.tp-search .field.sm { padding-left: 34px; border-radius: var(--r-pill); background: var(--chip); border-color: transparent; }
+.tp-search .field:focus { background: var(--surface); border-color: var(--accent); }
+.tp-search .field::-webkit-search-cancel-button { cursor: pointer; }
+.tp-cats { display: flex; gap: 6px; padding: 0 16px; overflow-x: auto; scrollbar-width: none; flex: none; }
+.tp-cats::-webkit-scrollbar { display: none; }
+.tp-cats button { flex: none; border: 0; background: var(--chip); color: var(--text); font: 500 13px var(--f-text); padding: 7px 13px; border-radius: var(--r-pill); cursor: pointer; white-space: nowrap; transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease), scale var(--fast) var(--ease-spring); }
+.tp-cats button:hover:not([aria-checked="true"]) { background: color-mix(in srgb, var(--accent) 12%, var(--chip)); }
+.tp-cats button:active { scale: .96; }
+.tp-cats button[aria-checked="true"] { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.tp-cats button small { font-size: 12px; margin-left: 5px; opacity: .72; font-variant-numeric: tabular-nums; }
+.tp-body { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 4px 16px 18px; display: flex; flex-direction: column; gap: 18px; scrollbar-width: thin; }
+.tp-group + .tp-group { margin-top: 18px; }
+.tp-group h3, .pl-sec h3 { margin: 0 0 8px; font: 600 12px var(--f-text); color: var(--muted); letter-spacing: -0.01em; }
+.tp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(196px, calc(50% - 5px)), 1fr)); gap: 10px; }
+.tp-card { display: flex; flex-direction: column; text-align: left; border: 0; padding: 0; background: var(--chip); border-radius: 16px; cursor: pointer; color: var(--text); min-width: 0; overflow: hidden; box-shadow: 0 0 0 0 transparent; transition: box-shadow var(--fast) var(--ease), translate var(--base) var(--ease-em), scale var(--fast) var(--ease-spring); }
+.tp-card:hover { translate: 0 -2px; box-shadow: 0 0 0 2px var(--accent), 0 8px 22px rgba(0, 0, 0, .12); }
+.tp-card:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--accent), var(--focus); }
+.tp-card:active { scale: .97; }
+.tp-prev { aspect-ratio: 16 / 10; background: color-mix(in srgb, var(--text) 4%, var(--surface)); border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent); overflow: hidden; contain: strict; }
+.tp-prev svg { display: block; width: 100%; height: 100%; transition: scale var(--slow, .4s) var(--ease-em); }
+.tp-card:hover .tp-prev svg { scale: 1.05; }
+.tp-meta { display: grid; gap: 2px; padding: 9px 12px 11px; min-width: 0; }
+.tp-meta b { font-weight: 600; font-size: 14px; line-height: 1.25; overflow-wrap: anywhere; }
+.tp-meta b i { font-style: normal; margin-right: 5px; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+.tp-meta small { font-size: 12px; line-height: 1.3; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tp-card[hidden], .tp-group[hidden] { display: none; }
+.tp-none { margin: 30px 0; text-align: center; color: var(--muted); font-size: 14px; }
+@media (max-width: 560px) { .tp-head { flex-wrap: wrap; } .tp-search { order: 3; max-width: none; flex-basis: 100%; } }
+body.view-only .plan-pop { height: auto; }
 .pl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 6px; }
 .pl-tile { display: flex; align-items: center; gap: 10px; text-align: left; border: 0; background: var(--chip); padding: 9px 12px 9px 9px; border-radius: 14px; cursor: pointer; color: var(--text); min-width: 0; transition: background-color var(--fast) var(--ease), scale var(--fast) var(--ease-spring), translate var(--base) var(--ease-em); }
 .pl-tile:hover { background: color-mix(in srgb, var(--accent) 12%, var(--chip)); translate: 0 -1px; }
@@ -905,6 +973,50 @@ select.field.sm { padding-right: 8px; }
 .md-actions { display: flex; align-items: center; gap: 8px; }
 .md-actions .mm-note { margin-right: auto; font-size: 12px; color: var(--muted); }
 #mdCopy { min-width: 132px; }
+/* settings dialog: Claude (MCP) connection and other MCP servers */
+.gal-head .gal-set { flex: none; width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--chip); color: var(--text); cursor: pointer; transition: background-color var(--fast) var(--ease), scale var(--fast) var(--ease-spring); }
+.gal-head .gal-set:hover { background: color-mix(in srgb, var(--text) 12%, transparent); }
+.gal-head .gal-set:active { scale: .94; }
+.gal-head .gal-set svg { width: 20px; height: 20px; }
+.panel.set-pop { height: auto; max-height: min(720px, calc(100vh - 48px)); width: min(640px, calc(100vw - 32px)); padding: 0; gap: 0; overflow: hidden; }
+.set-pop .md-head { padding: 18px 18px 12px 24px; align-items: center; }
+.set-tabs { display: flex; gap: 4px; padding: 0 24px 12px; border-bottom: 1px solid var(--line); }
+.set-tabs .seg { width: 100%; }
+.set-tabs .seg button[aria-selected="true"], .set-tabs .seg button[aria-selected="true"]:hover { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.set-body { flex: 1; min-height: 0; overflow: auto; padding: 18px 24px 22px; display: grid; gap: 18px; align-content: start; overscroll-behavior: contain; }
+.set-body h3 { margin: 0; font: 600 15px/1.3 var(--f-text); }
+.set-body p { margin: 0; font-size: 14px; line-height: 1.45; color: var(--muted); }
+.set-body p b { color: var(--text); font-weight: 600; }
+.set-card { display: grid; gap: 10px; padding: 16px; border-radius: var(--r-lg); background: var(--bg); }
+.set-url { display: flex; gap: 8px; align-items: center; }
+.set-url .field { flex: 1; min-width: 0; height: 40px; font: 400 13px/1 ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing: 0; color: var(--text); }
+.set-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.set-meta i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.set-meta[data-s="ok"] i { background: var(--ok); }
+.set-meta .txt-btn { padding: 5px 10px; font-size: 13px; }
+.set-meta #setUsed { margin-right: auto; }
+.set-meta .txt-btn.bad { color: var(--bad); }
+.set-steps { margin: 0; padding: 0 0 0 20px; display: grid; gap: 6px; font-size: 14px; line-height: 1.45; color: var(--text); }
+.set-steps code, .set-ex code { font: 500 12.5px ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing: 0; padding: 1px 6px; border-radius: 6px; background: var(--chip); }
+.set-boards { display: grid; gap: 2px; max-height: 220px; overflow: auto; margin: 0 -6px; padding: 0; list-style: none; }
+.set-boards label, .set-auto { display: flex; align-items: center; gap: 10px; padding: 7px 6px; border-radius: var(--r-sm); cursor: pointer; font-size: 14px; color: var(--text); transition: background-color var(--fast) var(--ease); }
+.set-boards label:hover { background: var(--chip); }
+.set-boards .nm { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.set-boards small { flex: none; font-size: 12px; color: var(--muted); }
+.set-pop input[type="checkbox"] { flex: none; width: 18px; height: 18px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.set-pop input[type="checkbox"]:focus-visible, .gal-set:focus-visible, .set-pop .txt-btn:focus-visible, .set-pop .primary:focus-visible, .set-pop a:focus-visible { outline: none; box-shadow: var(--focus); }
+.set-auto { padding: 2px 0; font-size: 13px; color: var(--muted); }
+.set-warn { display: flex; gap: 10px; padding: 12px 14px; border-radius: var(--r-md); background: var(--accent-soft); font-size: 13px; line-height: 1.45; color: var(--text); }
+.set-warn span[aria-hidden] { flex: none; }
+.set-mcp { display: grid; grid-template-columns: 40px 1fr; gap: 4px 12px; padding: 14px 16px; border-radius: var(--r-lg); background: var(--bg); }
+.set-mcp .ic { grid-row: span 2; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font: 700 17px var(--f-display); color: #fff; }
+.set-mcp h3 { display: flex; align-items: baseline; gap: 8px; }
+.set-mcp h3 a { font: 500 13px var(--f-text); color: var(--accent); text-decoration: none; border-radius: 4px; }
+.set-mcp h3 a:hover { text-decoration: underline; }
+.set-ex { grid-column: 2; display: flex; gap: 8px; align-items: flex-start; margin-top: 6px; padding: 10px 12px; border-radius: var(--r-md); background: var(--surface); font-size: 13px; line-height: 1.45; color: var(--text); }
+.set-ex q { flex: 1; quotes: "«" "»"; }
+.set-ex .txt-btn { flex: none; padding: 3px 9px; font-size: 13px; margin: -3px -6px 0 0; }
+@media (max-width: 560px) { .set-pop .md-head, .set-tabs, .set-body { padding-left: 16px; padding-right: 16px; } .set-url { flex-wrap: wrap; } .set-url .primary { width: 100%; } }
 @media (max-width: 560px) { .md-head { flex-wrap: wrap; } .md-head .seg { width: 100%; } .fl2 { grid-template-columns: 1fr; } }
 @media (max-width: 1320px) {
   .hints { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
@@ -939,6 +1051,7 @@ select.field.sm { padding-right: 8px; }
 <div class="panel gallery" id="boardMenu" role="dialog" aria-label="Мої дошки" hidden>
   <div class="gal-head">
     <div class="gal-hd"><h2 class="gal-title">Мої дошки <span id="boardCount"></span></h2><p class="gal-note" id="boardNote" hidden>Тут лише дошки, які ви створили або відкривали за посиланням. Інші люди цього списку не бачать.</p></div>
+    <button class="gal-set icon-btn" id="setBtn" aria-label="Налаштування" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg><span class="tip">Налаштування · Claude і MCP</span></button>
     <button class="primary sm" id="newBoardBtn"><span aria-hidden="true">＋</span> Нова дошка</button>
   </div>
   <div class="gal-grid" id="boardList" role="list"></div>
@@ -1013,11 +1126,17 @@ select.field.sm { padding-right: 8px; }
   <button class="icon-btn" data-tool="section" aria-label="Секція"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M4 7.5h4"/><rect x="3.5" y="10" width="17" height="10" rx="2.5"/><path d="M3.5 4.5h7"/></svg><span class="tip">Секція<kbd>F</kbd></span></button>
   <button class="icon-btn" data-tool="node" aria-label="Блок схеми"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="8" height="6" rx="1.6"/><ellipse cx="17" cy="16" rx="4" ry="1.6"/><path d="M13 16v3.4c0 .9 1.8 1.6 4 1.6s4-.7 4-1.6V16M7 9.5v3.5a2 2 0 002 2h4"/></svg><span class="tip">Блок схеми: сервіс, база, черга…<kbd>D</kbd></span></button>
   <button class="icon-btn" id="mermaidBtn" aria-label="Схема з Mermaid" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7.5L4 12l4 4.5M16 7.5l4 4.5-4 4.5"/><path d="M10.5 12h.01M13.5 12h.01" stroke-width="2.6"/></svg><span class="tip">Схема з тексту Mermaid<kbd>M</kbd></span></button>
-  <button class="icon-btn" id="planBtn" aria-label="Планінг і ретро" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v3M16 3v3"/><rect x="6.5" y="12.5" width="6" height="2.6" rx="1.3" fill="currentColor" stroke="none"/><rect x="10.5" y="16" width="7" height="2.6" rx="1.3" fill="currentColor" stroke="none" opacity=".55"/></svg><span class="tip">Планінг і ретро: таймлайн, матриця, шаблони<kbd>P</kbd></span></button>
+  <button class="icon-btn" id="planBtn" aria-label="Шаблони" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v3M16 3v3"/><rect x="6.5" y="12.5" width="6" height="2.6" rx="1.3" fill="currentColor" stroke="none"/><rect x="10.5" y="16" width="7" height="2.6" rx="1.3" fill="currentColor" stroke="none" opacity=".55"/></svg><span class="tip">Шаблони: планінг, ретро, UX, стратегія<kbd>P</kbd></span></button>
   <button class="icon-btn" id="imageBtn" aria-label="Зображення"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M20.5 16l-5-5-9 8.5"/></svg><span class="tip">Зображення<kbd>Ctrl+V</kbd></span></button>
   <div class="rule"></div>
   <button class="icon-btn" id="undoBtn" aria-label="Скасувати"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L4.5 11.5 9 16"/><path d="M5 11.5h9a5 5 0 010 10h-2"/></svg><span class="tip">Скасувати<kbd>Ctrl+Z</kbd></span></button>
   <button class="icon-btn" id="redoBtn" aria-label="Повторити"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7l4.5 4.5L15 16"/><path d="M19 11.5h-9a5 5 0 000 10h2"/></svg><span class="tip">Повторити<kbd>Ctrl+Shift+Z</kbd></span></button>
+  <button class="icon-btn" id="histBtn" aria-label="Історія версій" aria-haspopup="dialog" aria-expanded="false" aria-controls="histPop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.6 13.2A7.5 7.5 0 106.4 6.6"/><path d="M3.8 4.6v3.6h3.6"/><path d="M12 8.2V12l2.6 1.7"/></svg><span class="tip">Історія версій: хто, що й коли змінив</span></button>
+</div>
+<div class="panel hist-pop" id="histPop" role="dialog" aria-labelledby="histTitle" hidden>
+  <div class="hs-head"><div class="hs-hd"><h2 id="histTitle">Історія версій</h2><p>Хто, що й коли змінив. Натисніть версію, щоб переглянути або відновити її</p></div><button class="close" id="histClose" aria-label="Закрити">×</button></div>
+  <div class="hs-list" id="histList" role="list"></div>
+  <div class="hs-msg" id="histMsg" role="status"></div>
 </div>
 <div class="panel palette" id="palette" hidden></div>
 <div class="panel popover" id="mmPop" role="dialog" aria-label="Схема з Mermaid" hidden>
@@ -1026,11 +1145,18 @@ select.field.sm { padding-right: 8px; }
   <p class="mm-err" id="mmErr" role="alert"></p>
   <div class="mm-actions"><button class="primary sm" id="mmGo">Побудувати</button><button class="txt-btn" id="mmExample">Вставити приклад</button><span class="mm-note">Ctrl+Enter · або просто вставте текст на дошку</span></div>
 </div>
-<div class="panel popover plan-pop" id="planPop" role="dialog" aria-label="Планінг і ретро" hidden>
-  <div class="tm-head"><span class="label">Планінг і ретро</span><button class="close" id="plClose" aria-label="Закрити">×</button></div>
-  <div class="pl-sec pl-edit"><h3>Планування</h3><div class="pl-grid" id="plPlan"></div></div>
-  <div class="pl-sec pl-edit"><h3>Ретро</h3><div class="pl-grid" id="plRetro"></div></div>
-  <div class="pl-sec"><h3>Фасилітація</h3><div class="pl-grid" id="plFac"></div></div>
+<div class="panel popover plan-pop" id="planPop" role="dialog" aria-label="Шаблони" hidden>
+  <div class="tp-head">
+    <span class="label">Шаблони</span>
+    <label class="tp-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg><input class="field sm pl-edit" id="tpQ" type="search" autocomplete="off" spellcheck="false" placeholder="Знайти шаблон" aria-label="Знайти шаблон"></label>
+    <button class="close" id="plClose" aria-label="Закрити">×</button>
+  </div>
+  <div class="tp-cats pl-edit" id="tpCats" role="radiogroup" aria-label="Категорія"></div>
+  <div class="tp-body" id="tpBody">
+    <div class="pl-edit" id="tpList"></div>
+    <p class="tp-none" id="tpNone" hidden>Такого шаблону немає. Спробуйте інше слово</p>
+    <div class="pl-sec"><h3>Інструменти</h3><div class="pl-grid" id="plFac"></div></div>
+  </div>
 </div>
 <div class="panel popover side-pop" id="tlPop" role="dialog" aria-label="Дати й крок таймлайну" hidden>
   <div class="tm-head"><span class="label">Таймлайн</span><button class="close" id="tlClose" aria-label="Закрити">×</button></div>
@@ -1173,6 +1299,61 @@ select.field.sm { padding-right: 8px; }
     <button class="primary sm" id="figClose">Закрити</button>
   </div>
   <div class="peek-stage fig-stage" id="figStage"></div>
+<div class="peek-back" id="setBack" hidden></div>
+<div class="panel md-pop set-pop" id="setPop" role="dialog" aria-modal="true" aria-labelledby="setTitle" hidden>
+  <div class="md-head">
+    <div class="peek-hd"><h2 id="setTitle">Налаштування</h2><p>Для цього браузера. Входити не потрібно.</p></div>
+    <button class="txt-btn" id="setClose">Готово</button>
+  </div>
+  <div class="set-tabs"><div class="seg" id="setTabs" role="tablist" aria-label="Розділи"><button role="tab" data-t="claude" id="setTabClaude" aria-controls="setClaude">Claude · MCP</button><button role="tab" data-t="more" id="setTabMore" aria-controls="setMore">Інші MCP</button></div></div>
+  <div class="set-body" id="setClaude" role="tabpanel" aria-labelledby="setTabClaude">
+    <p>Підключіть JamBoard до <b>свого</b> Claude: він читатиме обрані дошки, розкладатиме стікери, будуватиме схеми, таймлайни й діаграми Ганта, додаватиме картинки.</p>
+    <div class="set-card" id="setOff">
+      <h3>Особисте посилання для Claude</h3>
+      <p id="setOffText">Посилання відкриває Claude лише ті дошки, які ви оберете. Його можна будь-коли відкликати.</p>
+      <div><button class="primary sm" id="setMake">Отримати посилання</button></div>
+    </div>
+    <div class="set-card" id="setOn" hidden>
+      <h3>Особисте посилання для Claude</h3>
+      <div class="set-url"><input class="field" id="setUrl" readonly aria-label="Посилання для конектора Claude" spellcheck="false"><button class="primary sm" id="setCopy">Скопіювати</button></div>
+      <div class="set-meta" id="setMeta" data-s="idle"><i aria-hidden="true"></i><span id="setUsed">Claude ще не підключався</span><button class="txt-btn" id="setRenew">Нове посилання</button><button class="txt-btn bad" id="setRevoke">Відкликати</button></div>
+      <div class="set-warn"><span aria-hidden="true">🔑</span><span>Посилання діє як пароль: хто його має, той бачить і змінює обрані дошки. Не публікуйте його. Якщо ним 90 днів не користуватися, воно перестане діяти.</span></div>
+    </div>
+    <div class="set-card">
+      <h3>Як підключити</h3>
+      <ol class="set-steps">
+        <li>У Claude відкрийте <b>Settings → Connectors</b> і натисніть <b>Add custom connector</b>.</li>
+        <li>Назва <code>JamBoard</code>, у поле URL вставте посилання звідси, <b>Add</b>.</li>
+        <li>У чаті увімкніть конектор і попросіть, наприклад: <q>прочитай дошку «<span id="setBoardName">Нова дошка</span>» і згрупуй стікери за темами</q>.</li>
+      </ol>
+    </div>
+    <div class="set-card" id="setScope" hidden>
+      <h3 id="setScopeTitle">Дошки, які бачить Claude</h3>
+      <ul class="set-boards" id="setBoards" aria-labelledby="setScopeTitle"></ul>
+      <label class="set-auto"><input type="checkbox" id="setAuto" checked>Нові дошки, які я створюю чи відкриваю, додавати автоматично</label>
+    </div>
+  </div>
+  <div class="set-body" id="setMore" role="tabpanel" aria-labelledby="setTabMore" hidden>
+    <p>Claude може брати дані з інших сервісів і класти їх на дошку. Підключіть потрібний сервіс у Claude <b>поруч із JamBoard</b> (Settings → Connectors) і просіть одним реченням. Ключі від цих сервісів лишаються у вашому Claude, JamBoard їх не бачить.</p>
+    <div class="set-mcp">
+      <span class="ic" style="background:#1d1d1f" aria-hidden="true">R</span>
+      <h3>Refero <a href="https://doc.refero.design/mcp/getting-started" target="_blank" rel="noopener">Як підключити ↗</a></h3>
+      <p>Бібліотека референсів: екрани й флоу реальних застосунків і сайтів. Claude знайде приклади й покладе їх на дошку картинками.</p>
+      <div class="set-ex"><q data-ex="refero">Знайди в Refero 8 екранів онбордингу фінтех-застосунків і поклади їх на дошку «<span class="bn"></span>» у секцію «Референси»</q><button class="txt-btn" data-copy="refero">Скопіювати</button></div>
+    </div>
+    <div class="set-mcp">
+      <span class="ic" style="background:#a8124d" aria-hidden="true">F</span>
+      <h3>Figma</h3>
+      <p>Макети й FigJam: структура екранів, коментарі, тексти. Є в каталозі конекторів Claude.</p>
+      <div class="set-ex"><q data-ex="figma">Візьми фрейми з цього файлу Figma і зроби на дошці «<span class="bn"></span>» схему флоу з блоками й стрілками</q><button class="txt-btn" data-copy="figma">Скопіювати</button></div>
+    </div>
+    <div class="set-mcp">
+      <span class="ic" style="background:#5e5ce6" aria-hidden="true">L</span>
+      <h3>Linear, Jira, GitHub</h3>
+      <p>Задачі стають картками з посиланням, статусом і виконавцем; Claude оновлює їх командою «синхронізуй задачі».</p>
+      <div class="set-ex"><q data-ex="tasks">Додай на таймлайн дошки «<span class="bn"></span>» задачі поточного спринту з Linear по командах</q><button class="txt-btn" data-copy="tasks">Скопіювати</button></div>
+    </div>
+  </div>
 </div>
 <div class="peek-back" id="peekBack" hidden></div>
 <div class="panel peek" id="peek" role="dialog" aria-modal="true" aria-labelledby="peekTitle" hidden>
@@ -1966,24 +2147,107 @@ const Plan = (() => {
     msg: ['Ретро · Mad / Sad / Glad', [['😠 Злить', 'warn'], ['😢 Засмучує', 'purple'], ['😊 Радує', 'ok']]],
     '4l': ['Ретро · 4L', [['💚 Сподобалось', 'ok'], ['📚 Навчились', 'info'], ['🕳️ Бракувало', 'warn'], ['✨ Хотілося б', 'purple']]],
     sail: ['Ретро · Вітрильник', [['🌬️ Вітер: що нас рухає', 'teal'], ['⚓ Якір: що гальмує', 'gray'], ['🪨 Скелі: ризики попереду', 'warn'], ['🏝️ Острів: наша мета', 'ok']]],
+    kalm: ['Ретро · Keep / Add / Less / More', [['✅ Залишити', 'ok'], ['➕ Додати', 'info'], ['➖ Менше', 'warn'], ['⬆️ Більше', 'purple']]],
+    wwa: ['Ретро · Що вдалось / Що покращити / Дії', [['🎉 Що вдалось', 'ok'], ['🔧 Що покращити', 'warn'], ['🚀 Дії: хто й до коли', 'info']]],
+    kanban: ['Канбан', [['📥 Беклог', 'gray'], ['📝 До роботи', 'info'], ['🚧 У роботі', 'warn'], ['👀 На перевірці', 'purple'], ['✅ Готово', 'ok']]],
+    moscow: ['Пріоритети · MoSCoW', [['🔴 Must · без цього ніяк', 'pink'], ['🟠 Should · дуже варто', 'warn'], ['🔵 Could · якщо встигнемо', 'info'], ['⚪ Won’t · не цього разу', 'gray']]],
+    pros: ['Плюси й мінуси', [['👍 За', 'ok'], ['👎 Проти', 'pink'], ['❓ Що ще треба з’ясувати', 'info']]],
   };
+  // canvases made of sections: [title, color, col, row, colSpan, rowSpan, hint] on a grid of cells cw×ch
+  const CANVAS = {
+    lean: ['Lean Canvas', 5, 3, 300, 300, [
+      ['1 · Проблема', 'pink', 0, 0, 1, 2, 'Три головні проблеми клієнта. Як їх вирішують зараз?'],
+      ['4 · Рішення', 'info', 1, 0, 1, 1, 'Найпростіше рішення кожної з проблем'],
+      ['8 · Ключові метрики', 'teal', 1, 1, 1, 1, 'Які цифри покажуть, що все працює?'],
+      ['3 · Унікальна цінність', 'purple', 2, 0, 1, 2, 'Одне речення: чому ви, а не інші'],
+      ['9 · Нечесна перевага', 'warn', 3, 0, 1, 1, 'Що не можна просто скопіювати чи купити?'],
+      ['5 · Канали', 'caution', 3, 1, 1, 1, 'Як клієнти про вас дізнаються'],
+      ['2 · Сегменти клієнтів', 'ok', 4, 0, 1, 2, 'Для кого це? Хто ранні користувачі?'],
+      ['7 · Структура витрат', 'gray', 0, 2, 2.5, 1, 'На що підуть гроші: люди, сервери, маркетинг'],
+      ['6 · Потоки доходу', 'ok', 2.5, 2, 2.5, 1, 'Як і скільки платять клієнти'],
+    ]],
+    bmc: ['Бізнес-модель (Business Model Canvas)', 5, 3, 300, 300, [
+      ['🤝 Ключові партнери', 'purple', 0, 0, 1, 2, 'Хто допомагає нам працювати?'],
+      ['⚙️ Ключові дії', 'info', 1, 0, 1, 1, 'Що ми мусимо робити щодня?'],
+      ['🧱 Ключові ресурси', 'teal', 1, 1, 1, 1, 'Люди, технології, гроші, бренд'],
+      ['💎 Ціннісні пропозиції', 'pink', 2, 0, 1, 2, 'Яку проблему клієнта ми вирішуємо?'],
+      ['💬 Відносини з клієнтами', 'caution', 3, 0, 1, 1, 'Як ми спілкуємося з клієнтами?'],
+      ['📣 Канали', 'warn', 3, 1, 1, 1, 'Як ми до них дістаємось?'],
+      ['👥 Сегменти клієнтів', 'ok', 4, 0, 1, 2, 'Для кого ми створюємо цінність?'],
+      ['💸 Структура витрат', 'gray', 0, 2, 2.5, 1, 'Найбільші витрати'],
+      ['💰 Потоки доходу', 'ok', 2.5, 2, 2.5, 1, 'За що й як платять клієнти'],
+    ]],
+    empathy: ['Карта емпатії', 2, 3, 460, 300, [
+      ['💬 Каже', 'info', 0, 0, 1, 1, 'Цитати з інтерв’ю'],
+      ['💭 Думає', 'purple', 1, 0, 1, 1, 'Що в голові, але вголос не каже?'],
+      ['🛠️ Робить', 'teal', 0, 1, 1, 1, 'Дії й поведінка'],
+      ['❤️ Відчуває', 'pink', 1, 1, 1, 1, 'Що тривожить і що надихає?'],
+      ['😣 Болі', 'warn', 0, 2, 1, 1, 'Страхи, перешкоди, розчарування'],
+      ['🌟 Здобутки', 'ok', 1, 2, 1, 1, 'Чого хоче досягти, що для нього успіх'],
+    ]],
+    persona: ['Персона', 3, 2, 400, 320, [
+      ['👤 Хто це', 'caution', 0, 0, 1, 2, 'Ім’я, вік, роль, де працює. Додайте фото'],
+      ['🎯 Цілі', 'ok', 1, 0, 1, 1, 'Чого хоче досягти?'],
+      ['😣 Болі', 'pink', 2, 0, 1, 1, 'Що заважає?'],
+      ['🧭 Поведінка й звички', 'info', 1, 1, 1, 1, 'Які сервіси використовує, як ухвалює рішення'],
+      ['💬 Цитата', 'purple', 2, 1, 1, 1, '«Те, що вона могла б сказати про себе»'],
+    ]],
+    crazy8: ['Crazy 8s · вісім ідей за вісім хвилин', 4, 2, 300, 300, [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ['Ідея ' + n, 'gray', (n - 1) % 4, (n / 4.01) | 0, 1, 1, n === 1 ? 'Хвилина на ідею: малюйте швидко, без деталей' : ''])],
+    mood: ['Мудборд', 3, 3, 400, 280, [
+      ['🖼️ Референси', 'gray', 0, 0, 2, 2, 'Перетягніть сюди картинки або вставте посилання'],
+      ['🎨 Кольори', 'pink', 2, 0, 1, 1, 'Палітра: основний, акцент, фон'],
+      ['🔤 Типографіка', 'info', 2, 1, 1, 1, 'Шрифти заголовків і тексту'],
+      ['✨ Настрій і ключові слова', 'purple', 0, 2, 2, 1, 'Три-п’ять слів про відчуття від продукту'],
+      ['🧵 Текстури й фото', 'caution', 2, 2, 1, 1, ''],
+    ]],
+    brain: ['Мозковий штурм', 3, 2, 400, 320, [
+      ['❓ Питання', 'info', 0, 0, 1, 2, 'Як ми могли б…?'],
+      ['💡 Ідеї', 'caution', 1, 0, 2, 1, 'Кількість важливіша за якість. Без критики'],
+      ['⭐ Найкращі', 'ok', 1, 1, 1, 1, 'Перенесіть сюди ідеї з найбільшою кількістю голосів'],
+      ['🧪 Що перевіримо', 'purple', 2, 1, 1, 1, 'Перший маленький експеримент'],
+    ]],
+  };
+  // [key, name, description, group]
+  const GROUPS = [['plan', 'Планування'], ['prio', 'Пріоритети'], ['product', 'Продукт і стратегія'], ['ux', 'UX і дизайн'], ['retro', 'Ретро']];
   const TEMPLATES = [
-    ['sprints', 'Таймлайн спринтів', 'Спринти по 2 тижні з доріжками команд'],
-    ['weeks', 'Таймлайн тижнів', 'Шість тижнів від поточного'],
-    ['gantt', 'Діаграма Ганта', 'Задачі-смуги з прогресом і залежностями'],
-    ['roadmap', 'Роадмап', 'Зараз · Далі · Потім'],
-    ['matrix', 'Матриця Impact / Effort', 'Пріоритети: вплив проти зусиль'],
-    ['table', 'Таблиця', 'Колонки й рядки, картки прилипають до клітинок'],
-    ['sprint', 'Спринт-планінг', 'Ціль, беклог і що беремо в спринт'],
-    ['ssc', 'Start / Stop / Continue', 'Ретро на три колонки'],
-    ['msg', 'Mad / Sad / Glad', 'Ретро про емоції команди'],
-    ['4l', '4L', 'Liked · Learned · Lacked · Longed for'],
-    ['sail', 'Вітрильник', 'Вітер, якір, скелі й острів'],
+    ['sprints', 'Таймлайн спринтів', 'Спринти по 2 тижні з доріжками команд', 'plan'],
+    ['weeks', 'Таймлайн тижнів', 'Шість тижнів від поточного', 'plan'],
+    ['gantt', 'Діаграма Ганта', 'Задачі-смуги з прогресом і залежностями', 'plan'],
+    ['roadmap', 'Роадмап', 'Зараз · Далі · Потім', 'plan'],
+    ['matrix', 'Матриця Impact / Effort', 'Пріоритети: вплив проти зусиль', 'prio'],
+    ['table', 'Таблиця', 'Колонки й рядки, картки прилипають до клітинок', 'plan'],
+    ['sprint', 'Спринт-планінг', 'Ціль, беклог і що беремо в спринт', 'plan'],
+    ['ssc', 'Start / Stop / Continue', 'Ретро на три колонки', 'retro'],
+    ['msg', 'Mad / Sad / Glad', 'Ретро про емоції команди', 'retro'],
+    ['4l', '4L', 'Liked · Learned · Lacked · Longed for', 'retro'],
+    ['sail', 'Вітрильник', 'Вітер, якір, скелі й острів', 'retro'],
+    ['kanban', 'Канбан', 'Беклог → у роботі → готово', 'plan'],
+    ['storymap', 'Story map', 'Кроки користувача й релізи під ними', 'plan'],
+    ['okr', 'OKR', 'Цілі, ключові результати й ініціативи', 'plan'],
+    ['standup', 'Дейлі', 'Вчора · сьогодні · блокери для кожного', 'plan'],
+    ['rice', 'RICE', 'Reach × Impact × Confidence ÷ Effort', 'prio'],
+    ['ice', 'ICE', 'Impact · Confidence · Ease, швидка оцінка', 'prio'],
+    ['moscow', 'MoSCoW', 'Must · Should · Could · Won’t', 'prio'],
+    ['eisen', 'Матриця Ейзенхауера', 'Термінове проти важливого', 'prio'],
+    ['lean', 'Lean Canvas', 'Модель стартапу на одному аркуші', 'product'],
+    ['bmc', 'Business Model Canvas', 'Дев’ять блоків бізнес-моделі', 'product'],
+    ['swot', 'SWOT', 'Сильні, слабкі сторони, можливості, загрози', 'product'],
+    ['pros', 'Плюси й мінуси', 'Зважити рішення разом', 'product'],
+    ['cjm', 'Карта шляху клієнта', 'Етапи, дії, емоції, болі й можливості', 'ux'],
+    ['empathy', 'Карта емпатії', 'Каже · думає · робить · відчуває', 'ux'],
+    ['persona', 'Персона', 'Хто наш користувач, його цілі й болі', 'ux'],
+    ['crazy8', 'Crazy 8s', 'Вісім ескізів за вісім хвилин', 'ux'],
+    ['mood', 'Мудборд', 'Референси, кольори, типографіка, настрій', 'ux'],
+    ['brain', 'Мозковий штурм', 'Питання, ідеї, найкращі й перший крок', 'ux'],
+    ['kalm', 'Keep / Add / Less / More', 'Ретро про те, що змінити в процесі', 'retro'],
+    ['wwa', 'Що вдалось · що покращити', 'Ретро з діями: хто й до коли', 'retro'],
   ];
   function template(key, ox, oy, makeId, by, nowMs) {
     const out = [], mk = (o) => { const it = { id: makeId(), by, ...o }; out.push(it); return it; };
     const table = (o, cw, lh) => { const t = { type: 'table', x: ox, y: oy, color: 'gray', ...o }; Object.assign(t, sizeFor({ ...t, w: 0, h: 0 }, cw, lh)); return mk(t); };
     const tl = (o, cw, lh) => { const t = { type: 'timeline', x: ox, y: oy, color: 'gray', start: thisMonday(nowMs || Date.now()), ...o }; Object.assign(t, sizeFor({ ...t, w: 0, h: 0 }, cw, lh)); return mk(t); };
+    const cols = (title, cs, cw, lh, rows) => table({ title, cols: cs.map((c) => c[0]), rows: rows || [], tint: cs.map((c) => c[1]) }, cw, lh);
+    const hint = (t, x, y, w, color, extra) => mk({ type: 'sticky', x, y, w, h: 120, color, text: t, ...extra });
     if (key === 'sprints') tl({ title: 'Спринти', unit: 'sprint', len: 14, k: 1, n: 4, lanes: ['Дизайн', 'Фронтенд', 'Бекенд'] }, 340, 250);
     else if (key === 'weeks') tl({ title: 'План на шість тижнів', unit: 'week', n: 6, lanes: [] }, 300, 420);
     else if (key === 'gantt') {
@@ -1999,14 +2263,34 @@ const Plan = (() => {
     }
     else if (key === 'roadmap') table({ title: 'Роадмап', cols: ['Зараз', 'Далі', 'Потім'], rows: ['Продукт', 'Дизайн', 'Розробка'], tint: ['ok', 'info', 'purple'] }, 380, 260);
     else if (key === 'matrix') table({ title: 'Пріоритети · Impact / Effort', kind: 'matrix', cols: ['Мало зусиль', 'Багато зусиль'], rows: ['Великий вплив', 'Малий вплив'], cells: ['Швидкі перемоги', 'Великі проєкти', 'Дрібниці', 'Не варто зусиль'], ax: ['Зусилля', 'Вплив'], tint: ['ok', 'warn'] }, 480, 380);
+    else if (key === 'eisen') table({ title: 'Матриця Ейзенхауера', kind: 'matrix', cols: ['Термінове', 'Не термінове'], rows: ['Важливе', 'Неважливе'], cells: ['🔥 Зробити зараз', '📅 Запланувати', '🤝 Делегувати', '🗑️ Прибрати'], ax: ['Терміновість', 'Важливість'], tint: ['warn', 'info'] }, 480, 380);
+    else if (key === 'swot') table({ title: 'SWOT', kind: 'matrix', cols: ['Допомагає', 'Заважає'], rows: ['Всередині', 'Ззовні'], cells: ['💪 Сильні сторони', '⚠️ Слабкі сторони', '🚀 Можливості', '🌩️ Загрози'], ax: ['Вплив', 'Джерело'], tint: ['ok', 'pink'] }, 480, 380);
     else if (key === 'table') table({ title: 'Таблиця', cols: ['Колонка 1', 'Колонка 2', 'Колонка 3'], rows: ['Рядок 1', 'Рядок 2'] }, 320, 260);
     else if (key === 'sprint') {
       mk({ type: 'sticky', x: ox, y: oy, w: 300, h: 220, color: 'pink', text: '🎯 Ціль спринту\n\nЗа що ми хочемо, щоб нас похвалили наприкінці?' });
       mk({ type: 'sticky', x: ox, y: oy + 250, w: 300, h: 160, color: 'caution', text: '👥 Ємність команди\n\n… сторіпоінтів' });
       table({ title: 'Спринт-планінг', x: ox + 340, cols: ['📥 Беклог', '✅ Беремо в спринт', '🚧 Ризики й залежності'], rows: [], tint: ['gray', 'ok', 'warn'] }, 360, 640);
-    } else if (RETRO[key]) {
-      const [title, cols] = RETRO[key];
-      table({ title, cols: cols.map((c) => c[0]), rows: [], tint: cols.map((c) => c[1]) }, cols.length > 3 ? 330 : 380, 620);
+    }
+    else if (key === 'storymap') table({ title: 'Story map', cols: ['🔍 Знайти', '🛒 Вибрати', '💳 Оплатити', '📦 Отримати', '🔁 Повернутися'], rows: ['🧭 Що робить користувач', '🚀 Реліз 1 · MVP', '📦 Реліз 2', '✨ Колись потім'], tint: ['info', 'teal', 'ok', 'caution', 'purple'] }, 300, 220);
+    else if (key === 'okr') table({ title: 'OKR на квартал', cols: ['📈 Ключовий результат 1', '📈 Ключовий результат 2', '📈 Ключовий результат 3', '🧩 Ініціативи'], rows: ['🎯 Ціль 1', '🎯 Ціль 2', '🎯 Ціль 3'], tint: ['ok', 'ok', 'ok', 'info'] }, 300, 220);
+    else if (key === 'standup') table({ title: 'Дейлі', cols: ['✅ Вчора', '🛠️ Сьогодні', '🚧 Блокери'], rows: ['Учасник 1', 'Учасник 2', 'Учасник 3', 'Учасник 4'], tint: ['ok', 'info', 'pink'] }, 320, 170);
+    else if (key === 'cjm') table({ title: 'Карта шляху клієнта', cols: ['👀 Дізнається', '🤔 Обирає', '🛒 Купує', '📱 Користується', '💬 Рекомендує'], rows: ['🎬 Дії', '📍 Точки контакту', '💭 Думки', '😊 Емоції', '😣 Болі', '💡 Можливості'], tint: ['info', 'teal', 'ok', 'caution', 'purple'] }, 300, 170);
+    else if (key === 'rice' || key === 'ice') {
+      const rice = key === 'rice';
+      const t = table({ title: rice ? 'Пріоритети · RICE' : 'Пріоритети · ICE', cols: rice ? ['👥 Reach', '💥 Impact', '🎯 Confidence', '⏱️ Effort', '🏆 RICE'] : ['💥 Impact', '🎯 Confidence', '🪶 Ease', '🏆 ICE'], rows: ['Ідея 1', 'Ідея 2', 'Ідея 3', 'Ідея 4', 'Ідея 5'], tint: rice ? ['info', 'pink', 'purple', 'warn', 'ok'] : ['pink', 'purple', 'teal', 'ok'] }, 200, 130);
+      hint(rice ? '🧮 RICE = Reach × Impact × Confidence ÷ Effort\n\nReach: скільки людей за квартал\nImpact: 3 · 2 · 1 · 0,5 · 0,25\nConfidence: 100 · 80 · 50 %\nEffort: людино-тижні' : '🧮 ICE = Impact × Confidence × Ease\n\nКожне від 1 до 10. Назви ідей пишіть у рядках зліва', ox + t.w + 40, oy, 300, 'caution', { h: rice ? 250 : 190 });
+    }
+    else if (RETRO[key]) {
+      const [title, cs] = RETRO[key];
+      cols(title, cs, cs.length > 4 ? 300 : cs.length > 3 ? 330 : 380, 620);
+    } else if (CANVAS[key]) {
+      const [title, nc, nr, cw, ch, parts] = CANVAS[key], gx = 24, gy = 64, top = 90;
+      mk({ type: 'text', x: ox, y: oy, w: Math.min(900, nc * cw), h: 48, ts: 'h1', text: title });
+      for (const [name, color, c, r, cs, rs, tip] of parts) {
+        const x = ox + c * (cw + gx), y = oy + top + r * (ch + gy), w = cs * cw + (cs - 1) * gx, h = rs * ch + (rs - 1) * gy;
+        const s = mk({ type: 'section', x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h), title: name, color, autofit: false });
+        if (tip) hint(tip, s.x + 24, s.y + 24, Math.min(240, s.w - 48), color, { h: 110, sec: s.id });
+      }
     } else throw new Error('Unknown template: ' + key);
     return out;
   }
@@ -2164,7 +2448,7 @@ const Plan = (() => {
   };
   const source = (u) => { for (const k in SOURCES) { const m = SOURCES[k].match(String(u || '')); if (m) return m; } return null; };
 
-  return { TOP, SIDE, PAD, GAP, BAR_H, TRACK, UNITS, STATUSES, STATUS_NAMES, TEMPLATES, SOURCES, isGrid, isBar, dayOf, isoOf, localDay, thisMonday, fmtD, range, dims, sizeFor, column, nowAt, rowName, cellRect, cellAt, cellOf, snap, slotIn, readOrder, flow, cellTop, reflow, xOfDay, dayAtX, barSpan, barBox, barDates, laneY, trackOf, barY, nextTrack, colOfDay, placeBar, workdays, template, sortByVotes, markdown, source };
+  return { TOP, SIDE, PAD, GAP, BAR_H, TRACK, UNITS, STATUSES, STATUS_NAMES, TEMPLATES, GROUPS, SOURCES, isGrid, isBar, dayOf, isoOf, localDay, thisMonday, fmtD, range, dims, sizeFor, column, nowAt, rowName, cellRect, cellAt, cellOf, snap, slotIn, readOrder, flow, cellTop, reflow, xOfDay, dayAtX, barSpan, barBox, barDates, laneY, trackOf, barY, nextTrack, colOfDay, placeBar, workdays, template, sortByVotes, markdown, source };
 })();
 // </plan>
   const isSec = (i) => i.type === 'section';
@@ -2404,7 +2688,7 @@ const Plan = (() => {
     const after = snapIds(Object.keys(before));
     undoStack.push({ before, after }); if (undoStack.length > 120) undoStack.shift();
     redoStack.length = 0; updateHistoryButtons();
-    persist(after); coverSoon(true);
+    persist(after); coverSoon(true); histSoon();
     if (ripArmed && newIds.length) { // the first thing created after a paste gets the ripple
       const fresh = performance.now() - ripArmed < 10000; ripArmed = 0;
       const made = newIds.map((id) => items.get(id)).filter((i) => i && !isLink(i));
@@ -2421,7 +2705,7 @@ const Plan = (() => {
   function applyMap(map) {
     for (const id in map) map[id] ? putItem(id, { ...map[id] }) : items.delete(id);
     selected = new Set([...selected].filter((id) => items.has(id)));
-    persist(map); renderAll(); coverSoon(true);
+    persist(map); renderAll(); coverSoon(true); histSoon();
   }
   function undo() { finishEdit(); const op = undoStack.pop(); if (!op) return; applyMap(op.before); redoStack.push(op); updateHistoryButtons(); }
   function redo() { finishEdit(); const op = redoStack.pop(); if (!op) return; applyMap(op.after); undoStack.push(op); updateHistoryButtons(); }
@@ -5040,7 +5324,7 @@ const Plan = (() => {
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     for (const i of cards) { x0 = Math.min(x0, i.x); y0 = Math.min(y0, i.y - (i.type === 'section' ? 40 : 0)); x1 = Math.max(x1, i.x + W(i)); y1 = Math.max(y1, i.y + H(i)); }
     const T = (c, d) => `var(--t-${COLORS.includes(c) ? c : d})`;
-    const box = (i, cls) => { const e = document.createElement('div'); e.className = 'pv ' + cls; e.style.cssText = `left:${i.x}px;top:${i.y}px;width:${W(i)}px;height:${H(i)}px`; return e; };
+    const box = (i, cls) => { const e = document.createElement('div'); e.className = 'pv ' + cls; e.style.cssText = `left:${i.x}px;top:${i.y}px;width:${W(i)}px;height:${H(i)}px`; if (i.id) e.dataset.id = i.id; return e; };
     const order = cards.sort((a, b) => rank(a) - rank(b) || (a.z || 0) - (b.z || 0));
     const secs = order.filter((i) => i.type === 'section'), rest = order.filter((i) => i.type !== 'section');
     for (const i of secs) {
@@ -5098,7 +5382,8 @@ const Plan = (() => {
     if (!bid) return;
     closeGallery(); closeThread();
     const pop = $('#peek'), back = $('#peekBack'), token = ++pk.token;
-    pk.open = true; pk.bid = bid; pk.from = fromEl || null;
+    pk.open = true; pk.bid = bid; pk.from = fromEl || null; pk.hist = null;
+    pop.classList.remove('hist'); $('#peekNew').hidden = false; $('#peekWorld').classList.remove('hs-diff');
     // grow out of the card that was clicked
     const r = fromEl && fromEl.getBoundingClientRect();
     pop.hidden = false; back.hidden = false; pop.classList.remove('out'); back.classList.remove('out');
@@ -5162,6 +5447,7 @@ const Plan = (() => {
   function closePeek(go) {
     if (!pk.open) return;
     pk.open = false; pk.token++;
+    if (pk.hist) { pk.hist = null; histPreviewClosed(); }
     const pop = $('#peek'), back = $('#peekBack'), from = pk.from;
     pop.classList.remove('in'); pop.classList.add('out'); back.classList.add('out');
     setTimeout(() => { if (!pk.open) { pop.hidden = true; back.hidden = true; $('#peekWorld').innerHTML = ''; } }, reduceMotion ? 0 : 200);
@@ -5169,11 +5455,12 @@ const Plan = (() => {
     else if (from && from.isConnected) { const f = from.closest('.item') ? null : from; if (f && f.focus) f.focus({ preventScroll: true }); }
   }
   $('#peekClose').addEventListener('click', () => closePeek(false));
-  $('#peekGo').addEventListener('click', () => closePeek(true));
+  $('#peekGo').addEventListener('click', () => (pk.hist ? histRestore() : closePeek(true)));
   $('#peekBack').addEventListener('pointerdown', () => closePeek(false));
   $('#peek').addEventListener('keydown', (e) => {
     e.stopPropagation();
     if (e.key === 'Escape') { e.preventDefault(); closePeek(false); return; }
+    if (pk.hist && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); histStep(e.key === 'ArrowUp' ? -1 : 1); return; } // the next older / newer version
     if (e.key === 'Tab') { // keep focus inside the dialog
       const f = [...$('#peek').querySelectorAll('button:not([disabled]), a[href]')]; if (!f.length) return;
       const i = f.indexOf(document.activeElement), n = e.shiftKey ? (i <= 0 ? f.length - 1 : i - 1) : (i + 1) % f.length;
@@ -5220,6 +5507,260 @@ const Plan = (() => {
     st.addEventListener('dblclick', () => peekFit(true));
     addEventListener('resize', () => { if (pk.open && pk.fit) peekFit(false); });
   })();
+  // ---------- version history: the server keeps every change to an item with who made it (supabase/history.sql).
+  // The list folds one person's run of changes into a version; a version opens in the preview dialog beside the list
+  // (what changed is ringed), and restoring it writes only the difference, as one ordinary undo step ----------
+  const HS_GAP = 10 * 60000, HS_PAGE = 200, HS_TOP = 60;
+  const hs = { open: false, bid: null, rows: new Map(), groups: [], more: false, cur: null, sig: '', timer: 0, soon: 0, cache: new Map(), token: 0, busy: false };
+  const HS_NOUNS = { sticky: ['стікер', 'стікери', 'стікерів'], text: ['текст', 'тексти', 'текстів'], image: ['зображення', 'зображення', 'зображень'],
+    section: ['секцію', 'секції', 'секцій'], stamp: ['штамп', 'штампи', 'штампів'], comment: ['коментар', 'коментарі', 'коментарів'],
+    link: ['зв’язок', 'зв’язки', 'зв’язків'], web: ['посилання', 'посилання', 'посилань'], node: ['блок', 'блоки', 'блоків'],
+    board: ['картку дошки', 'картки дошок', 'карток дошок'], timeline: ['таймлайн', 'таймлайни', 'таймлайнів'], table: ['таблицю', 'таблиці', 'таблиць'],
+    task: ['задачу', 'задачі', 'задач'], bar: ['смугу', 'смуги', 'смуг'] };
+  const HS_ANY = ['елемент', 'елементи', 'елементів'];
+  const HS_VERBS = { add: 'додано', edit: 'змінено', move: 'переміщено', del: 'видалено' };
+  const hsPlural = (n, f) => plural(n, f[0], f[1], f[2]);
+  const idOfPath = (p) => p.slice(p.lastIndexOf('/') + 1);
+  const hsTime = (t) => new Date(t).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+  function hsDay(t) {
+    const d = new Date(t), now = new Date(), day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+    const ago = Math.round((day(now) - day(d)) / 864e5);
+    if (ago === 0) return 'Сьогодні'; if (ago === 1) return 'Вчора';
+    return d.toLocaleDateString('uk-UA', d.getFullYear() === now.getFullYear() ? { day: 'numeric', month: 'long' } : { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  const hsWhen = (t) => { const d = hsDay(t); return (d === 'Сьогодні' || d === 'Вчора' ? d.toLowerCase() : d) + ', ' + hsTime(t); };
+  const hsStamp = (t) => new Date(t).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' }) + ', ' + hsTime(t); // stays true tomorrow
+  function hsWho(w) {
+    if (!w || typeof w !== 'object') return { key: '?', n: 'Хтось', e: '👤', c: '#8e8e93' };
+    if (w.seed) return { key: 'seed', n: 'Збережений стан', e: '🗂️', c: '#8e8e93', seed: true };
+    if (w.mcp) return { key: 'mcp', n: 'Claude', e: '✦', c: '#c2185b' };
+    const v = typeof w.v === 'string' ? w.v : '', r = typeof w.r === 'string' ? w.r.slice(0, 40) : '';
+    return { key: (v || shortStr(w.n, 32) || '?') + (r ? '/' + r : ''), n: shortStr(w.n, 32) || 'Хтось', e: typeof w.e === 'string' && w.e && w.e.length <= 8 ? w.e : '👤', c: safeColor(w.c), mine: !!v && v === myVid, r };
+  }
+  function hsGroup() {
+    const out = []; let g = null;
+    for (const r of [...hs.rows.values()].sort((a, b) => b.id - a.id)) {
+      const w = hsWho(r.who), t = Date.parse(r.at) || 0;
+      if (!g || g.who.key !== w.key || (!w.seed && Math.abs(g.t0 - t) > HS_GAP)) { g = { id: r.id, t, t0: t, who: w, rows: [] }; out.push(g); }
+      g.rows.push(r); if (t < g.t0) g.t0 = t; if (t > g.t) g.t = t;
+    }
+    hs.groups = out;
+  }
+  function hsSummary(g) {
+    if (g.who.seed) return 'Так дошка виглядала, коли ввімкнули історію';
+    if (g.who.r) return 'Відновлено версію від ' + g.who.r;
+    const per = new Map(); // each item once: what this version did to it in the end
+    for (let i = g.rows.length - 1; i >= 0; i--) {
+      const r = g.rows[i], p = per.get(r.path);
+      if (!p) per.set(r.path, { first: r.op, last: r.op, edit: r.op === 'edit', type: r.type, label: r.label });
+      else { p.last = r.op; p.edit = p.edit || r.op === 'edit'; if (r.type) p.type = r.type; if (r.label != null) p.label = r.label; }
+    }
+    const by = { add: [], edit: [], move: [], del: [] };
+    for (const p of per.values()) {
+      const op = p.first === 'add' ? (p.last === 'del' ? null : 'add') : p.last === 'del' ? 'del' : p.edit || p.first === 'del' ? 'edit' : 'move';
+      if (op) by[op].push(p);
+    }
+    const parts = [];
+    for (const op of ['add', 'edit', 'move', 'del']) {
+      const L = by[op]; if (!L.length) continue;
+      const types = new Map(); L.forEach((p) => types.set(p.type, (types.get(p.type) || 0) + 1));
+      let what;
+      if (L.length === 1) {
+        const p = L[0], lab = typeof p.label === 'string' ? p.label.replace(/\s+/g, ' ').trim() : '';
+        what = (HS_NOUNS[p.type] || HS_ANY)[0] + (lab ? ' «' + (lab.length > 36 ? lab.slice(0, 35) + '…' : lab) + '»' : '');
+      } else if (types.size <= 2) what = [...types].map(([t, n]) => n + ' ' + hsPlural(n, HS_NOUNS[t] || HS_ANY)).join(' і ');
+      else what = L.length + ' ' + hsPlural(L.length, HS_ANY);
+      parts.push(HS_VERBS[op] + ' ' + what);
+    }
+    const s = parts.join(', ') || 'дрібні зміни';
+    return s[0].toUpperCase() + s.slice(1);
+  }
+  function hsMsg(html) { $('#histMsg').innerHTML = html; }
+  function hsRender() {
+    const list = $('#histList');
+    const sig = hs.groups.map((g) => g.id + ':' + g.rows.length + ':' + g.t + ':' + g.who.key).join(',') + '|' + hs.more;
+    if (sig === hs.sig) return hsMark();
+    hs.sig = sig;
+    const top = list.scrollTop, had = document.activeElement && list.contains(document.activeElement) ? document.activeElement.dataset.id : null;
+    const frag = document.createDocumentFragment(); let day = '';
+    hs.groups.forEach((g, k) => {
+      const d = hsDay(g.t);
+      if (d !== day) { day = d; const h = document.createElement('div'); h.className = 'hs-day'; h.textContent = d; frag.appendChild(h); }
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'hs-item'; b.dataset.id = g.id;
+      const av = document.createElement('span'); av.className = 'av'; av.style.setProperty('--pc', g.who.c); av.textContent = g.who.e; av.setAttribute('aria-hidden', 'true');
+      const t = document.createElement('span'); t.className = 'hs-t';
+      const l = document.createElement('span'); l.className = 'hs-l';
+      const n = document.createElement('b'); n.textContent = g.who.n + (g.who.mine ? ' (ви)' : '');
+      const tm = document.createElement('time'); tm.dateTime = new Date(g.t).toISOString(); tm.textContent = hsTime(g.t);
+      l.append(n, tm);
+      const sm = document.createElement('small'); sm.textContent = hsSummary(g);
+      t.append(l, sm); b.append(av, t);
+      if (k === 0) { const now = document.createElement('span'); now.className = 'hs-now'; now.textContent = 'Зараз'; b.appendChild(now); }
+      b.setAttribute('aria-label', (k === 0 ? 'Поточна версія. ' : '') + n.textContent + ', ' + hsWhen(g.t) + '. ' + sm.textContent);
+      frag.appendChild(b);
+    });
+    if (hs.more) { const m = document.createElement('button'); m.type = 'button'; m.className = 'txt-btn hs-more'; m.textContent = 'Показати давніші'; frag.appendChild(m); }
+    list.textContent = ''; list.appendChild(frag); list.scrollTop = top;
+    if (had) { const f = list.querySelector(`.hs-item[data-id="${had}"]`); if (f) f.focus({ preventScroll: true }); }
+    hsMark();
+  }
+  function hsMark() { $('#histList').querySelectorAll('.hs-item').forEach((b) => { const on = +b.dataset.id === hs.cur; if ((b.getAttribute('aria-current') === 'true') !== on) b.setAttribute('aria-current', String(on)); }); }
+  const hsBtn = (id) => $('#histList').querySelector(`.hs-item[data-id="${id}"]`);
+  async function hsLoad(more) {
+    const H = db && db.history;
+    if (!H) { $('#histList').classList.remove('wait'); hsMsg(mode === 'local' ? 'Історія версій зберігається лише на спільній дошці. Тут дошка живе тільки в цьому браузері.' : 'Історія версій тут недоступна.'); return; }
+    if (hs.busy) return; hs.busy = true;
+    const bid = hs.bid, token = hs.token, fresh = !hs.rows.size;
+    const before = more ? Math.min(...hs.rows.keys()) : null, limit = more || fresh ? HS_PAGE : HS_TOP;
+    let rows;
+    try { rows = await H.list(bid, before, limit); } catch (e) { rows = e; }
+    hs.busy = false;
+    if (token !== hs.token || !hs.open) return;
+    $('#histList').classList.remove('wait');
+    if (!Array.isArray(rows)) {
+      const e = rows, missing = e && (e.code === 'PGRST202' || /jb_history/.test(e.message || ''));
+      if (!hs.rows.size) hsMsg(missing ? 'Історію версій ще не ввімкнено. Виконайте в Supabase → SQL Editor файл <code>supabase/history.sql</code> з репозиторію.' : 'Не вдалося завантажити історію. Перевірте зв’язок і спробуйте ще раз.');
+      return;
+    }
+    const known = hs.rows.size ? Math.max(...hs.rows.keys()) : 0;
+    if (!more && !fresh && rows.length >= limit && Math.min(...rows.map((r) => +r.id)) > known) { hs.rows.clear(); hs.busy = false; return hsLoad(false); } // too much is new: start over
+    for (const r of rows) hs.rows.set(+r.id, { id: +r.id, path: String(r.path), at: r.at, who: r.who, op: r.op, type: r.type, label: r.label });
+    if (more || fresh) hs.more = rows.length >= limit;
+    hsGroup();
+    hsMsg(hs.groups.length ? '' : 'Поки що змін немає. Щойно хтось щось змінить на дошці, тут з’явиться версія.');
+    hsRender();
+    if (pk.open && pk.hist) { // the version on show may have grown, or a newer one appeared above it
+      const g = hs.groups.find((x) => x.id === pk.hist.id);
+      if (g && g !== pk.hist) { pk.hist = g; hsHead(g); hsRing(g); }
+    }
+  }
+  function histSoon() { if (!hs.open) return; clearTimeout(hs.soon); hs.soon = setTimeout(() => hsLoad(false), 1200); }
+  function openHistory(open) {
+    open = open != null ? !!open : !hs.open;
+    if (open === hs.open) return;
+    const pop = $('#histPop'), btn = $('#histBtn');
+    hs.open = open; btn.setAttribute('aria-expanded', String(open)); btn.setAttribute('aria-pressed', String(open));
+    hs.token++; clearInterval(hs.timer); clearTimeout(hs.soon); hs.timer = 0;
+    if (open) {
+      closeGallery(); closeThread(); openPlan(false); openMermaid(false); closeSidePops();
+      hs.bid = boardId; hs.rows.clear(); hs.groups = []; hs.sig = ''; hs.cur = null; hs.more = false; hs.cache.clear(); hs.busy = false;
+      $('#histList').textContent = ''; $('#histList').classList.add('wait'); hsMsg('');
+      pop.classList.remove('out'); pop.hidden = false;
+      hsLoad(false);
+      hs.timer = setInterval(() => { if (!document.hidden && !hs.busy) hsLoad(false); }, 5000); // others' changes show up while the list is open
+      requestAnimationFrame(() => $('#histClose').focus({ preventScroll: true }));
+    } else {
+      if (pk.open && pk.hist) closePeek(false);
+      pop.classList.add('out');
+      setTimeout(() => { if (!hs.open) pop.hidden = true; }, reduceMotion ? 0 : 170);
+    }
+  }
+  function hsHead(g) {
+    const now = g === hs.groups[0];
+    $('#peekTitle').textContent = (now ? 'Поточна версія · ' : 'Версія · ') + hsWhen(g.t);
+    $('#peekSub').textContent = g.who.n + (g.who.mine ? ' (ви)' : '') + ': ' + hsSummary(g).replace(/^./, (c) => (g.who.seed || g.who.r ? c : c.toLowerCase()));
+    const go = $('#peekGo');
+    const off = now || viewOnly() || mode !== 'shared', had = document.activeElement === go;
+    go.textContent = now ? 'Це поточна версія' : 'Відновити цю версію'; go.disabled = off;
+    if (off && had) $('#peekClose').focus({ preventScroll: true }); // a disabled button would drop the focus, and the arrow keys with it
+  }
+  function hsRing(g) { // what this version touched, ringed; the rest of the board a little faded
+    const w = $('#peekWorld'), ids = new Set(g.who.seed ? [] : g.rows.filter((r) => r.op !== 'del').map((r) => idOfPath(r.path)));
+    let n = 0;
+    w.querySelectorAll('.pv[data-id]').forEach((e) => { const on = ids.has(e.dataset.id); if (on) n++; e.classList.toggle('hs-hit', on); });
+    w.classList.toggle('hs-diff', n > 0);
+  }
+  async function hsPreview(g, fromEl) {
+    if (!g || !db || !db.history) return;
+    hs.cur = g.id; hsMark();
+    if (pk.open && !pk.hist) closePeek(false); // a board preview was open: this one takes its place
+    const pop = $('#peek'), back = $('#peekBack'), first = !pk.open || !pk.hist, token = ++pk.token;
+    if (!pk.open) {
+      closeThread();
+      pk.open = true; pk.bid = null; pk.from = fromEl || null;
+      const r = fromEl && fromEl.getBoundingClientRect();
+      pop.classList.add('hist'); $('#peekNew').hidden = true;
+      pop.hidden = false; back.hidden = false; pop.classList.remove('out'); back.classList.remove('out');
+      const pr = pop.getBoundingClientRect();
+      pop.style.transformOrigin = r ? `${r.left + r.width / 2 - pr.left}px ${r.top + r.height / 2 - pr.top}px` : '50% 50%';
+      pop.classList.remove('in'); void pop.offsetWidth; pop.classList.add('in');
+      document.body.classList.add('hs-pv');
+    }
+    pk.hist = g; if (fromEl) pk.from = fromEl;
+    hsHead(g); $('#peekMsg').textContent = '';
+    let list = hs.cache.get(g.id);
+    if (!list) {
+      $('#peekStage').classList.add('wait');
+      try { list = await db.history.at(hs.bid, g.id); if (hs.cache.size > 24) hs.cache.delete(hs.cache.keys().next().value); hs.cache.set(g.id, list); } catch (e) { list = null; }
+      if (token !== pk.token || !pk.open || pk.hist !== g) return;
+      $('#peekStage').classList.remove('wait');
+    }
+    if (!list) { $('#peekWorld').innerHTML = ''; pk.fit = null; $('#peekMsg').textContent = 'Не вдалося завантажити цю версію. Перевірте зв’язок'; return; }
+    const its = list.map((r) => ({ ...r.data, id: idOfPath(r.path) })).filter((i) => TYPES_OK.includes(i.type))
+      .map((i) => (hiddenFor(i) ? { ...i, text: '•••', html: undefined } : i)); // hidden writing stays hidden in the past too
+    const keep = !first && pk.fit; // stepping between versions keeps the view, so the eye sees only what moved
+    pk.fit = peekBuild(its);
+    if (!pk.fit) { $('#peekMsg').textContent = 'У цій версії на дошці нічого немає'; return; }
+    hsRing(g);
+    if (keep) peekApply(false); else { peekFit(false); const w = $('#peekWorld'); w.classList.remove('show'); void w.offsetWidth; w.classList.add('show'); }
+    if (first) requestAnimationFrame(() => { if (pk.hist === g && !$('#peekGo').disabled) $('#peekGo').focus({ preventScroll: true }); else $('#peekClose').focus({ preventScroll: true }); });
+  }
+  function histPreviewClosed() {
+    const b = hs.cur != null && hsBtn(hs.cur); if (b) pk.from = b;
+    hs.cur = null; hsMark(); document.body.classList.remove('hs-pv');
+  }
+  async function histStep(d) {
+    const i = hs.groups.findIndex((g) => pk.hist && g.id === pk.hist.id);
+    if (i < 0) return;
+    if (i + d >= hs.groups.length && hs.more) { await hsLoad(true); }
+    const g = hs.groups[i + d]; if (!g) return;
+    const b = hsBtn(g.id); if (b) b.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
+    hsPreview(g, b);
+  }
+  // stable text of an item, to tell what really differs (key order, the revision and empty fields don't count)
+  const canon = (o) => JSON.stringify(o, (k, v) => (v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.keys(v).filter((x) => x !== 'rev' && v[x] !== null).sort().map((x) => [x, v[x]])) : v));
+  async function histRestore() {
+    const g = pk.hist; if (!g || viewOnly() || mode !== 'shared' || !db.history) return;
+    const go = $('#peekGo'); go.disabled = true;
+    let list = hs.cache.get(g.id);
+    if (!list) { try { list = await db.history.at(hs.bid, g.id); } catch (e) { list = null; } }
+    if (pk.hist !== g || hs.bid !== boardId) return;
+    if (!list) { toast('Не вдалося завантажити цю версію'); go.disabled = false; return; }
+    finishEdit();
+    const target = new Map();
+    for (const r of list) { const id = idOfPath(r.path); if (r.data && TYPES_OK.includes(r.data.type)) target.set(id, full(id, r.data)); }
+    const before = {};
+    items.forEach((it, id) => { if (!target.has(id) && !active.has(id)) before[id] = { ...clean(it), id }; });
+    target.forEach((t, id) => { if (active.has(id)) return; const cur = items.get(id); if (!cur || canon(clean(cur)) !== canon(clean(t))) before[id] = cur ? { ...clean(cur), id } : null; });
+    const ids = Object.keys(before);
+    if (!ids.length) { toast('Дошка вже така, як у цій версії'); closePeek(false); return; }
+    for (const id of ids) { if (target.has(id)) putItem(id, target.get(id)); else items.delete(id); }
+    selected = new Set([...selected].filter((id) => items.has(id)));
+    renderAll();
+    db.history.tagged(hsStamp(g.t), () => commit(before)); // every write of the restore says which version it brought back
+    renderAll(); coverSoon(true);
+    closePeek(false);
+    toast('Дошку відновлено до версії від ' + hsWhen(g.t) + '. Ctrl+Z поверне як було');
+    histSoon();
+  }
+  $('#histBtn').addEventListener('click', () => openHistory());
+  $('#histClose').addEventListener('click', () => { openHistory(false); $('#histBtn').focus({ preventScroll: true }); });
+  $('#histList').addEventListener('click', (e) => {
+    if (e.target.closest('.hs-more')) { hsLoad(true); return; }
+    const b = e.target.closest('.hs-item'); if (!b) return;
+    const g = hs.groups.find((x) => x.id === +b.dataset.id); if (!g) return;
+    if (pk.open && pk.hist && pk.hist.id === g.id) { closePeek(false); return; } // a second click puts it away
+    hsPreview(g, b);
+  });
+  $('#histPop').addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Escape') { e.preventDefault(); openHistory(false); $('#histBtn').focus({ preventScroll: true }); return; }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { // walk the list
+      const all = [...$('#histList').querySelectorAll('.hs-item')], i = all.indexOf(document.activeElement);
+      const n = all[i < 0 ? 0 : clamp(i + (e.key === 'ArrowDown' ? 1 : -1), 0, all.length - 1)];
+      if (n) { e.preventDefault(); n.focus(); }
+    }
+  });
   function openWeb(it) { const u = safeHttps(it.url); if (u) window.open(u, '_blank', 'noopener,noreferrer'); }
   function pasteText(text, p) {
     if (Flow.looksLike(text)) { buildMermaid(text, p, true); return; }
@@ -5764,6 +6305,7 @@ const Plan = (() => {
     if (pk.open) { if (e.key === 'Escape') { e.preventDefault(); closePeek(false); } return; } // the board preview has the keys
     if (fg.open) { if (e.key === 'Escape') { e.preventDefault(); closeFig(); } return; }
     if (!$('#mdPop').hidden) { if (e.key === 'Escape') { e.preventDefault(); openExport(false); } return; }
+    if (!$('#setPop').hidden) { if (e.key === 'Escape') { e.preventDefault(); openSettings(false); } return; }
     if (e.target === thInput) {
       if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendComment(); }
       else if (e.key === 'Escape') { e.preventDefault(); closeThread(); }
@@ -6242,10 +6784,157 @@ const Plan = (() => {
   });
   const STALE_LINK = 'Це старе посилання. Попросіть нове: тепер кожна дошка відкривається лише за власним посиланням';
   const boardsKey = () => (privateLinks ? 'jamboard:myboards' : 'jamboard:boards');
-  function saveLocalBoards() { store.set(boardsKey(), JSON.stringify([...boards.entries()].map(([id, b]) => ({ id, ...b })))); }
+  function saveLocalBoards() { store.set(boardsKey(), JSON.stringify([...boards.entries()].map(([id, b]) => ({ id, ...b })))); mcpSoon(); }
   function loadLocalBoards() {
     try { (JSON.parse(store.get(boardsKey()) || '[]') || []).forEach((b) => { if (b && boardOk(b.id)) boards.set(b.id, { title: String(b.title || 'Нова дошка').slice(0, 120), at: +b.at || 0, by: typeof b.by === 'string' ? b.by : '', seen: +b.seen || 0 }); }); } catch (e) {}
   }
+
+  // ---------- settings: a personal link that connects this browser's boards to the visitor's own Claude ----------
+  // The browser makes a random token (jbt_ + 40 chars) and registers it with jb_mcp_token_put (supabase/mcp-tokens.sql),
+  // which keeps only its SHA-256 and the list of boards it may open. The MCP server (…/jamboard-mcp?token=) then
+  // reaches only those boards. The token is stored here (localStorage jamboard:mcp) and in the visitor's Claude, nowhere else.
+  // auto: new boards join the list; off: boards unticked by hand; on: the ticked ones when auto is off.
+  const MCP_LS = 'jamboard:mcp';
+  const mcpSt = { cfg: null, t: '', auto: true, off: [], on: [], sig: '', synced: 0, used: null, busy: false, timer: 0, tab: 'claude' };
+  try { const d = JSON.parse(store.get(MCP_LS) || 'null'); if (d && /^jbt_[A-Za-z0-9]{40}$/.test(d.t)) Object.assign(mcpSt, { t: d.t, auto: d.auto !== false, off: Array.isArray(d.off) ? d.off.filter(secretBoard) : [], on: Array.isArray(d.on) ? d.on.filter(secretBoard) : [], sig: String(d.sig || ''), synced: +d.synced || 0, used: d.used || null }); } catch (e) {}
+  const mcpSave = () => store.set(MCP_LS, JSON.stringify(mcpSt.t ? { t: mcpSt.t, auto: mcpSt.auto, off: mcpSt.off, on: mcpSt.on, sig: mcpSt.sig, synced: mcpSt.synced, used: mcpSt.used } : null));
+  const mcpReady = () => mode === 'shared' && privateLinks && !!(db && db.rpc) && !!(window.JAMBOARD_CONFIG && window.JAMBOARD_CONFIG.supabaseUrl);
+  const mcpUrl = () => window.JAMBOARD_CONFIG.supabaseUrl.replace(/\/+$/, '') + '/functions/v1/jamboard-mcp?token=' + mcpSt.t;
+  const mcpAll = () => boardIds().filter(secretBoard);
+  const mcpBoards = () => (mcpSt.auto ? mcpAll().filter((id) => !mcpSt.off.includes(id)) : mcpSt.on.filter((id) => boards.has(id) || isDemo(id)));
+  function newToken() {
+    const abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', out = [];
+    while (out.length < 40) for (const x of crypto.getRandomValues(new Uint8Array(64))) { if (x < 248 && out.length < 40) out.push(abc[x % 62]); }
+    return 'jbt_' + out.join('');
+  }
+  const mcpFail = (e) => (e && (e.code === 'PGRST202' || /jb_mcp_token|function/i.test(e.message || '')) ? 'Сервер ще не вміє видавати посилання: власник JamBoard має виконати supabase/mcp-tokens.sql' : 'Не вдалося зв’язатися з сервером. Спробуйте ще раз');
+  async function mcpPush(force) { // send the board list; also keeps the token alive (it expires after 90 idle days)
+    if (!mcpSt.t || !mcpReady() || mcpSt.busy) return;
+    const list = mcpBoards(), sig = list.join(',');
+    if (!force && sig === mcpSt.sig && Date.now() - mcpSt.synced < 864e5) return;
+    mcpSt.busy = true;
+    try {
+      const r = await db.rpc('jb_mcp_token_put', { p_token: mcpSt.t, p_boards: list, p_name: me && me.name || null });
+      mcpSt.sig = sig; mcpSt.synced = Date.now(); mcpSt.used = r && r.used_at || null; mcpSave();
+    } catch (e) { if (force) throw e; } finally { mcpSt.busy = false; }
+    if (!$('#setPop').hidden) setRender();
+  }
+  function mcpSoon() { if (!mcpSt.t) return; clearTimeout(mcpSt.timer); mcpSt.timer = setTimeout(() => mcpPush(false), 900); }
+  const ago = (iso) => {
+    const t = Date.parse(iso || ''); if (!t) return '';
+    const m = Math.round((Date.now() - t) / 60000);
+    if (m < 2) return 'щойно'; if (m < 60) return m + ' хв тому';
+    const h = Math.round(m / 60); if (h < 24) return h + ' год тому';
+    const d = Math.round(h / 24); return d + ' ' + plural(d, 'день', 'дні', 'днів') + ' тому';
+  };
+  function setRender() {
+    const ready = mcpReady(), on = !!mcpSt.t && ready;
+    $('#setOff').hidden = on; $('#setOn').hidden = !on; $('#setScope').hidden = !on;
+    $('#setMake').hidden = !ready;
+    $('#setOffText').textContent = ready ? 'Посилання відкриває Claude лише ті дошки, які ви оберете. Його можна будь-коли відкликати.' : 'Підключення до Claude працює лише з хмарними дошками JamBoard.';
+    const bn = titleOf(boardId);
+    $('#setBoardName').textContent = bn; document.querySelectorAll('#setMore .bn').forEach((e) => { e.textContent = bn; });
+    if (!on) return;
+    const u = $('#setUrl'), url = mcpUrl(); if (u.value !== url) u.value = url;
+    $('#setMeta').dataset.s = mcpSt.used ? 'ok' : 'idle';
+    $('#setUsed').textContent = mcpSt.used ? 'Claude підключено · останній раз ' + ago(mcpSt.used) : 'Claude ще не підключався';
+    $('#setAuto').checked = mcpSt.auto;
+    const want = new Set(mcpBoards()), box = $('#setBoards'), ids = mcpAll();
+    box.textContent = '';
+    for (const id of ids) {
+      const li = document.createElement('li'), lb = document.createElement('label'), cb = document.createElement('input'), nm = document.createElement('span');
+      cb.type = 'checkbox'; cb.checked = want.has(id); cb.dataset.id = id;
+      nm.className = 'nm'; nm.textContent = titleOf(id);
+      lb.append(cb, nm);
+      if (viewOnly(id)) { const s = document.createElement('small'); s.textContent = 'лише перегляд'; lb.appendChild(s); }
+      else if (id === boardId) { const s = document.createElement('small'); s.textContent = 'ця дошка'; lb.appendChild(s); }
+      li.appendChild(lb); box.appendChild(li);
+    }
+  }
+  function openSettings(open) {
+    const pop = $('#setPop'), back = $('#setBack');
+    if (open === false) {
+      if (pop.hidden) return;
+      pop.classList.add('out'); back.classList.add('out');
+      setTimeout(() => { pop.hidden = true; back.hidden = true; pop.classList.remove('out'); back.classList.remove('out'); }, reduceMotion ? 0 : 180);
+      $('#boardsBtn').focus({ preventScroll: true }); return;
+    }
+    closeBoardUi(); finishEdit(); closeThread();
+    pop.hidden = false; back.hidden = false; pop.classList.remove('out'); back.classList.remove('out');
+    setTab(mcpSt.tab); setRender(); mcpPush(false);
+    requestAnimationFrame(() => (mcpSt.t && mcpReady() ? $('#setCopy') : $('#setMake').hidden ? $('#setClose') : $('#setMake')).focus({ preventScroll: true }));
+  }
+  function setTab(t) {
+    mcpSt.tab = t;
+    $('#setTabs').querySelectorAll('[data-t]').forEach((b) => { const sel = b.dataset.t === t; b.setAttribute('aria-selected', String(sel)); b.tabIndex = sel ? 0 : -1; });
+    $('#setClaude').hidden = t !== 'claude'; $('#setMore').hidden = t !== 'more';
+  }
+  async function copyText(text, btn, okMsg) {
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; } catch (e) {
+      const t = document.createElement('textarea'); t.value = text; t.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(t); t.select();
+      try { ok = document.execCommand('copy'); } catch (e2) {} t.remove();
+    }
+    if (!ok) { toast('Не вдалося скопіювати: виділіть текст і натисніть Ctrl/⌘ + C'); return; }
+    const was = btn.dataset.label || btn.textContent; btn.dataset.label = was; btn.textContent = 'Скопійовано ✓'; clearTimeout(btn._t);
+    btn._t = setTimeout(() => { btn.textContent = was; }, 1600);
+    toast(okMsg);
+  }
+  async function mcpMake(renew) {
+    const btn = renew ? $('#setRenew') : $('#setMake'); if (btn.disabled) return; btn.disabled = true;
+    const old = mcpSt.t, t = newToken();
+    try {
+      mcpSt.t = t; mcpSt.sig = ''; mcpSt.used = null;
+      await mcpPush(true);
+      if (old && renew) db.rpc('jb_mcp_token_del', { p_token: old }).catch(() => {});
+      mcpSave(); setRender();
+      toast(renew ? 'Нове посилання готове, старе більше не діє. Оновіть його в Claude' : 'Посилання готове: скопіюйте його в Claude');
+      requestAnimationFrame(() => $('#setCopy').focus({ preventScroll: true }));
+    } catch (e) { mcpSt.t = old; toast(mcpFail(e)); }
+    btn.disabled = false;
+  }
+  async function mcpRevoke() {
+    const btn = $('#setRevoke'); if (!mcpSt.t || btn.disabled) return; btn.disabled = true;
+    try {
+      await db.rpc('jb_mcp_token_del', { p_token: mcpSt.t });
+      Object.assign(mcpSt, { t: '', sig: '', synced: 0, used: null }); mcpSave(); setRender();
+      toast('Посилання відкликано: Claude більше не бачить ваших дошок');
+      requestAnimationFrame(() => $('#setMake').focus({ preventScroll: true }));
+    } catch (e) { toast(mcpFail(e)); }
+    btn.disabled = false;
+  }
+  $('#setBtn').addEventListener('click', () => openSettings(true));
+  $('#setClose').addEventListener('click', () => openSettings(false));
+  $('#setBack').addEventListener('pointerdown', () => openSettings(false));
+  $('#setTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-t]'); if (b) setTab(b.dataset.t); });
+  $('#setMake').addEventListener('click', () => mcpMake(false));
+  $('#setRenew').addEventListener('click', () => mcpMake(true));
+  $('#setRevoke').addEventListener('click', mcpRevoke);
+  $('#setCopy').addEventListener('click', (e) => copyText(mcpUrl(), e.currentTarget, 'Посилання для Claude скопійовано'));
+  $('#setUrl').addEventListener('focus', (e) => e.target.select());
+  $('#setMore').addEventListener('click', (e) => { const b = e.target.closest('[data-copy]'); if (b) copyText($('#setMore [data-ex="' + b.dataset.copy + '"]').textContent, b, 'Запит скопійовано: вставте його в чат із Claude'); });
+  $('#setAuto').addEventListener('change', (e) => {
+    const list = mcpBoards(); mcpSt.auto = e.target.checked;
+    if (mcpSt.auto) mcpSt.off = mcpAll().filter((id) => !list.includes(id)); else mcpSt.on = list; // the ticks stay as they are
+    mcpSave(); mcpSoon();
+  });
+  $('#setBoards').addEventListener('change', (e) => {
+    const id = e.target.dataset && e.target.dataset.id; if (!id) return;
+    const on = e.target.checked, drop = (a) => a.filter((x) => x !== id);
+    if (mcpSt.auto) mcpSt.off = on ? drop(mcpSt.off) : [...drop(mcpSt.off), id];
+    else mcpSt.on = on ? [...drop(mcpSt.on), id] : drop(mcpSt.on);
+    mcpSave(); mcpSoon();
+  });
+  $('#setPop').addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Escape') { e.preventDefault(); openSettings(false); return; }
+    if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && e.target.closest('#setTabs')) { e.preventDefault(); const t = mcpSt.tab === 'claude' ? 'more' : 'claude'; setTab(t); $('#setTabs [data-t="' + t + '"]').focus(); return; }
+    if (e.key === 'Tab') { // keep focus inside the dialog
+      const f = [...$('#setPop').querySelectorAll('button:not([disabled]), input, a[href]')].filter((x) => x.offsetParent && x.tabIndex >= 0); if (!f.length) return;
+      const i = f.indexOf(document.activeElement), n = e.shiftKey ? (i <= 0 ? f.length - 1 : i - 1) : (i + 1) % f.length;
+      e.preventDefault(); f[n].focus();
+    }
+  });
 
   // ---------- shared timer: one per board, everyone sees the same countdown ----------
   // state: { dur, run: true, end } running · { dur, run: false, left } paused · { dur } ready. Times are epoch ms.
@@ -6523,16 +7212,100 @@ const Plan = (() => {
   $('#hideChip').addEventListener('click', () => { if (!viewOnly()) revealAll(); });
   addEventListener('pointerdown', (e) => { if (!$('#votePop').hidden && !e.target.closest('#votePop, #voteChip, .item')) openVotePop(false); }, true);
 
-  // the «Планінг і ретро» popover: templates, a task card, and the facilitation tools
-  const PLAN_ICONS = { sprints: '🗓️', weeks: '📆', gantt: '📊', roadmap: '🛣️', matrix: '🎯', table: '🔲', sprint: '🏃', ssc: '🚦', msg: '🎭', '4l': '🍀', sail: '⛵' };
+  // the templates library (P): a preview card for every template, by group, with search; below, the facilitation tools
+  const PLAN_ICONS = { sprints: '🗓️', weeks: '📆', gantt: '📊', roadmap: '🛣️', matrix: '🎯', table: '🔲', sprint: '🏃', ssc: '🚦', msg: '🎭', '4l': '🍀', sail: '⛵', kanban: '🗂️', storymap: '🗺️', okr: '📈', standup: '☕', rice: '🧮', ice: '🧊', moscow: '🏷️', eisen: '⏳', lean: '🚀', bmc: '🏢', swot: '🧭', pros: '⚖️', cjm: '🛤️', empathy: '💗', persona: '👤', crazy8: '✏️', mood: '🎨', brain: '💡', kalm: '🔄', wwa: '🎉' };
   function planTile(box, icon, name, desc, fn, edit) {
     const b = document.createElement('button'); b.className = 'pl-tile' + (edit ? ' pl-edit' : '');
     const i = document.createElement('span'); i.className = 'pl-ico'; i.textContent = icon; i.setAttribute('aria-hidden', 'true');
     const t = document.createElement('span'); t.className = 'pl-t'; const n = document.createElement('b'); n.textContent = name; const d = document.createElement('small'); d.textContent = desc; t.append(n, d);
     b.append(i, t); b.addEventListener('click', () => { openPlan(false); fn(); }); box.appendChild(b); return b;
   }
-  Plan.TEMPLATES.forEach(([k, name, desc], i) => planTile(i < 7 ? $('#plPlan') : $('#plRetro'), PLAN_ICONS[k] || '▦', name, desc, () => insertTemplate(k), true));
-  planTile($('#plPlan'), '✅', 'Картка задачі', 'Статус, виконавець, естімейт; з Jira, Linear, GitHub', () => { const it = createTaskAt(center()); pendingEdit = null; startEdit(it.id); }, true);
+  const tpl = { cat: 'all', built: false, cards: [], groups: new Map() };
+  function buildLibrary() { // once, on first open: the previews are drawn from the templates themselves
+    if (tpl.built) return; tpl.built = true;
+    const list = $('#tpList'), cats = $('#tpCats');
+    const chip = (k, name, count) => { const b = document.createElement('button'); b.setAttribute('role', 'radio'); b.dataset.cat = k; b.textContent = name; const c = document.createElement('small'); c.textContent = count; b.appendChild(c); b.addEventListener('click', () => { tpl.cat = k; $('#tpQ').value = ''; filterLibrary(true); }); cats.appendChild(b); };
+    chip('all', 'Усі', Plan.TEMPLATES.length);
+    for (const [g, gname] of Plan.GROUPS) {
+      const own = Plan.TEMPLATES.filter((t) => t[3] === g); if (!own.length) continue;
+      chip(g, gname, own.length);
+      const sec = document.createElement('section'); sec.className = 'tp-group'; const h = document.createElement('h3'); h.textContent = gname; const grid = document.createElement('div'); grid.className = 'tp-grid'; sec.append(h, grid); list.appendChild(sec); tpl.groups.set(g, sec);
+      for (const [k, name, desc] of own) {
+        const b = document.createElement('button'); b.className = 'tp-card'; b.dataset.k = k;
+        const pv = document.createElement('div'); pv.className = 'tp-prev';
+        try { let q = 0; pv.appendChild(tplPreview(k, Plan.template(k, 0, 0, () => 'p' + q++, '', Date.now()))); } catch (e) {}
+        const m = document.createElement('div'); m.className = 'tp-meta'; const t = document.createElement('b'); const ic = document.createElement('i'); ic.textContent = PLAN_ICONS[k] || '▦'; ic.setAttribute('aria-hidden', 'true'); t.append(ic, name); const d = document.createElement('small'); d.textContent = desc; m.append(t, d);
+        b.append(pv, m); b.setAttribute('aria-label', name + '. ' + desc);
+        b.addEventListener('click', () => { openPlan(false); insertTemplate(k); });
+        grid.appendChild(b); tpl.cards.push({ b, g, text: (name + ' ' + desc + ' ' + k + ' ' + gname).toLocaleLowerCase('uk') });
+      }
+    }
+  }
+  // a template's thumbnail: tinted headers, sections and a few sample cards, so each one reads at a glance
+  function tplPreview(key, list) {
+    const svg = document.createElementNS(SVGNS, 'svg'); svg.setAttribute('aria-hidden', 'true');
+    const T = (c, d) => `var(--t-${COLORS.includes(c) ? c : d})`, mix = (c, p, b) => `color-mix(in srgb, ${c} ${p}%, ${b || 'var(--surface)'})`;
+    const cards = list.filter((i) => !isLink(i)), byId = new Map(cards.map((i) => [i.id, i]));
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const i of cards) { const t = titled(i) ? 44 : 0; x0 = Math.min(x0, i.x); y0 = Math.min(y0, i.y - t); x1 = Math.max(x1, i.x + i.w); y1 = Math.max(y1, i.y + (i.h || 48)); }
+    const pad = Math.max(x1 - x0, y1 - y0) * 0.07, vw = x1 - x0 + pad * 2, vh = y1 - y0 + pad * 2;
+    let bw = vw, bh = vh; if (bw / bh > 1.6) bh = bw / 1.6; else bw = bh * 1.6;
+    svg.setAttribute('viewBox', `${x0 - pad - (bw - vw) / 2} ${y0 - pad - (bh - vh) / 2} ${bw} ${bh}`);
+    const u = bw / 200;
+    const el = (tag, at, style) => { const e = document.createElementNS(SVGNS, tag); for (const k in at) e.setAttribute(k, at[k]); if (style) e.setAttribute('style', style); svg.appendChild(e); return e; };
+    const bar = (x, y, w, h, op) => el('rect', { x, y, width: Math.max(w, 0), height: h, rx: h / 2 }, `fill:var(--text);opacity:${op || .5}`);
+    const note = (x, y, w, h, c) => { el('rect', { x, y, width: w, height: h, rx: Math.min(w, h) * 0.08 }, `fill:${T(c, 'caution')}`); bar(x + w * 0.14, y + h * 0.3, w * 0.62, Math.max(h * 0.09, u), .2); bar(x + w * 0.14, y + h * 0.52, w * 0.4, Math.max(h * 0.09, u), .2); };
+    let seed = [...key].reduce((a, ch) => a * 31 + ch.charCodeAt(0), 7) >>> 0; const rnd = () => ((seed = (seed * 1103515245 + 12345) >>> 0) / 4294967296);
+    for (const l of list) if (isLink(l)) { const a = byId.get(l.a), b = byId.get(l.b); if (a && b) el('path', { d: `M${a.x + a.w} ${a.y + a.h / 2}H${(a.x + a.w + b.x) / 2}V${b.y + b.h / 2}H${b.x}`, fill: 'none' }, `stroke:var(--muted);stroke-width:${0.8 * u};opacity:.7`); }
+    for (const i of cards.sort((a, b) => rank(a) - rank(b))) {
+      if (titled(i) && i.title) bar(i.x, i.y - 30, Math.min(i.w * 0.6, i.title.length * 11), 16, .62);
+      if (i.type === 'section') { el('rect', { x: i.x, y: i.y, width: i.w, height: i.h, rx: 18 }, `fill:${mix(T(i.color, 'gray'), 24)};stroke:${mix(T(i.color, 'gray'), 70, 'var(--line)')};stroke-width:${u}`); continue; }
+      if (i.type === 'text') { bar(i.x, i.y + 8, Math.min(i.w, (i.text || '').length * 20), 32, .7); continue; }
+      if (i.type === 'sticky') { note(i.x, i.y, i.w, i.h, i.color); continue; }
+      if (i.type === 'bar') { if (i.ms) el('polygon', { points: `${i.x + i.w / 2},${i.y} ${i.x + i.w},${i.y + i.h / 2} ${i.x + i.w / 2},${i.y + i.h} ${i.x},${i.y + i.h / 2}` }, `fill:${T(i.color, 'pink')}`); else { el('rect', { x: i.x, y: i.y, width: i.w, height: i.h, rx: i.h / 2 }, `fill:${mix(T(i.color, 'pink'), 45)}`); el('rect', { x: i.x, y: i.y, width: i.w * (i.pct || 0) / 100, height: i.h, rx: i.h / 2 }, `fill:${T(i.color, 'pink')}`); } continue; }
+      if (!isGrid(i)) continue;
+      const d = Plan.dims(i), c0 = T(i.color, 'gray'), mx = i.kind === 'matrix', tl = i.type === 'timeline', ln = `stroke:${mix(c0, 45, 'var(--line)')};stroke-width:${0.7 * u}`;
+      el('rect', { x: i.x, y: i.y, width: i.w, height: i.h, rx: 14 }, `fill:var(--surface);stroke:${mix(c0, 60, 'var(--line)')};stroke-width:${u}`);
+      for (let c = 0; c < d.nc; c++) {
+        const cx = i.x + d.side + c * d.cw, tc = tl ? c0 : tintOf(i, c);
+        el('rect', { x: cx + 6, y: i.y + 6, width: d.cw - 12, height: d.top - 12, rx: 10 }, `fill:${mix(tc, tl ? 22 : 42)}`);
+        bar(cx + 18, i.y + d.top / 2 - 7, Math.min(d.cw * 0.55, 120), 14, .55);
+        for (let r = 0; r < d.nr; r++) {
+          const cell = Plan.cellRect(i, c, r);
+          if (mx) { el('rect', { x: cell.x, y: cell.y, width: cell.w, height: cell.h }, `fill:${mix(tintOf(i, c), r ? 10 : 18)}`); bar(cell.x + 20, cell.y + 20, Math.min(cell.w * 0.5, 160), 16, .4); }
+          else if (!tl && !list.some((m) => m.grid === i.id)) { // sample cards, more in the first columns
+            const n = Math.floor(rnd() * (d.nr > 2 ? 2.2 : 3.4) * (1 - c / (d.nc + 1)) + (r === 0 && c < 2 ? 1 : 0));
+            const cwid = Math.min(cell.w - 28, 150), chh = Math.min(cwid * 0.62, (cell.h - 28) / Math.max(n, 1) - 12);
+            for (let k = 0; k < n && chh > 20; k++) note(cell.x + 14 + (cell.w - 28 - cwid) / 2, cell.y + 16 + k * (chh + 12), cwid, chh, tintOf(i, c).match(/--t-(\w+)/)[1]);
+          }
+        }
+      }
+      for (let r = 0; r < d.nr; r++) if (d.side) { const y = i.y + d.top + r * d.lh; el('rect', { x: i.x, y, width: d.side, height: d.lh }, `fill:${mix(c0, 12)}`); bar(i.x + 18, y + 18, Math.min(d.side - 36, 110), 13, .45); }
+      for (let c = 1; c < d.nc + (d.side ? 1 : 0); c++) { const lx = i.x + d.side + (c - (d.side ? 1 : 0)) * d.cw; el('line', { x1: lx, y1: i.y + (mx ? d.top : 0), x2: lx, y2: i.y + i.h }, ln); }
+      for (let r = 0; r < d.nr; r++) { const ly = i.y + d.top + r * d.lh; el('line', { x1: i.x, y1: ly, x2: i.x + i.w, y2: ly }, ln); }
+    }
+    return svg;
+  }
+  function filterLibrary(anim) {
+    const q = $('#tpQ').value.trim().toLocaleLowerCase('uk'), cat = q ? 'all' : tpl.cat, words = q.split(/\s+/).filter(Boolean);
+    $('#tpCats').querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.cat === cat)));
+    const shown = new Set(); let any = 0;
+    for (const c of tpl.cards) { const on = (cat === 'all' || c.g === cat) && words.every((w) => c.text.includes(w)); if (c.b.hidden === on) c.b.hidden = !on; if (on) { shown.add(c.g); any++; } }
+    tpl.groups.forEach((sec, g) => { sec.hidden = !shown.has(g); sec.firstChild.hidden = cat !== 'all'; });
+    $('#tpNone').hidden = !!any;
+    if (anim && !reduceMotion) { $('#tpBody').scrollTop = 0; let i = 0; for (const c of tpl.cards) if (!c.b.hidden && i < 12) c.b.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 220, delay: i++ * 18, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' }); }
+  }
+  $('#tpQ').addEventListener('input', () => filterLibrary(false));
+  $('#tpQ').addEventListener('keydown', (e) => { if (e.key === 'Enter') { const c = tpl.cards.find((c) => !c.b.hidden); if (c) { e.preventDefault(); c.b.click(); } } else if (e.key === 'ArrowDown') { const c = tpl.cards.find((c) => !c.b.hidden); if (c) { e.preventDefault(); c.b.focus(); } } });
+  $('#tpList').addEventListener('keydown', (e) => { // arrows move between cards, row by row
+    const k = e.key; if (!/^Arrow(Left|Right|Up|Down)$/.test(k) || !e.target.classList.contains('tp-card')) return;
+    const vis = tpl.cards.filter((c) => !c.b.hidden).map((c) => c.b), i = vis.indexOf(e.target); if (i < 0) return;
+    const r0 = e.target.getBoundingClientRect(); let next = null;
+    if (k === 'ArrowLeft') next = vis[i - 1]; else if (k === 'ArrowRight') next = vis[i + 1];
+    else { const down = k === 'ArrowDown', cands = vis.filter((b) => { const r = b.getBoundingClientRect(); return down ? r.top > r0.top + 4 : r.top < r0.top - 4; }); let best = Infinity; for (const b of cands) { const r = b.getBoundingClientRect(), d = Math.abs(r.top - r0.top) * 4 + Math.abs(r.left - r0.left); if (d < best) { best = d; next = b; } } if (!next && !down) { e.preventDefault(); $('#tpQ').focus(); return; } }
+    if (next) { e.preventDefault(); next.focus(); next.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' }); }
+  });
+  planTile($('#plFac'), '✅', 'Картка задачі', 'Статус, виконавець, естімейт; з Jira, Linear, GitHub', () => { const it = createTaskAt(center()); pendingEdit = null; startEdit(it.id); }, true);
   planTile($('#plFac'), '🗳️', 'Голосування крапками', 'Кілька голосів на кожного, потім сортування', () => openVotePop(true), true);
   const hideTile = planTile($('#plFac'), '🙈', 'Приховане писання', 'Чужі картки не видно, доки їх не відкриють', () => (hideMode.on ? revealAll() : startHide()), true);
   planTile($('#plFac'), '📝', 'Експорт у Markdown', 'Увесь текст дошки, щоб скопіювати', () => openExport(true), false);
@@ -6542,15 +7315,12 @@ const Plan = (() => {
     pop.hidden = !open; $('#planBtn').setAttribute('aria-expanded', String(open)); $('#planBtn').setAttribute('aria-pressed', String(open));
     if (open) {
       openMermaid(false); setTool('select');
+      buildLibrary(); $('#tpQ').value = ''; filterLibrary(true);
       hideTile.querySelector('b').textContent = hideMode.on ? 'Відкрити приховані картки' : 'Приховане писання';
       hideTile.querySelector('small').textContent = hideMode.on ? 'Усі побачать, що написали інші' : 'Чужі картки не видно, доки їх не відкриють';
-      requestAnimationFrame(() => { const f = pop.querySelector('.pl-tile:not([hidden])'); const vis = [...pop.querySelectorAll('.pl-tile')].find((b) => b.offsetParent); if (vis || f) (vis || f).focus({ preventScroll: true }); });
+      requestAnimationFrame(() => { const q = $('#tpQ'); if (q.offsetParent) q.focus({ preventScroll: true }); });
     }
   }
-  $('#planBtn').addEventListener('click', () => openPlan());
-  $('#plClose').addEventListener('click', () => openPlan(false));
-  $('#planPop').addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); openPlan(false); $('#planBtn').focus(); } });
-  addEventListener('pointerdown', (e) => { if (!$('#planPop').hidden && !e.target.closest('#planPop, #planBtn')) openPlan(false); }, true);
   const TPL_NAMES = Object.fromEntries(Plan.TEMPLATES.map(([k, n]) => [k, n]));
   // a spot near c where a box the size of b overlaps nothing: step right past whatever is in the way
   function freeSpot(b, c) {
@@ -6575,7 +7345,7 @@ const Plan = (() => {
     ripArmed = performance.now();
     commit({}, made.map((i) => i.id)); setSel(made.filter(isGrid).map((i) => i.id)); renderAll();
     showArea({ x1: b.x1 + dx, y1: b.y1 + dy - 50, x2: b.x2 + dx, y2: b.y2 + dy + 40 });
-    toast('Додано: ' + (TPL_NAMES[key] || 'шаблон') + (key === 'gantt' ? '. Тягніть смугу або її краї, щоб змінити дати' : '. Подвійний клік у клітинці додає стікер'));
+    toast('Додано: ' + (TPL_NAMES[key] || 'шаблон') + (key === 'gantt' ? '. Тягніть смугу або її краї, щоб змінити дати' : made.some(isGrid) ? '. Подвійний клік у клітинці додає стікер' : '. Підказки на стікерах можна переписати або видалити'));
   }
 
   // grid controls in the context bar: one more or one fewer column or lane; cells keep their size, cards their cells
@@ -6857,7 +7627,7 @@ const Plan = (() => {
   function openBoard(id) {
     if (!validBoard(id)) id = 'main';
     if (!boardOk(id)) return;
-    finishEdit(); closeThread();
+    finishEdit(); closeThread(); openHistory(false);
     if (mode === 'local' && localTimer) saveLocal(true); // keep the old board's last change before leaving it
     const first = !els.size && !items.size, token = ++switchToken;
     if (first) { doOpen(id); return; }
@@ -7001,6 +7771,13 @@ const Plan = (() => {
     const getRow = (path) => sb.rpc('jb_get', { p_path: path });
     const listRows = (coll) => sb.rpc('jb_list', { p_coll: coll });
     const myPeer = 'p' + rnd() + rnd();
+    // Version history (supabase/history.sql): writes say who made them, so the board's log can show it.
+    // Until that script runs, jb_put / jb_del only take two arguments: the first refusal switches back to those.
+    let whoOk = true, whoTag = null;
+    const noFn = (e) => !!e && (e.code === 'PGRST202' || /could not find the function/i.test(e.message || ''));
+    const whoNow = () => { const w = { n: me.name, e: me.emoji, c: me.color, v: myVid }; if (whoTag) w.r = whoTag; return w; };
+    const signed = (name, args) => (!whoOk ? sb.rpc(name, args)
+      : sb.rpc(name, { ...args, p_who: whoNow() }).then((r) => { if (r.error && noFn(r.error)) { whoOk = false; return sb.rpc(name, args); } return r; }));
     // one realtime channel per board ("jb:<id>"): row changes broadcast by the database, plus presence
     const lines = new Map();
     function openLine(bid) {
@@ -7081,15 +7858,21 @@ const Plan = (() => {
         if (line) { line.L.rows.delete(onMsg); line.L.stats.delete(onStatus); line.release(); }
       };
     }
+    const rows = (p) => p.then(({ data, error }) => { if (error) throw fail(error); return data || []; });
     const sdb = {
+      // the board's version history: the latest changes (newest first), and the whole board right after one of them
+      history: { list: (bid, before, limit) => rows(sb.rpc('jb_history', { p_bid: bid, p_before: before || null, p_limit: limit || 200 })),
+        at: (bid, id) => rows(sb.rpc('jb_at', { p_bid: bid, p_id: id })),
+        tagged(tag, fn) { whoTag = tag; try { fn(); } finally { whoTag = null; } } },
       // one-off reads for the boards gallery (no live updates)
       peek: (path) => sdb.doc(path).peek(),
+      rpc: (fn, args) => sb.rpc(fn, args).then(({ data, error }) => { if (error) throw fail(error); return data; }), // settings: personal MCP tokens
       peekList: (coll) => listRows(coll).then(({ data, error }) => { if (error) throw fail(error); return data || []; }),
       doc(path) {
         return {
           peek: () => getRow(path).then(({ data, error }) => { if (error) throw fail(error); return data && data[0] ? data[0].data : null; }),
-          set: (data) => sb.rpc('jb_put', { p_path: path, p_data: data }).then(({ error }) => { if (error) throw fail(error); }),
-          delete: () => sb.rpc('jb_del', { p_path: path }).then(({ error }) => { if (error) throw fail(error); }),
+          set: (data) => signed('jb_put', { p_path: path, p_data: data }).then(({ error }) => { if (error) throw fail(error); }),
+          delete: () => signed('jb_del', { p_path: path }).then(({ error }) => { if (error) throw fail(error); }),
           onSnapshot(next, onError) {
             const snap = (row) => ({ exists: !!row, data: () => (row ? row.data : undefined) });
             return watch('path', path, (rows) => next(snap(rows[0])), () => next(snap(null)), onError, (rows) => next(snap(rows[0] || null)));

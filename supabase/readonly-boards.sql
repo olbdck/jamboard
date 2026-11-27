@@ -1,4 +1,6 @@
 -- JamBoard: view-only boards. Run once in Supabase → SQL Editor, after private-boards.sql (safe to run again).
+-- If history.sql has already run, run history.sql again after this file: it replaces jb_put / jb_del with versions
+-- that also say who made the change (same checks as here), and two copies of them must not live side by side.
 --
 -- A board whose meta (boards/<id>) has "ro": true can be read by anyone with its link, but the browser
 -- can't change it: no items, timer, title or meta. Only its cover thumbnail (boards/<id>/cover/v1) may be
