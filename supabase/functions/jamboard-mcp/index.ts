@@ -64,9 +64,9 @@ const save = async (board, list) => { await putDocs(list.map((it) => ({ path: it
 // <flow> shared by index.html and the MCP server: keep both copies identical
 const Flow = (() => {
   const SHAPES = ['rect', 'round', 'pill', 'circle', 'diamond', 'cyl', 'hex'];
-  const ICONS = ['service', 'db', 'cache', 'queue', 'api', 'user', 'web', 'mobile', 'cloud', 'storage', 'fn', 'lock', 'mail', 'none'];
+  const ICONS = ['service', 'db', 'cache', 'queue', 'api', 'user', 'web', 'mobile', 'cloud', 'storage', 'fn', 'lock', 'mail', 'lamp', 'strip', 'psu', 'switch', 'hub', 'plug', 'none'];
   // default tint per icon, from the sticky palette
-  const ICON_COLOR = { service: 'ok', db: 'info', cache: 'warn', queue: 'purple', api: 'teal', user: 'pink', web: 'info', mobile: 'pink', cloud: 'gray', storage: 'ok', fn: 'caution', lock: 'warn', mail: 'pink', none: 'gray' };
+  const ICON_COLOR = { service: 'ok', db: 'info', cache: 'warn', queue: 'purple', api: 'teal', user: 'pink', web: 'info', mobile: 'pink', cloud: 'gray', storage: 'ok', fn: 'caution', lock: 'warn', mail: 'pink', lamp: 'caution', strip: 'pink', psu: 'gray', switch: 'info', hub: 'purple', plug: 'warn', none: 'gray' };
   const GUESS = [
     ['db', /\b(db|database|postgres\w*|mysql|maria\w*|sqlite|mongo\w*|dynamo\w*|clickhouse|firestore|supabase|warehouse)\b|баз[аиіу] даних|\bбд\b/i],
     ['cache', /\b(redis|cache|memcached?|valkey)\b|кеш/i],
@@ -80,6 +80,12 @@ const Flow = (() => {
     ['fn', /\b(lambda|functions?|workers?|cron|jobs?|scheduler|edge)\b|функці|воркер|задач/i],
     ['mail', /\b(e-?mail|smtp|notifications?|sms|push)\b|пошт|сповіщ|лист/i],
     ['cloud', /\b(cloud|aws|gcp|azure|vercel|heroku|kubernetes|k8s)\b|хмар/i],
+    ['plug', /\b(power ?strips?|surge protectors?)\b|мережев\S* фільтр|подовжувач|розетк/i],
+    ['psu', /\b(psu|power ?supply|led driver)\b|блок\S* живлення|led-драйвер/i],
+    ['strip', /\b(led ?strips?|light ?strips?)\b|стрічк/i],
+    ['lamp', /\b(lamps?|lights?|bulbs?|spotlights?)\b|ламп|світильн|торшер|підсвіт|бра\b/i],
+    ['switch', /\b(dimmers?|light ?switch)\b|вимикач|диммер|димер/i],
+    ['hub', /\b(zigbee|wled|smart ?hub)\b|контролер|хаб\b/i],
     ['service', /\b(service|server|backend|back-end|microservice|app|svc)\b|сервіс|сервер|бекенд/i],
   ];
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -852,6 +858,7 @@ function bbox(list) {
   return { x1, y1, x2, y2 };
 }
 const stickyColor = (c) => { const k = String(c || '').toLowerCase(); return STICKY_COLORS.includes(k) ? k : COLOR_ALIASES[k] || null; };
+const PXCM = 5; // board px per centimetre on desks and cables (same as index.html)
 const str = (v, n) => (typeof v === 'string' ? v.slice(0, n) : undefined);
 const num = (v) => (typeof v === 'number' && isFinite(v) ? Math.round(v) : undefined);
 // https://…/jamboard/#b=<id> (any host serving JamBoard) → the board id
@@ -1002,7 +1009,15 @@ function summary(i, all, retro) {
   if (i.type === 'web') { o.url = i.url; if (i.title) o.title = i.title; }
   if (i.type === 'board') { o.board = i.bid; if (i.title) o.title = i.title; }
   if (i.type === 'stamp') o.emoji = i.emoji;
-  if (i.type === 'node') { o.text = i.text || ''; o.shape = i.shape || 'rect'; o.icon = i.icon || 'none'; }
+  if (i.type === 'node') {
+    o.text = i.text || ''; o.shape = i.shape || 'rect'; o.icon = i.icon || 'none'; if (i.watt) o.watts = i.watt;
+    if (i.icon === 'plug') { o.sockets = i.sock || 6; if (all) o.sockets_used = new Set(all.filter((l) => (l.type === 'link' || l.type === 'cable') && (l.a === i.id || l.b === i.id)).map((l) => (l.a === i.id ? l.b : l.a))).size; }
+  }
+  if (i.type === 'section' && i.desk) o.desk_cm = [Math.round(i.w / PXCM), Math.round(i.h / PXCM)];
+  if (i.type === 'cable') {
+    let len = 0; const p = i.pts || []; for (let k = 1; k < p.length; k++) len += Math.hypot(p[k][0] - p[k - 1][0], p[k][1] - p[k - 1][1]);
+    o.length_cm = Math.round(len / PXCM); o.kind = i.kind || 'ac'; o.points = p.map((q) => [i.x + q[0], i.y + q[1]]); if (i.a) o.from = i.a; if (i.b) o.to = i.b; if (i.label) o.label = i.label;
+  }
   if (i.type === 'link') { if (i.flow === false) o.arrow = false; if (i.dash) o.dash = true; if (i.thick) o.thick = true; }
   if (i.type === 'comment') o.messages = (i.msgs || []).map((m) => `${m.n || '?'}: ${m.t || ''}`);
   if (i.type === 'timeline') {
@@ -1110,7 +1125,7 @@ const TOOLS = [
   { name: 'get_board', description: 'Read everything on a board: stickies, text, sections, timelines, tables and 2×2 matrices, task cards, Gantt bars (start, due, progress, after = the bars they wait for), diagram nodes, ropes (links), link cards, stamps, comments, plus the retro state (hidden writing, dot voting with vote counts). Coordinates are board pixels; a sticky is 200×200. A card\'s "section" is the id of the section it belongs to; "grid" and "cell" say which timeline/table cell it sits in.', inputSchema: { type: 'object', properties: { board: boardArg } } },
   {
     name: 'add_items',
-    description: 'Add items to a board in one go. Planning types: timeline (title, unit day|week|sprint|month, start YYYY-MM-DD, columns: a count or a list of names, sprint_days, first_sprint, lanes: team or stream names), table (title, columns, rows; matrix: true with cells: the 4 quadrant names and axes [x, y] makes a 2×2 prioritisation matrix), task (text, status todo|doing|review|done, who, estimate, due YYYY-MM-DD, tags, url: a Jira/Linear/GitHub issue link; GitHub issues fill themselves in), bar (a Gantt task bar on a timeline: text, grid: the timeline, lane, start and due YYYY-MM-DD (or days), progress 0–100, who, milestone, after: bars it depends on; x and width follow the dates). Cards in a table or timeline cell line up in rows, side by side as far as the column is wide. Put any card into a timeline or table cell with grid (ref or id) plus column (1-based number, header name, or a YYYY-MM-DD date on a timeline) and lane/row (number or name); in a matrix, cell can be the quadrant name. Other types: node (a diagram block for flows and architecture: text, shape rect|round|pill|circle|diamond|cyl|hex, icon service|db|cache|queue|api|user|web|mobile|cloud|storage|fn|lock|mail|none; ropes between two nodes are drawn straight with an arrow), stamp (emoji, on: a card to stamp, size), comment (text: a comment pin, on: a card), sticky (text, color), text (text, style h1|h2|p|s), section (title, color; give other items "section": its ref to put them inside — the section grows to fit), link (a rope from "from" to "to", optional label and color), web (url: a link card with preview; YouTube shows the video thumbnail), image (url: an https picture, e.g. a screenshot or reference found with another tool; w sets its width, the height follows the picture). Leave x/y out to let the board lay items out in a tidy grid (inside their section if given). Use "ref" to name a new item so links and "section" can point at it in the same call; existing ids work too.',
+    description: 'Add items to a board in one go. Planning types: timeline (title, unit day|week|sprint|month, start YYYY-MM-DD, columns: a count or a list of names, sprint_days, first_sprint, lanes: team or stream names), table (title, columns, rows; matrix: true with cells: the 4 quadrant names and axes [x, y] makes a 2×2 prioritisation matrix), task (text, status todo|doing|review|done, who, estimate, due YYYY-MM-DD, tags, url: a Jira/Linear/GitHub issue link; GitHub issues fill themselves in), bar (a Gantt task bar on a timeline: text, grid: the timeline, lane, start and due YYYY-MM-DD (or days), progress 0–100, who, milestone, after: bars it depends on; x and width follow the dates). Cards in a table or timeline cell line up in rows, side by side as far as the column is wide. Put any card into a timeline or table cell with grid (ref or id) plus column (1-based number, header name, or a YYYY-MM-DD date on a timeline) and lane/row (number or name); in a matrix, cell can be the quadrant name. Other types: node (a diagram block for flows and architecture: text, shape rect|round|pill|circle|diamond|cyl|hex, icon service|db|cache|queue|api|user|web|mobile|cloud|storage|fn|lock|mail|lamp|strip|psu|switch|hub|plug|none; ropes between two nodes are drawn straight with an arrow; lighting kit: lamp, strip (LED strip), psu, switch, hub (controller), plug = power strip with sockets and used/total count, watts on devices), cable (a hand-laid cable with its length: from/to cards it plugs into, points [[x,y]…] for the bends, kind ac|dc, color; lay it on a section with desk: [width_cm, depth_cm], 5 px = 1 cm), stamp (emoji, on: a card to stamp, size), comment (text: a comment pin, on: a card), sticky (text, color), text (text, style h1|h2|p|s), section (title, color; give other items "section": its ref to put them inside — the section grows to fit), link (a rope from "from" to "to", optional label and color), web (url: a link card with preview; YouTube shows the video thumbnail), image (url: an https picture, e.g. a screenshot or reference found with another tool; w sets its width, the height follows the picture). Leave x/y out to let the board lay items out in a tidy grid (inside their section if given). Use "ref" to name a new item so links and "section" can point at it in the same call; existing ids work too.',
     inputSchema: {
       type: 'object', required: ['items'],
       properties: {
@@ -1120,7 +1135,12 @@ const TOOLS = [
           items: {
             type: 'object', required: ['type'],
             properties: {
-              type: { type: 'string', enum: ['sticky', 'text', 'section', 'link', 'web', 'image', 'stamp', 'comment', 'node', 'timeline', 'table', 'task', 'bar'] },
+              type: { type: 'string', enum: ['sticky', 'text', 'section', 'link', 'web', 'image', 'stamp', 'comment', 'node', 'timeline', 'table', 'task', 'bar', 'cable'] },
+              desk: { type: 'array', items: { type: 'number' }, description: 'Section: make it a desk/tabletop in real size [width_cm, depth_cm] (5 board px per cm), to lay cables on.' },
+              sockets: { type: 'number', description: 'Node with icon plug (power strip): number of sockets (default 6). The strip shows used/total, counting cards tied to it by a cable or rope.' },
+              watts: { type: 'number', description: 'Node: power draw in W (a power strip sums the watts of what is plugged in).' },
+              points: { type: 'array', items: { type: 'array', items: { type: 'number' } }, description: 'Cable: bend points [[x, y], …] in board px (5 px = 1 cm). With from/to, the card centres are added as the ends.' },
+              kind: { type: 'string', enum: ['ac', 'dc'], description: 'Cable: ac = 230 V power (thick), dc = low-voltage / signal (thin).' },
               progress: { type: 'number', description: 'Bar: percent done, 0–100.' },
               days: { type: 'number', description: 'Bar: length in days when due is left out (default 5).' },
               milestone: { type: 'boolean', description: 'Bar: a milestone, one date shown as a diamond.' },
@@ -1174,7 +1194,7 @@ const TOOLS = [
     inputSchema: { type: 'object', required: ['changes'], properties: { board: boardArg, changes: { type: 'array', minItems: 1, maxItems: 200, items: { type: 'object', required: ['id'], properties: { id: { type: 'string' }, text: { type: 'string' },
       status: { type: 'string', enum: ['todo', 'doing', 'review', 'done'] }, who: { type: 'string' }, progress: { type: 'number' }, milestone: { type: 'boolean' }, days: { type: 'number' }, track: { type: 'number' }, estimate: { type: 'string' }, due: { type: 'string', description: 'YYYY-MM-DD, or "" to clear.' }, tags: { type: 'array', items: { type: 'string' } }, url: { type: 'string', description: 'Task: tracker issue link, or "" to unlink.' },
       unit: { type: 'string', enum: ['day', 'week', 'sprint', 'month'] }, start: { type: 'string' }, columns: { anyOf: [{ type: 'number' }, { type: 'array', items: { type: 'string' } }] }, sprint_days: { type: 'number' }, first_sprint: { type: 'number' }, lanes: { type: 'array', items: { type: 'string' } }, rows: { type: 'array', items: { type: 'string' } }, cells: { type: 'array', items: { type: 'string' } }, axes: { type: 'array', items: { type: 'string' } }, tints: { type: 'array', items: { type: 'string' } }, matrix: { type: 'boolean' },
-      grid: { type: 'string', description: 'Timeline/table id to move the card into, or "" to take it out.' }, column: { anyOf: [{ type: 'number' }, { type: 'string' }] }, lane: { anyOf: [{ type: 'number' }, { type: 'string' }] }, row: { anyOf: [{ type: 'number' }, { type: 'string' }] }, cell: { type: 'string' }, shape: { type: 'string', enum: Flow.SHAPES }, icon: { type: 'string', enum: Flow.ICONS }, arrow: { type: 'boolean' }, dash: { type: 'boolean' }, thick: { type: 'boolean' }, title: { type: 'string' }, color: { type: 'string' }, style: { type: 'string', enum: TEXT_STYLES }, label: { type: 'string' }, section: { type: 'string' }, x: { type: 'number' }, y: { type: 'number' }, w: { type: 'number' }, h: { type: 'number' } } } } } },
+      grid: { type: 'string', description: 'Timeline/table id to move the card into, or "" to take it out.' }, column: { anyOf: [{ type: 'number' }, { type: 'string' }] }, lane: { anyOf: [{ type: 'number' }, { type: 'string' }] }, row: { anyOf: [{ type: 'number' }, { type: 'string' }] }, cell: { type: 'string' }, shape: { type: 'string', enum: Flow.SHAPES }, icon: { type: 'string', enum: Flow.ICONS }, sockets: { type: 'number' }, watts: { type: 'number' }, kind: { type: 'string', enum: ['ac', 'dc'] }, arrow: { type: 'boolean' }, dash: { type: 'boolean' }, thick: { type: 'boolean' }, title: { type: 'string' }, color: { type: 'string' }, style: { type: 'string', enum: TEXT_STYLES }, label: { type: 'string' }, section: { type: 'string' }, x: { type: 'number' }, y: { type: 'number' }, w: { type: 'number' }, h: { type: 'number' } } } } } },
   },
   {
     name: 'add_mermaid',
@@ -1359,7 +1379,7 @@ async function callTool(name, a, scope) {
       const p = { x: st.x, y: st.y }; st.x += w + 40; st.rowH = Math.max(st.rowH, h); st.col++; return p;
     };
     // sections first, so cards can be placed inside them
-    const rank = (t) => (t === 'section' || t === 'timeline' || t === 'table' ? 0 : t === 'link' ? 2 : t === 'bar' ? 0.5 : 1);
+    const rank = (t) => (t === 'section' || t === 'timeline' || t === 'table' ? 0 : t === 'link' || t === 'cable' ? 2 : t === 'bar' ? 0.5 : 1);
     const order = [...list].sort((p, q) => rank(p.type) - rank(q.type));
     for (const spec of order) {
       const t = spec.type; let it;
@@ -1367,6 +1387,24 @@ async function callTool(name, a, scope) {
         it = { id: uid(), type: 'section', x: num(spec.x) ?? 0, y: num(spec.y) ?? 0, w: num(spec.w) ?? 640, h: num(spec.h) ?? 420, color: stickyColor(spec.color) || 'gray', title: str(spec.title ?? spec.text, 120) || 'Нова секція', z: ++z, by: BY };
         if (spec.x == null || spec.y == null) { const p = slot(it.w, it.h); it.x = p.x; it.y = p.y; }
         if (spec.w != null || spec.h != null) it.autofit = false;
+        if (Array.isArray(spec.desk)) { // a desk measured in centimetres (5 board px per cm), for laying cables on
+          it.desk = true; it.autofit = false; it.w = clampN(spec.desk[0], 20, 2000, 140) * PXCM; it.h = clampN(spec.desk[1], 20, 2000, 70) * PXCM;
+          if (spec.title == null && spec.text == null) it.title = 'Стільниця';
+          if (!spec.color) it.color = 'warn';
+          if (spec.x == null || spec.y == null) { const p = slot(it.w, it.h); it.x = p.x; it.y = p.y; }
+        }
+      } else if (t === 'cable') { // a cable laid point by point; its ends can plug into cards (a power strip counts them)
+        const A = spec.from != null ? resolve(spec.from) : null, B = spec.to != null ? resolve(spec.to) : null;
+        if ((spec.from != null && (!A || !isCard(A))) || (spec.to != null && (!B || !isCard(B)))) throw new Error('cable: "from"/"to" must be cards');
+        let abs = Array.isArray(spec.points) ? spec.points.slice(0, 400).filter((p) => Array.isArray(p) && isFinite(+p[0]) && isFinite(+p[1])).map((p) => [Math.round(+p[0]), Math.round(+p[1])]) : [];
+        const mid = (c) => [Math.round(c.x + c.w / 2), Math.round(c.y + c.h / 2)];
+        if (A) abs.unshift(mid(A));
+        if (B) { const e = mid(B), l = abs[abs.length - 1]; if (abs.length === 1 && l[0] !== e[0] && l[1] !== e[1]) abs.push([e[0], l[1]]); abs.push(e); }
+        if (abs.length < 2) throw new Error('cable needs two points, or from and to');
+        let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; abs.forEach(([x, y]) => { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); });
+        it = { id: uid(), type: 'cable', x: x0, y: y0, w: Math.max(1, x1 - x0), h: Math.max(1, y1 - y0), pts: abs.map(([x, y]) => [x - x0, y - y0]), color: ROPE_COLORS.includes(spec.color) ? spec.color : 'gray', kind: spec.kind === 'dc' ? 'dc' : 'ac', z: ++z, by: BY };
+        if (A) it.a = A.id; if (B) it.b = B.id;
+        const lab = str(spec.label, 60); if (lab && lab.trim()) it.label = lab.trim();
       } else if (t === 'timeline' || t === 'table') {
         it = { id: uid(), type: t, x: 0, y: 0, w: 0, h: 0, color: stickyColor(spec.color) || 'gray', title: t === 'timeline' ? 'Таймлайн' : 'Таблиця', z: ++z, by: BY };
         if (t === 'timeline') Object.assign(it, { start: Plan.thisMonday(Date.now()), unit: 'week', n: 6, len: 14, k: 1, lanes: [], names: [] });
@@ -1414,6 +1452,8 @@ async function callTool(name, a, scope) {
           const icon = Flow.ICONS.includes(spec.icon) ? spec.icon : Flow.guessIcon(text, shape);
           const [w, h] = Flow.sizeOf({ text: text || 'Назва', shape, icon });
           it = { id: uid(), type: 'node', shape, icon, text, w: num(spec.w) ?? Math.round(w), h: num(spec.h) ?? Math.round(h), color: stickyColor(spec.color) || Flow.ICON_COLOR[icon] || 'gray' };
+          if (icon === 'plug') { it.sock = clampN(spec.sockets, 1, 24, 6); if (spec.w == null) it.w = Math.max(it.w, 236); if (spec.h == null) it.h = Math.max(it.h, 96); }
+          if (num(spec.watts) > 0) it.watt = Math.min(100000, num(spec.watts));
         }
         if (t === 'sticky') it = { id: uid(), type: 'sticky', w: num(spec.w) ?? 200, h: num(spec.h) ?? 200, color: stickyColor(spec.color) || 'caution', text: str(spec.text, 4000) || '' };
         if (t === 'text') it = { id: uid(), type: 'text', w: num(spec.w) ?? 360, h: 40, ts: TEXT_STYLES.includes(spec.style) ? spec.style : 'p', text: str(spec.text, 4000) || '' };
@@ -1525,6 +1565,10 @@ async function callTool(name, a, scope) {
           const home = geoSec(it, all); it.sec = home ? home.id : null;
         }
       }
+      if (c.sockets != null && it.type === 'node' && it.icon === 'plug') it.sock = clampN(c.sockets, 1, 24, it.sock || 6);
+      if (c.watts != null && it.type === 'node') { const w = num(c.watts); if (w > 0) it.watt = Math.min(100000, w); else delete it.watt; }
+      if (c.kind != null && it.type === 'cable') it.kind = c.kind === 'dc' ? 'dc' : 'ac';
+      if (c.color != null && it.type === 'cable' && ROPE_COLORS.includes(c.color)) it.color = c.color;
       if (c.label != null && it.type === 'link') { const l = String(c.label).trim().slice(0, 60); if (l) it.label = l; else delete it.label; }
       if (c.style != null && it.type === 'text' && TEXT_STYLES.includes(c.style)) it.ts = c.style;
       if (c.color != null) {

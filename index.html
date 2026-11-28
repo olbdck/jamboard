@@ -164,6 +164,72 @@ button { font: inherit; color: inherit; letter-spacing: inherit; }
 #marquee { position: fixed; border: 1px solid var(--accent); background: var(--accent-soft); pointer-events: none; border-radius: 4px; }
 #pasteCatcher { position: fixed; width: 48px; height: 48px; opacity: 0; z-index: 4; outline: none; caret-color: transparent; overflow: hidden; color: transparent; }
 .item.section:not(.dragging):not(.resizing):not(.settle) { transition: translate var(--base) var(--ease-em), width var(--base) var(--ease-em), height var(--base) var(--ease-em), box-shadow var(--base) var(--ease-em); }
+/* lighting kit: desks in centimetres, cables laid by hand, power strips that count their sockets */
+.section.desk {
+  border-radius: 6px; border-width: calc(1.5px / var(--z));
+  background-image: linear-gradient(to right, color-mix(in srgb, var(--text) 9%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in srgb, var(--text) 9%, transparent) 1px, transparent 1px);
+  background-size: 50px 50px; background-position: -0.5px -0.5px;
+}
+.section.desk .stitle:empty::before { content: "Стільниця"; }
+.dk-size { position: absolute; right: 0; bottom: 100%; margin-bottom: 10px; font: 600 15px/1.2 var(--f-text); color: var(--muted); white-space: nowrap; pointer-events: none; font-variant-numeric: tabular-nums; }
+.dk-x, .dk-y { position: absolute; pointer-events: none; font: 500 10px/1 var(--f-text); color: var(--muted); font-variant-numeric: tabular-nums; }
+.dk-x { left: 0; right: 0; top: 0; height: 12px; background: repeating-linear-gradient(to right, color-mix(in srgb, var(--text) 38%, transparent) 0 1px, transparent 1px 25px) 0 0 / 100% 6px no-repeat; }
+.dk-y { top: 0; bottom: 0; left: 0; width: 12px; background: repeating-linear-gradient(to bottom, color-mix(in srgb, var(--text) 38%, transparent) 0 1px, transparent 1px 25px) 0 0 / 6px 100% no-repeat; }
+.dk-x span { position: absolute; top: 8px; left: var(--p); translate: -50% 0; }
+.dk-y span { position: absolute; left: 8px; top: var(--p); translate: 0 -50%; }
+#ghostSection.desk { border-radius: 6px; }
+#ghostSection.desk::after { content: attr(data-size); position: absolute; right: 0; bottom: 100%; margin-bottom: 8px; padding: 3px 8px; border-radius: var(--r-pill); background: var(--accent); color: var(--accent-fg); font: 600 13px/1.2 var(--f-text); white-space: nowrap; transform-origin: 100% 100%; scale: calc(1 / var(--z)); font-variant-numeric: tabular-nums; }
+.item.cable { pointer-events: none; overflow: visible; }
+.item.cable.sel { outline: none; }
+.cable .cb { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; }
+.cable .cb path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.cable .cb-line { stroke: var(--cc); stroke-width: 6px; }
+.cable[data-kind="dc"] .cb-line { stroke-width: 3px; }
+.cable .cb-halo { stroke: var(--accent-soft); stroke-width: 0; transition: stroke-width var(--fast) var(--ease); }
+.cable.sel .cb-halo, .cable.hov .cb-halo { stroke-width: 16px; }
+.cable.sel .cb-halo { stroke: color-mix(in srgb, var(--accent) 22%, transparent); }
+.cable .cb-hit { stroke: transparent; stroke-width: 18px; pointer-events: stroke; cursor: move; }
+.cable .cb-end { fill: var(--surface); stroke: var(--cc); stroke-width: 2.5px; }
+.cable.drafting .cb-hit, .cable.drafting .cv, .cable.drafting .cmid, .cable.editpt .cb-hit, .cable.editpt .cv, .cable.editpt .cmid { pointer-events: none; }
+.cable .cb-len {
+  position: absolute; left: 0; top: 0; translate: 0 0; pointer-events: none; white-space: nowrap;
+  transform: translate(-50%, -50%) scale(calc(1 / max(var(--z), .5))); padding: 2px 7px; border-radius: var(--r-pill);
+  background: var(--surface); color: var(--text); border: 1px solid color-mix(in srgb, var(--cc) 70%, var(--line)); font: 600 12px/1.3 var(--f-text); font-variant-numeric: tabular-nums;
+}
+.cable .cb-pts { position: absolute; left: 0; top: 0; }
+.cable .cv, .cable .cmid {
+  position: absolute; left: 0; top: 0; display: none; box-sizing: border-box; border-radius: 50%; pointer-events: auto;
+  width: calc(14px / var(--z)); height: calc(14px / var(--z)); margin: calc(-7px / var(--z)) 0 0 calc(-7px / var(--z));
+  background: var(--surface); border: calc(2px / var(--z)) solid var(--accent); cursor: grab; transition: scale var(--fast) var(--ease-spring);
+}
+.cable .cmid { width: calc(10px / var(--z)); height: calc(10px / var(--z)); margin: calc(-5px / var(--z)) 0 0 calc(-5px / var(--z)); border-width: calc(1.5px / var(--z)); opacity: .75; cursor: copy; }
+.cable.sel.solo .cv, .cable.sel.solo .cmid { display: block; }
+.cable .cv:hover, .cable .cmid:hover { scale: 1.3; background: var(--accent); opacity: 1; }
+body.view-only .cable .cv, body.view-only .cable .cmid { display: none !important; }
+#viewport.tool-cable, #viewport.tool-cable .item { cursor: crosshair; }
+.node .nw { position: absolute; z-index: 1; top: 6px; right: 10px; font: 600 11px/1.2 var(--f-text); color: color-mix(in srgb, var(--c) 25%, var(--text)); font-variant-numeric: tabular-nums; pointer-events: none; }
+.node .nw:empty, .node .nsock:empty { display: none; }
+.node .nsock { position: absolute; z-index: 1; left: 12px; right: 12px; bottom: 10px; display: flex; align-items: center; gap: 8px; pointer-events: none; }
+.nsock .sk-dots { display: flex; gap: 4px; flex-wrap: wrap; min-width: 0; }
+.nsock .sk-dots i { width: 12px; height: 12px; border-radius: 4px; box-sizing: border-box; border: 1.5px solid color-mix(in srgb, var(--c) 55%, var(--text) 25%); background: var(--surface); transition: background-color var(--base) var(--ease-em), border-color var(--base) var(--ease-em); }
+.nsock .sk-dots i.on { background: color-mix(in srgb, var(--c) 45%, var(--text) 40%); border-color: transparent; }
+.nsock .sk-dots i.x { background: var(--bad); }
+.nsock b { margin-left: auto; font: 600 12px/1.2 var(--f-text); color: var(--text); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.nsock.over b { color: color-mix(in srgb, var(--bad) 72%, var(--text)); }
+#ctx .el-tools { gap: 6px; align-items: center; padding: 0 6px; }
+#ctx .el-cols { gap: 6px; padding: 0 2px; }
+.el-lab { font: 500 13px/1 var(--f-text); color: var(--muted); white-space: nowrap; }
+.el-lab.el-val { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; min-width: 1.2em; text-align: center; }
+.el-field { display: flex; align-items: center; gap: 4px; height: 30px; padding: 0 8px 0 2px; border-radius: 10px; background: var(--chip); font: 500 12px/1 var(--f-text); color: var(--muted); transition: box-shadow var(--fast) var(--ease); }
+.el-field:focus-within { box-shadow: var(--focus); }
+.el-num { width: 52px; border: 0; background: transparent; color: var(--text); font: 600 13px/1 var(--f-text); text-align: right; outline: none; padding: 0 0 0 6px; font-variant-numeric: tabular-nums; -moz-appearance: textfield; appearance: textfield; }
+.el-num::-webkit-inner-spin-button, .el-num::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+#ctx .icon-btn.sm { width: 30px; height: 30px; }
+#ctx .icon-btn.sm svg { width: 16px; height: 16px; }
+#ctx .icon-btn.sm:disabled { opacity: .38; cursor: default; }
+.el-seg { padding: 2px; }
+.el-seg { flex: none; }
+.el-seg button { flex: none; padding: 5px 10px; font-size: 12px; overflow: visible; }
 /* free text on the board: headings and body copy, no card behind it */
 .text { color: var(--text); }
 .text .txt { white-space: pre-wrap; overflow-wrap: anywhere; outline: none; font-family: var(--f-note); padding: 2px 4px; min-height: 1.2em; }
@@ -1185,6 +1251,7 @@ button, a, .icon-btn { -webkit-tap-highlight-color: transparent; }
   <button class="icon-btn" data-tool="link" aria-label="З’єднати картки"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="17" r="2.5"/><path d="M8.3 8.2c3.5 1.6 1.8 7.4 7.4 8.2"/></svg><span class="tip">З’єднати картки<kbd>L</kbd></span></button>
   <button class="icon-btn" data-tool="section" aria-label="Секція"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M4 7.5h4"/><rect x="3.5" y="10" width="17" height="10" rx="2.5"/><path d="M3.5 4.5h7"/></svg><span class="tip">Секція<kbd>F</kbd></span></button>
   <button class="icon-btn" data-tool="node" aria-label="Блок схеми"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="8" height="6" rx="1.6"/><ellipse cx="17" cy="16" rx="4" ry="1.6"/><path d="M13 16v3.4c0 .9 1.8 1.6 4 1.6s4-.7 4-1.6V16M7 9.5v3.5a2 2 0 002 2h4"/></svg><span class="tip">Блок схеми: сервіс, база, черга…<kbd>D</kbd></span></button>
+  <button class="icon-btn" data-tool="light" aria-label="Схема світла"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18h5M10.5 21h3"/><path d="M12 3a6 6 0 00-3.7 10.7c.7.6 1.2 1.4 1.2 2.3h5c0-.9.5-1.7 1.2-2.3A6 6 0 0012 3z"/><path d="M12.8 6.5l-2 3.2h2.4l-2 3.2"/></svg><span class="tip">Схема світла: пристрої, фільтр, стільниця, кабель<kbd>W</kbd></span></button>
   <button class="icon-btn" id="mermaidBtn" aria-label="Схема з Mermaid" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7.5L4 12l4 4.5M16 7.5l4 4.5-4 4.5"/><path d="M10.5 12h.01M13.5 12h.01" stroke-width="2.6"/></svg><span class="tip">Схема з тексту Mermaid<kbd>M</kbd></span></button>
   <button class="icon-btn" id="planBtn" aria-label="Шаблони" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v3M16 3v3"/><rect x="6.5" y="12.5" width="6" height="2.6" rx="1.3" fill="currentColor" stroke="none"/><rect x="10.5" y="16" width="7" height="2.6" rx="1.3" fill="currentColor" stroke="none" opacity=".55"/></svg><span class="tip">Шаблони: планінг, ретро, UX, стратегія<kbd>P</kbd></span></button>
   <button class="icon-btn" id="imageBtn" aria-label="Зображення"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M20.5 16l-5-5-9 8.5"/></svg><span class="tip">Зображення<kbd>Ctrl+V</kbd></span></button>
@@ -1313,6 +1380,8 @@ button, a, .icon-btn { -webkit-tap-highlight-color: transparent; }
     <button class="icon-btn" id="brBtn" aria-label="Дати, прогрес і залежності" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8.5" width="18" height="7" rx="3.5"/><path d="M6.5 12h6" stroke-width="2.6"/></svg><span class="tip">Дати, прогрес і залежності</span></button>
   </div>
   <div class="sep" id="ctxBarSep"></div>
+  <div class="group el-tools" id="ctxElec"></div>
+  <div class="sep" id="ctxElecSep"></div>
   <div class="group" id="ctxColors"></div>
   <div class="sep" id="ctxSep"></div>
   <div class="group txt-tools" id="ctxText">
@@ -1447,6 +1516,7 @@ button, a, .icon-btn { -webkit-tap-highlight-color: transparent; }
     <li>Штамп <b>E · утримуйте, щоб більший</b></li>
     <li>Коментар <b>C і клік</b></li>
     <li>Блок схеми: сервіс, база, черга <b>D і клік</b></li>
+    <li>Схема світла: пристрої, фільтр, стільниця в см, кабель <b>W</b></li>
     <li>Схема з Mermaid <b>M · або вставте текст</b></li>
     <li>Таймлайн, матриця, ретро <b>P</b></li>
     <li>Перейменувати колонку <b>Подвійний клік на назві</b></li>
@@ -1512,9 +1582,9 @@ button, a, .icon-btn { -webkit-tap-highlight-color: transparent; }
 // <flow> shared by index.html and the MCP server: keep both copies identical
 const Flow = (() => {
   const SHAPES = ['rect', 'round', 'pill', 'circle', 'diamond', 'cyl', 'hex'];
-  const ICONS = ['service', 'db', 'cache', 'queue', 'api', 'user', 'web', 'mobile', 'cloud', 'storage', 'fn', 'lock', 'mail', 'none'];
+  const ICONS = ['service', 'db', 'cache', 'queue', 'api', 'user', 'web', 'mobile', 'cloud', 'storage', 'fn', 'lock', 'mail', 'lamp', 'strip', 'psu', 'switch', 'hub', 'plug', 'none'];
   // default tint per icon, from the sticky palette
-  const ICON_COLOR = { service: 'ok', db: 'info', cache: 'warn', queue: 'purple', api: 'teal', user: 'pink', web: 'info', mobile: 'pink', cloud: 'gray', storage: 'ok', fn: 'caution', lock: 'warn', mail: 'pink', none: 'gray' };
+  const ICON_COLOR = { service: 'ok', db: 'info', cache: 'warn', queue: 'purple', api: 'teal', user: 'pink', web: 'info', mobile: 'pink', cloud: 'gray', storage: 'ok', fn: 'caution', lock: 'warn', mail: 'pink', lamp: 'caution', strip: 'pink', psu: 'gray', switch: 'info', hub: 'purple', plug: 'warn', none: 'gray' };
   const GUESS = [
     ['db', /\b(db|database|postgres\w*|mysql|maria\w*|sqlite|mongo\w*|dynamo\w*|clickhouse|firestore|supabase|warehouse)\b|баз[аиіу] даних|\bбд\b/i],
     ['cache', /\b(redis|cache|memcached?|valkey)\b|кеш/i],
@@ -1528,6 +1598,12 @@ const Flow = (() => {
     ['fn', /\b(lambda|functions?|workers?|cron|jobs?|scheduler|edge)\b|функці|воркер|задач/i],
     ['mail', /\b(e-?mail|smtp|notifications?|sms|push)\b|пошт|сповіщ|лист/i],
     ['cloud', /\b(cloud|aws|gcp|azure|vercel|heroku|kubernetes|k8s)\b|хмар/i],
+    ['plug', /\b(power ?strips?|surge protectors?)\b|мережев\S* фільтр|подовжувач|розетк/i],
+    ['psu', /\b(psu|power ?supply|led driver)\b|блок\S* живлення|led-драйвер/i],
+    ['strip', /\b(led ?strips?|light ?strips?)\b|стрічк/i],
+    ['lamp', /\b(lamps?|lights?|bulbs?|spotlights?)\b|ламп|світильн|торшер|підсвіт|бра\b/i],
+    ['switch', /\b(dimmers?|light ?switch)\b|вимикач|диммер|димер/i],
+    ['hub', /\b(zigbee|wled|smart ?hub)\b|контролер|хаб\b/i],
     ['service', /\b(service|server|backend|back-end|microservice|app|svc)\b|сервіс|сервер|бекенд/i],
   ];
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -2532,14 +2608,147 @@ const Plan = (() => {
     fn: '<path d="M15 4.5c-2 0-2.9 1-3.3 3l-2 10c-.4 2-1.3 3-3.2 3M8.5 10h7"/>',
     lock: '<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8.5 10.5V7.5a3.5 3.5 0 017 0v3"/>',
     mail: '<rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M4 7l8 6 8-6"/>',
+    lamp: '<path d="M9.5 18h5M10.5 21h3"/><path d="M12 3a6 6 0 00-3.7 10.7c.7.6 1.2 1.4 1.2 2.3h5c0-.9.5-1.7 1.2-2.3A6 6 0 0012 3z"/>',
+    strip: '<rect x="2.5" y="9" width="19" height="6" rx="3"/><path d="M7 12h.01M12 12h.01M17 12h.01" stroke-width="2.8"/>',
+    psu: '<rect x="3" y="6" width="18" height="12" rx="2.2"/><path d="M6.5 11c1-1.3 2-1.3 3 0s2 1.3 3 0M14.5 10.5h3M14.5 13.5h3"/>',
+    switch: '<rect x="5.5" y="3" width="13" height="18" rx="3"/><rect x="9" y="6.5" width="6" height="11" rx="1.6"/><path d="M9 12h6"/>',
+    hub: '<circle cx="12" cy="12" r="2.6"/><path d="M8.3 8.3a5.2 5.2 0 000 7.4M15.7 8.3a5.2 5.2 0 010 7.4M5.5 5.5a9.2 9.2 0 000 13M18.5 5.5a9.2 9.2 0 010 13"/>',
+    plug: '<rect x="2.5" y="8.5" width="15" height="7" rx="2.2"/><path d="M6.5 12h.01M10 12h.01M13.5 12h.01" stroke-width="2.6"/><path d="M17.5 12h2a2 2 0 002-2V7.5"/>',
     none: '<path d="M6 6l12 12" opacity=".5"/><rect x="4" y="4" width="16" height="16" rx="3" opacity=".5"/>',
   };
-  const ICON_NAMES = { service: 'Сервіс', db: 'База даних', cache: 'Кеш', queue: 'Черга', api: 'API / шлюз', user: 'Користувач', web: 'Вебклієнт', mobile: 'Мобільний', cloud: 'Хмара', storage: 'Сховище', fn: 'Функція', lock: 'Авторизація', mail: 'Сповіщення', none: 'Без іконки' };
+  const ICON_NAMES = { service: 'Сервіс', db: 'База даних', cache: 'Кеш', queue: 'Черга', api: 'API / шлюз', user: 'Користувач', web: 'Вебклієнт', mobile: 'Мобільний', cloud: 'Хмара', storage: 'Сховище', fn: 'Функція', lock: 'Авторизація', mail: 'Сповіщення', lamp: 'Світильник', strip: 'LED-стрічка', psu: 'Блок живлення', switch: 'Вимикач', hub: 'Контролер', plug: 'Мережевий фільтр', none: 'Без іконки' };
   const SHAPE_NAMES = { rect: 'Прямокутник', round: 'Заокруглений', pill: 'Капсула', circle: 'Коло', diamond: 'Рішення (ромб)', cyl: 'Циліндр (база)', hex: 'Шестикутник' };
   const iconSvg = (k) => (ICON_SVG[k] && k !== 'none' ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON_SVG[k]}</svg>` : '');
   // node presets on the toolbar palette: [icon, shape, w, h, label]
   const NODE_PRESETS = [['service', 'rect'], ['db', 'cyl'], ['cache', 'rect'], ['queue', 'rect'], ['api', 'hex'], ['user', 'pill'], ['web', 'rect'], ['mobile', 'rect'], ['cloud', 'round'], ['storage', 'rect'], ['fn', 'round'], ['lock', 'rect'], ['mail', 'rect'], ['none', 'diamond'], ['none', 'rect']];
   let nodePreset = clamp(parseInt(store.get('jamboard:node') || '0', 10) || 0, 0, NODE_PRESETS.length - 1);
+  // <light> lighting schematics: devices (diagram blocks with light icons), power strips that count their sockets,
+  // desks drawn in real centimetres, and cables laid point by point with their length in cm / m.
+  const PXCM = 5; // board pixels per centimetre on a desk and along a cable
+  const isCable = (i) => !!i && i.type === 'cable';
+  const isDesk = (i) => !!i && i.type === 'section' && !!i.desk;
+  const isPlug = (i) => !!i && i.type === 'node' && i.icon === 'plug';
+  const LIGHT_ICONS = ['lamp', 'strip', 'psu', 'switch', 'hub', 'plug'];
+  const LIGHT_PRESETS = [['lamp', 'round'], ['strip', 'pill'], ['psu', 'rect'], ['switch', 'rect'], ['hub', 'round'], ['plug', 'rect'], ['desk'], ['cable']];
+  const LIGHT_LABEL = { desk: 'Стільниця в сантиметрах: потягніть, щоб задати розмір', cable: 'Кабель: клацайте точки, подвійний клік або Enter завершує' };
+  let lightPreset = clamp(parseInt(store.get('jamboard:light') || '0', 10) || 0, 0, LIGHT_PRESETS.length - 1);
+  const CABLE_KINDS = { ac: 'Силовий 230 В', dc: 'Низьковольтний / сигнальний' };
+  const OVERLOAD_W = 3500; // a typical 16 A strip on 230 V
+  const cmOf = (px) => Math.round(px / PXCM);
+  function fmtLen(px) {
+    const cm = cmOf(px);
+    return cm < 100 ? cm + ' см' : (cm / 100).toFixed(2).replace(/\.?0+$/, '').replace('.', ',') + ' м';
+  }
+  const cableLen = (c) => { let s = 0; const p = c.pts || []; for (let k = 1; k < p.length; k++) s += Math.hypot(p[k][0] - p[k - 1][0], p[k][1] - p[k - 1][1]); return s; };
+  const cableAbs = (c) => (c.pts || []).map((p) => [c.x + p[0], c.y + p[1]]);
+  function setCableAbs(c, abs) { // points are kept relative to the cable's box, so moving it is just x/y
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    abs.forEach(([x, y]) => { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); });
+    x0 = Math.round(x0); y0 = Math.round(y0);
+    c.x = x0; c.y = y0; c.w = Math.max(1, Math.round(x1) - x0); c.h = Math.max(1, Math.round(y1) - y0);
+    c.pts = abs.map(([x, y]) => [Math.round(x) - x0, Math.round(y) - y0]);
+  }
+  function cablePath(pts, r0) { // a polyline with softly bent corners, the way a real cable lies
+    if (pts.length < 2) return '';
+    const f = (n) => Math.round(n * 10) / 10;
+    let d = `M${pts[0][0]},${pts[0][1]}`;
+    for (let k = 1; k < pts.length - 1; k++) {
+      const [ax, ay] = pts[k - 1], [bx, by] = pts[k], [cx, cy] = pts[k + 1];
+      const l1 = Math.hypot(bx - ax, by - ay), l2 = Math.hypot(cx - bx, cy - by), r = Math.min(r0, l1 / 2, l2 / 2);
+      if (r < 0.5) { d += `L${bx},${by}`; continue; }
+      d += `L${f(bx - ((bx - ax) / l1) * r)},${f(by - ((by - ay) / l1) * r)}Q${bx},${by} ${f(bx + ((cx - bx) / l2) * r)},${f(by + ((cy - by) / l2) * r)}`;
+    }
+    const e = pts[pts.length - 1]; return d + `L${e[0]},${e[1]}`;
+  }
+  // what is plugged into each power strip: cards tied to it by a rope or a cable (a strip tied to a strip counts
+  // only where the rope or cable ends, i.e. "from the thing you plug in to where it goes")
+  function plugUse() {
+    const use = new Map();
+    items.forEach((l) => {
+      if (!(isLink(l) || isCable(l)) || !l.a || !l.b || l.a === l.b) return;
+      const A = items.get(l.a), B = items.get(l.b); if (!A || !B) return;
+      if (isPlug(B)) { if (!use.has(B.id)) use.set(B.id, new Set()); use.get(B.id).add(A.id); }
+      if (isPlug(A) && !isPlug(B)) { if (!use.has(A.id)) use.set(A.id, new Set()); use.get(A.id).add(B.id); }
+    });
+    return use;
+  }
+  const plugEls = new Set();
+  function refreshPlugs() {
+    for (const id of plugEls) if (!isPlug(items.get(id))) plugEls.delete(id);
+    if (!plugEls.size) return;
+    const use = plugUse();
+    for (const id of plugEls) {
+      const it = items.get(id), d = els.get(id); if (!d) continue;
+      const on = use.get(id) || new Set(), n = it.sock || 6;
+      let w = 0; on.forEach((k) => { const q = items.get(k); if (q && +q.watt > 0) w += +q.watt; });
+      const sig = n + '|' + on.size + '|' + w; if (d._sock === sig) continue; d._sock = sig;
+      const row = d.querySelector('.nsock'); if (!row) continue;
+      const over = on.size > n, hot = w > OVERLOAD_W;
+      let html = '<span class="sk-dots" aria-hidden="true">';
+      for (let k = 0; k < Math.max(n, Math.min(on.size, 24)); k++) html += `<i class="${k < on.size ? (k >= n ? 'on x' : 'on') : ''}"></i>`;
+      html += '</span>';
+      row.innerHTML = html;
+      const lab = document.createElement('b');
+      lab.textContent = on.size + '/' + n + (over ? ' · бракує ' + (on.size - n) : '') + (w ? ' · ' + w + ' Вт' : '');
+      row.appendChild(lab);
+      row.classList.toggle('over', over || hot);
+      row.title = `Зайнято ${on.size} з ${n} розеток` + (w ? `, навантаження ${w} Вт` : '') + (hot ? ` (більше ${OVERLOAD_W} Вт)` : '');
+    }
+  }
+  // <light> drawing a cable: each click fixes a point, the last one follows the pointer
+  let cableDraft = null; // { id, abs: [[x, y]…] }
+  function snapCable(p, prev, free) {
+    let x = Math.round(p.x / PXCM) * PXCM, y = Math.round(p.y / PXCM) * PXCM; // whole centimetres
+    if (prev && !free) { // a nearly straight run becomes straight: cable management is mostly right angles
+      const tol = 10 / view.z;
+      if (Math.abs(x - prev[0]) < tol) x = prev[0];
+      if (Math.abs(y - prev[1]) < tol) y = prev[1];
+    }
+    return [x, y];
+  }
+  function cableTarget(e) { // a card under the pointer that a cable end plugs into
+    const under = document.elementFromPoint(e.clientX, e.clientY), ie = under && under.closest && under.closest('.item');
+    const t = ie && items.get(ie.dataset.id);
+    return t && isCard(t) ? t : null;
+  }
+  function cableClick(e, dbl) {
+    const w = toWorld(e.clientX, e.clientY), tgt = cableTarget(e);
+    if (!cableDraft) {
+      const p = snapCable(w, null);
+      const it = { id: uid(), type: 'cable', x: p[0], y: p[1], w: 1, h: 1, pts: [[0, 0], [0, 0]], color: 'gray', kind: 'ac', z: topZ(), by: me.name };
+      if (tgt) it.a = tgt.id;
+      cableDraft = { id: it.id, abs: [p, p.slice()] };
+      items.set(it.id, it); active.add(it.id); setCableAbs(it, cableDraft.abs); setSel([]); renderAll();
+      return;
+    }
+    const it = items.get(cableDraft.id); if (!it) { cableDraft = null; return; }
+    const abs = cableDraft.abs, prev = abs[abs.length - 2], p = snapCable(w, prev, e.shiftKey);
+    abs[abs.length - 1] = p;
+    const back = Math.hypot((p[0] - prev[0]) * view.z, (p[1] - prev[1]) * view.z) < 8;
+    if (dbl || back || (tgt && tgt.id !== it.a)) { if (tgt && tgt.id !== it.a) it.b = tgt.id; finishCable(); return; }
+    abs.push(p.slice()); setCableAbs(it, abs); render(it);
+  }
+  function moveDraft(e) {
+    const it = cableDraft && items.get(cableDraft.id); if (!it) return;
+    const abs = cableDraft.abs;
+    abs[abs.length - 1] = snapCable(toWorld(e.clientX, e.clientY), abs[abs.length - 2], e.shiftKey);
+    setCableAbs(it, abs); render(it);
+    const tgt = cableTarget(e); setLinkTarget(tgt && tgt.id !== it.a ? tgt.id : null);
+  }
+  function finishCable(cancel) {
+    const dr = cableDraft; cableDraft = null; setLinkTarget(null);
+    const it = dr && items.get(dr.id); if (!it) return;
+    active.delete(it.id);
+    const abs = dr.abs.filter((p, k, a) => !k || p[0] !== a[k - 1][0] || p[1] !== a[k - 1][1]);
+    if (cancel || abs.length < 2) { items.delete(it.id); renderAll(); return; }
+    setCableAbs(it, abs);
+    commit({}, [it.id]); setSel([it.id]); renderAll();
+  }
+  function popDraftPoint() {
+    const it = cableDraft && items.get(cableDraft.id); if (!it) return;
+    if (cableDraft.abs.length <= 2) { finishCable(true); return; }
+    cableDraft.abs.splice(cableDraft.abs.length - 2, 1); setCableAbs(it, cableDraft.abs); render(it);
+  }
   function shapePath(shape, w, h) { // the outline in the node's own pixels; a cylinder also gets its lid
     const f = (n) => Math.round(n * 10) / 10, i = 0.75, W = w - i, Hh = h - i;
     const rr = (r) => { r = Math.min(r, w / 2, h / 2); return `M${f(i + r)},${i}H${f(W - r)}A${f(r)},${f(r)} 0 0 1 ${f(W)},${f(i + r)}V${f(Hh - r)}A${f(r)},${f(r)} 0 0 1 ${f(W - r)},${f(Hh)}H${f(i + r)}A${f(r)},${f(r)} 0 0 1 ${i},${f(Hh - r)}V${f(i + r)}A${f(r)},${f(r)} 0 0 1 ${f(i + r)},${i}Z`; };
@@ -2565,10 +2774,10 @@ const Plan = (() => {
   const TEXT_TS = ['h1', 'h2', 'p', 's'];
   const isMark = (i) => i.type === 'stamp' || i.type === 'comment';
   // paint order: sections under everything, stamps over cards, comment pins on top
-  const RANK = { section: 0, timeline: 0.5, table: 0.5, stamp: 2, comment: 3 };
+  const RANK = { section: 0, timeline: 0.5, table: 0.5, cable: 0.8, stamp: 2, comment: 3 };
   const rank = (i) => (i.type in RANK ? RANK[i.type] : 1);
   const sorted = () => [...items.values()].filter((i) => !isLink(i)).sort((a, b) => rank(a) - rank(b) || (a.z || 0) - (b.z || 0) || (a.id < b.id ? -1 : 1));
-  const TYPES_OK = ['sticky', 'image', 'section', 'stamp', 'comment', 'text', 'link', 'web', 'node', 'board', 'timeline', 'table', 'task', 'bar'];
+  const TYPES_OK = ['sticky', 'image', 'section', 'stamp', 'comment', 'text', 'link', 'web', 'node', 'board', 'timeline', 'table', 'task', 'bar', 'cable'];
   const STAMPS = ['👍', '❤️', '🔥', '⭐', '✅', '❌', '❓', '💡', '🎉', '😂', '👀', '🚀'];
   let stampEmoji = STAMPS.includes(store.get('jamboard:stamp')) ? store.get('jamboard:stamp') : STAMPS[0];
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -2601,6 +2810,17 @@ const Plan = (() => {
       if (!COLORS.includes(o.color)) o.color = 'gray';
       o.text = typeof o.text === 'string' ? o.text.slice(0, 400) : '';
       delete o.html;
+      if (o.sock != null) { const n = Math.round(+o.sock); if (n >= 1 && n <= 24) o.sock = n; else delete o.sock; }
+      if (o.watt != null) { const n = Math.round(+o.watt); if (n > 0 && n <= 100000) o.watt = n; else delete o.watt; }
+    }
+    if (o.type === 'section' && o.desk !== true) delete o.desk;
+    if (o.type === 'cable') {
+      const pts = (Array.isArray(o.pts) ? o.pts : []).slice(0, 400).filter((p) => Array.isArray(p) && isFinite(+p[0]) && isFinite(+p[1])).map((p) => [Math.round(+p[0]), Math.round(+p[1])]);
+      o.pts = pts.length >= 2 ? pts : [[0, 0], [Math.max(10, Math.round(+o.w) || 100), 0]];
+      if (!ROPE_COLORS.includes(o.color)) o.color = 'gray';
+      if (!(o.kind in CABLE_KINDS)) o.kind = 'ac';
+      ['a', 'b'].forEach((k) => { if (typeof o[k] !== 'string' || !o[k]) delete o[k]; });
+      if (typeof o.label !== 'string' || !o.label.trim()) delete o.label; else o.label = o.label.slice(0, 60);
     }
     if (o.type === 'web') {
       o.url = safeHttps(o.url) || '';
@@ -2781,7 +3001,7 @@ const Plan = (() => {
     if (need.delete('ctx')) updateCtxNow();
     if (need.delete('cursors')) renderCursors();
     if (need.delete('thread')) placeThread();
-    if (need.delete('links')) renderLinks();
+    if (need.delete('links')) { renderLinks(); refreshPlugs(); }
   }
 
   // ---------- view ----------
@@ -2792,7 +3012,7 @@ const Plan = (() => {
   // (selected, edited, hovered cards, sections, link and task cards, tables, pins, others' frames). The rest keeps 1.
   // The hovered card is marked by .hov from script: a `.item:hover` rule here would restyle every card on each zoom step.
   const zoomCss = document.createElement('style'); document.head.appendChild(zoomCss);
-  const Z_USERS = ['.sel', '.editing', '.link-target', '.drop-target', '.mine-hidden', '.hov', '.section', '.comment', '.web', '.board', '.grid', '.task', '.bar', '.vb', '.peer-box', '#ghostSection'].map((q) => '#world ' + q).join(', ');
+  const Z_USERS = ['.sel', '.editing', '.link-target', '.drop-target', '.mine-hidden', '.hov', '.section', '.comment', '.web', '.board', '.grid', '.task', '.bar', '.vb', '.cable', '.peer-box', '#ghostSection'].map((q) => '#world ' + q).join(', ');
   function paintView() {
     world.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.z})`;
     if (view.z !== paintedZ) { // zoom-dependent work only when the zoom changed, not on every pan frame
@@ -3011,8 +3231,10 @@ const Plan = (() => {
       ico.addEventListener('error', () => ico.classList.add('off'));
       ico.addEventListener('load', () => ico.classList.remove('off'));
       d.querySelector('.fig-peek').addEventListener('click', (e) => { e.stopPropagation(); const cur = items.get(id); if (cur) openFig(cur, d.querySelector('.web-media')); });
+    } else if (it.type === 'cable') {
+      d.innerHTML = '<svg class="cb" aria-hidden="true"><path class="cb-halo"/><path class="cb-line"/><path class="cb-hit"/><circle class="cb-end" r="4"/><circle class="cb-end" r="4"/></svg><span class="cb-len"></span><div class="cb-pts"></div>';
     } else if (it.type === 'node') {
-      d.innerHTML = '<div class="txt"></div><span class="nico"></span><svg class="nbg" aria-hidden="true"></svg><div class="handle" title="Змінити розмір"></div>';
+      d.innerHTML = '<div class="txt"></div><span class="nico"></span><svg class="nbg" aria-hidden="true"></svg><span class="nw"></span><div class="nsock"></div><div class="handle" title="Змінити розмір"></div>';
       const t = d.firstChild;
       t.addEventListener('input', () => liveText(id));
       t.addEventListener('blur', () => { if (editingId === id) finishEdit(); });
@@ -3094,6 +3316,9 @@ const Plan = (() => {
       const t = d.firstChild;
       if (editingId !== it.id && t.textContent !== (it.title || '')) t.textContent = it.title || '';
       if (d.title) d.title = '';
+      if (it.desk || d._desk) renderDesk(d, it, g);
+    } else if (it.type === 'cable') {
+      renderCable(d, it);
     } else if (it.type === 'sticky') {
       setVar(d, '--c', `var(--t-${COLORS.includes(it.color) ? it.color : 'caution'})`);
       const t = d.firstChild, masked = maskFor(d, it);
@@ -3152,6 +3377,7 @@ const Plan = (() => {
     const col = shape === 'circle' || shape === 'diamond' || (icon !== 'none' && w < h * 1.7);
     setData(d, 'lay', col ? 'col' : 'row'); setData(d, 'shape', shape);
     const pad = { diamond: [w * 0.2, h * 0.17, h * 0.17], hex: [Math.min(h / 2, w * 0.18) + 6, 10, 10], circle: [w * 0.16, h * 0.14, h * 0.14], cyl: [16, Math.min(13, h * 0.14) * 2 + 6, 10], pill: [h / 2.6, 8, 8] }[shape] || [16, 10, 10];
+    if (isPlug(it)) pad[2] += 26; // room for the socket row
     setVar(d, '--px', Math.round(pad[0]) + 'px'); setVar(d, '--pt', Math.round(pad[1]) + 'px'); setVar(d, '--pb', Math.round(pad[2]) + 'px');
     const key = shape + w + 'x' + h;
     if (d._shape !== key) {
@@ -3165,6 +3391,43 @@ const Plan = (() => {
     if (editingId !== it.id && t.textContent !== (it.text || '')) t.textContent = it.text || '';
     t.style.fontSize = (it.text || '').length > 60 || h < 60 ? '13px' : '';
     if (d.title) d.title = '';
+    const nw = d.querySelector('.nw'); if (nw) setText(nw, it.watt && !isPlug(it) ? it.watt + ' Вт' : '');
+    const plug = isPlug(it); d.classList.toggle('plug', plug);
+    if (plug) { if (!plugEls.has(it.id)) { plugEls.add(it.id); d._sock = ''; } schedule('links'); } else if (plugEls.has(it.id)) { plugEls.delete(it.id); const r = d.querySelector('.nsock'); if (r) r.innerHTML = ''; }
+  }
+  function renderDesk(d, it, g) { // a desk: a section measured in centimetres, with a 10 cm grid and rulers
+    const on = !!it.desk; d._desk = on; d.classList.toggle('desk', on);
+    if (!on) { d.querySelectorAll('.dk-x, .dk-y, .dk-size').forEach((e) => e.remove()); d._dkKey = ''; return; }
+    if (!d.querySelector('.dk-size')) d.insertAdjacentHTML('beforeend', '<div class="dk-size"></div><div class="dk-x" aria-hidden="true"></div><div class="dk-y" aria-hidden="true"></div>');
+    const W = cmOf(g.w), H = cmOf(g.h), key = W + 'x' + H;
+    if (d._dkKey === key) return; d._dkKey = key;
+    setText(d.querySelector('.dk-size'), `${W} × ${H} см`);
+    const step = Math.max(W, H) > 400 ? 50 : 10;
+    const ticks = (n) => { let h = ''; for (let c = step; c < n; c += step) h += `<span style="--p:${c * PXCM}px">${c}</span>`; return h; };
+    d.querySelector('.dk-x').innerHTML = ticks(W); d.querySelector('.dk-y').innerHTML = ticks(H);
+  }
+  function renderCable(d, it) {
+    setVar(d, '--cc', ROPE_VAR[it.color] || ROPE_VAR.gray); setData(d, 'kind', it.kind || 'ac');
+    d.classList.toggle('drafting', !!cableDraft && cableDraft.id === it.id);
+    const pts = it.pts || [], len = cableLen(it);
+    const key = JSON.stringify(pts) + (it.label || '');
+    if (d._cb === key) return; d._cb = key;
+    const path = cablePath(pts, 14), svg = d.firstChild;
+    svg.querySelectorAll('path').forEach((p) => p.setAttribute('d', path));
+    const ends = svg.querySelectorAll('.cb-end'), a = pts[0], b = pts[pts.length - 1];
+    ends[0].setAttribute('cx', a[0]); ends[0].setAttribute('cy', a[1]); ends[1].setAttribute('cx', b[0]); ends[1].setAttribute('cy', b[1]);
+    let best = 0, at = [a[0], a[1]];
+    for (let k = 1; k < pts.length; k++) { const l = Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]); if (l > best) { best = l; const ux = (pts[k][0] - pts[k - 1][0]) / (l || 1), uy = (pts[k][1] - pts[k - 1][1]) / (l || 1), n = uy > 0 || (uy === 0 && ux < 0) ? 1 : -1; at = [(pts[k][0] + pts[k - 1][0]) / 2 + uy * 16 * n, (pts[k][1] + pts[k - 1][1]) / 2 - ux * 16 * n]; } } // beside the cable, clear of its midpoint handle
+    const lab = d.querySelector('.cb-len');
+    setText(lab, (it.label ? it.label + ' · ' : '') + fmtLen(len)); lab.style.translate = `${Math.round(at[0])}px ${Math.round(at[1])}px`;
+    lab.hidden = len < 2;
+    let h = '';
+    pts.forEach((p, k) => {
+      if (k) h += `<i class="cmid" data-i="${k}" style="translate:${(p[0] + pts[k - 1][0]) / 2}px ${(p[1] + pts[k - 1][1]) / 2}px"></i>`;
+      h += `<i class="cv" data-i="${k}" style="translate:${p[0]}px ${p[1]}px"></i>`;
+    });
+    d.querySelector('.cb-pts').innerHTML = h;
+    d.setAttribute('aria-label', 'Кабель ' + fmtLen(len));
   }
   const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } };
   function renderWeb(d, it) {
@@ -3451,6 +3714,68 @@ const Plan = (() => {
     applyText((i) => { if (next === 'left') delete i.al; else i.al = next; });
   });
   let ctxSig = '';
+  // <light> context bar: sockets of a strip, a device's watts, a desk's size in cm, a cable's kind, colour and length
+  let elecSig = '';
+  const deskCables = (desk) => contained(desk).filter(isCable);
+  const MINUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 12h12"/></svg>';
+  const PLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 12h12M12 6v12"/></svg>';
+  function elecEdit(list, fn) {
+    const before = snapIds(list.map((i) => i.id)); list.forEach(fn);
+    list.filter(isDesk).forEach((dk) => Object.entries(regroup(dk, true)).forEach(([k, v]) => { if (!(k in before)) before[k] = v; }));
+    commit(before); renderAll();
+  }
+  function elecNum(label, value, unit, min, max, onSet) {
+    const wrap = document.createElement('label'); wrap.className = 'el-field';
+    const inp = document.createElement('input'); inp.type = 'number'; inp.inputMode = 'numeric'; inp.min = min; inp.max = max; inp.step = 1; inp.className = 'el-num';
+    inp.value = value == null ? '' : String(value); inp.setAttribute('aria-label', label); inp.placeholder = '0';
+    const u = document.createElement('span'); u.textContent = unit; u.setAttribute('aria-hidden', 'true');
+    inp.addEventListener('change', () => { const n = Math.round(+inp.value); if (inp.value === '' || !isFinite(n)) onSet(null); else onSet(clamp(n, min, max)); });
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
+    wrap.append(inp, u); return wrap;
+  }
+  function elecText(t, cls) { const s = document.createElement('span'); s.className = 'el-lab' + (cls ? ' ' + cls : ''); s.textContent = t; return s; }
+  function elecCtx(sel) {
+    const box = $('#ctxElec'), one = sel.length === 1 ? sel[0] : null, cables = sel.filter(isCable);
+    let kind = null;
+    if (one && isPlug(one)) kind = 'plug';
+    else if (one && isNode(one) && LIGHT_ICONS.includes(one.icon)) kind = 'dev';
+    else if (one && isDesk(one)) kind = 'desk';
+    else if (cables.length && cables.length === sel.length) kind = 'cable';
+    box.hidden = $('#ctxElecSep').hidden = !kind;
+    if (!kind) { elecSig = ''; return; }
+    const sig = kind + '|' + sel.map((i) => i.id).join() + '|' + (kind === 'plug' ? one.sock : kind === 'dev' ? one.watt : kind === 'desk' ? one.w + 'x' + one.h + '|' + deskCables(one).map((c) => Math.round(cableLen(c))).join() : cables.map((c) => c.color + c.kind + Math.round(cableLen(c))).join());
+    if (sig === elecSig) return;
+    if (box.contains(document.activeElement) && document.activeElement.tagName === 'INPUT') return; // never rebuild under someone typing
+    elecSig = sig; box.innerHTML = '';
+    if (kind === 'plug') {
+      const n = one.sock || 6;
+      const btn = (ico, lab, d) => { const b = document.createElement('button'); b.className = 'icon-btn sm'; b.innerHTML = ico + '<span class="tip"></span>'; b.lastChild.textContent = lab; b.setAttribute('aria-label', lab); b.disabled = n + d < 1 || n + d > 24; b.addEventListener('click', () => elecEdit([one], (i) => { i.sock = clamp((i.sock || 6) + d, 1, 24); })); return b; };
+      box.append(elecText('Розеток'), btn(MINUS, 'Менше розеток', -1), elecText(String(n), 'el-val'), btn(PLUS, 'Більше розеток', 1));
+    } else if (kind === 'dev') {
+      box.append(elecText('Потужність'), elecNum('Потужність, Вт', one.watt, 'Вт', 0, 100000, (v) => elecEdit([one], (i) => { if (v) i.watt = v; else delete i.watt; })));
+    } else if (kind === 'desk') {
+      box.append(
+        elecNum('Ширина стільниці, см', cmOf(one.w), 'см', 20, 2000, (v) => elecEdit([one], (i) => { i.w = (v || 20) * PXCM; })),
+        elecText('×'),
+        elecNum('Глибина стільниці, см', cmOf(one.h), 'см', 20, 2000, (v) => elecEdit([one], (i) => { i.h = (v || 20) * PXCM; })));
+      const cs = deskCables(one);
+      if (cs.length) box.append(elecText('Кабелі ' + fmtLen(cs.reduce((a, c) => a + cableLen(c), 0)), 'el-val'));
+    } else {
+      const seg = document.createElement('div'); seg.className = 'seg el-seg'; seg.setAttribute('role', 'radiogroup'); seg.setAttribute('aria-label', 'Тип кабелю');
+      [['ac', '230 В'], ['dc', '12–24 В']].forEach(([k, t]) => {
+        const b = document.createElement('button'); b.setAttribute('role', 'radio'); b.textContent = t; b.title = CABLE_KINDS[k];
+        b.setAttribute('aria-checked', cables.every((c) => (c.kind || 'ac') === k) ? 'true' : 'false');
+        b.addEventListener('click', () => elecEdit(cables, (c) => { c.kind = k; }));
+        seg.appendChild(b);
+      });
+      const cols = document.createElement('div'); cols.className = 'group el-cols';
+      const same = cables.every((c) => c.color === cables[0].color) ? cables[0].color : null;
+      buildSwatches(cols, (c) => elecEdit(cables, (x) => { x.color = c; }), (c) => c === same, ROPE_COLORS, (c) => ROPE_VAR[c], ROPE_NAMES);
+      const len = cables.reduce((a, c) => a + cableLen(c), 0), lab = elecText((cables.length > 1 ? 'Разом ' : '') + fmtLen(len), 'el-val');
+      lab.title = 'З запасом 10% на вигини й підключення: ' + fmtLen(len * 1.1);
+      box.append(seg, cols, lab, elecText('+10% ≈ ' + fmtLen(len * 1.1)));
+    }
+  }
   function updateCtxNow() {
     if (ctxHidden || !selected.size) { ctx.hidden = true; closeStyleMenu(); closeNodeMenu(); openArr(false); if (!selected.size) closeSidePops(); return; }
     const sel = [...selected].map((id) => items.get(id)).filter((i) => i && !isLink(i));
@@ -3492,6 +3817,7 @@ const Plan = (() => {
     const bar1 = sel.length === 1 && isBar(sel[0]);
     $('#ctxBar').hidden = $('#ctxBarSep').hidden = !bar1;
     if (!bar1 && !$('#barPop').hidden) openBarPop(false); else if (bar1 && !$('#barPop').hidden) fillBarPop();
+    elecCtx(sel);
     const tinted = sel.filter((i) => i.type === 'sticky' || isSec(i) || isNode(i) || isGrid(i) || isBar(i));
     const arrN = arrUnits().length; $('#ctxArr').hidden = $('#ctxArrSep').hidden = arrN < 2; if (arrN < 2) openArr(false); else if (!$('#arrMenu').hidden) refreshArr();
     $('#wrapBtn').hidden = !sel.some(isCard);
@@ -3604,13 +3930,16 @@ const Plan = (() => {
 
   // ---------- tools ----------
   function setTool(t) {
+    if (cableDraft && t !== 'light') finishCable();
     tool = t;
     document.querySelectorAll('[data-tool]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.tool === t ? 'true' : 'false'));
-    ['select', 'hand', 'sticky', 'section', 'stamp', 'comment', 'text', 'link', 'node'].forEach((n) => vp.classList.toggle('tool-' + n, t === n));
+    ['select', 'hand', 'sticky', 'section', 'stamp', 'comment', 'text', 'link', 'node', 'light'].forEach((n) => vp.classList.toggle('tool-' + n, t === n));
+    vp.classList.toggle('tool-cable', t === 'light' && LIGHT_PRESETS[lightPreset][0] === 'cable');
     const pal = $('#palette');
-    pal.hidden = t !== 'sticky' && t !== 'stamp' && t !== 'node';
-    pal.classList.toggle('emojis', t === 'stamp'); pal.classList.toggle('nodes', t === 'node');
+    pal.hidden = t !== 'sticky' && t !== 'stamp' && t !== 'node' && t !== 'light';
+    pal.classList.toggle('emojis', t === 'stamp'); pal.classList.toggle('nodes', t === 'node' || t === 'light');
     if (t === 'node') buildNodePalette(pal);
+    if (t === 'light') buildLightPalette(pal);
     if (t === 'sticky') buildSwatches(pal, (c) => { stickyColor = c; updateStickyDot(); setTool('sticky'); }, (c) => c === stickyColor);
     if (t === 'stamp') buildEmojis(pal);
     if (!pal.hidden) {
@@ -3643,6 +3972,22 @@ const Plan = (() => {
       if (i === 12) { const r = document.createElement('div'); r.className = 'rule'; pal.appendChild(r); }
     });
   }
+  const DESK_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="1.5"/><path d="M3 9.5h2M3 13h1.4M3 16.5h2M7 6v1.6M10.5 6v1M14 6v1.6M17.5 6v1"/></svg>';
+  const CABLE_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V13a3 3 0 013-3h10a3 3 0 003-3V4"/><circle cx="4" cy="19.5" r="1.4" fill="currentColor"/><circle cx="20" cy="4" r="1.4" fill="currentColor"/></svg>';
+  function buildLightPalette(pal) {
+    pal.innerHTML = '';
+    LIGHT_PRESETS.forEach(([icon], i) => {
+      const b = document.createElement('button');
+      b.className = 'nd-btn'; b.style.setProperty('--c', `var(--t-${Flow.ICON_COLOR[icon] || 'gray'})`);
+      const label = LIGHT_LABEL[icon] || ICON_NAMES[icon];
+      b.setAttribute('aria-label', label); b.title = label;
+      b.setAttribute('aria-pressed', i === lightPreset ? 'true' : 'false');
+      b.innerHTML = '<span>' + (icon === 'desk' ? DESK_ICO : icon === 'cable' ? CABLE_ICO : iconSvg(icon)) + '</span>';
+      b.addEventListener('click', () => { lightPreset = i; store.set('jamboard:light', String(i)); setTool('light'); });
+      if (i === 6) { const r = document.createElement('div'); r.className = 'rule'; pal.appendChild(r); }
+      pal.appendChild(b);
+    });
+  }
   function shapeIcon(shape) { // drawn at 3× and scaled down, so corner radii keep their proportions
     const w = 66, h = shape === 'circle' ? 66 : shape === 'diamond' || shape === 'cyl' ? 54 : 42;
     return `<svg viewBox="-4 -4 74 74" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><g transform="translate(0 ${(66 - h) / 2})">${shapePath(shape, w, h).map((p) => `<path vector-effect="non-scaling-stroke" d="${p}"/>`).join('')}</g></svg>`;
@@ -3660,11 +4005,13 @@ const Plan = (() => {
     items.set(it.id, it); freshText.add(it.id); write(it); renderAll(); return it;
   }
   function createStickyAt(p) { const it = addSticky(p.x, p.y); placeInGrid(it); commit({}, [it.id]); renderAll(); return it; }
-  function createNodeAt(p) {
-    const [icon, shape] = NODE_PRESETS[nodePreset];
+  function createNodeAt(p, preset = NODE_PRESETS[nodePreset]) {
+    const [icon, shape] = preset;
     const name = shape === 'diamond' ? 'Умова?' : icon === 'none' ? '' : ICON_NAMES[icon];
-    const [w, h] = Flow.sizeOf({ text: name || 'Назва блока', shape, icon });
+    let [w, h] = Flow.sizeOf({ text: name || 'Назва блока', shape, icon });
+    if (icon === 'plug') { w = Math.max(w, 236); h = Math.max(h, 96); }
     const it = { id: uid(), type: 'node', x: Math.round(p.x - w / 2), y: Math.round(p.y - h / 2), w: Math.round(w), h: Math.round(h), shape, icon, color: Flow.ICON_COLOR[icon] || 'gray', text: name, z: topZ(), by: me.name };
+    if (icon === 'plug') it.sock = 6;
     items.set(it.id, it); placeInGrid(it); commit({}, [it.id]); renderAll(); return it;
   }
   function createTaskAt(p, extra) {
@@ -4014,6 +4361,38 @@ const Plan = (() => {
       if (dbl) { setSel([lid]); editRopeLabel(lid); return; }
       setSel(e.shiftKey ? [...selected, lid] : [lid]); return;
     }
+    if (tool === 'light') { // lighting kit: devices and strips, a desk drawn in centimetres, or a cable laid point by point
+      const kind = LIGHT_PRESETS[lightPreset][0];
+      if (kind === 'cable') { action = null; cableClick(e, dbl); return; }
+      if (!hit || isBack(hit)) {
+        const p = toWorld(e.clientX, e.clientY);
+        if (kind === 'desk') { action = { type: 'draw', desk: true, x: p.x, y: p.y, sx: e.clientX, sy: e.clientY }; return; }
+        pendingEdit = createNodeAt(p, LIGHT_PRESETS[lightPreset]).id; setTool('select'); action = null; return;
+      }
+    }
+    if (hit && isCable(hit)) { // a cable's own points: drag one, drag a midpoint to add a bend, double-click a point to drop it
+      const cvEl = e.target.closest('.cv, .cmid'), abs = cableAbs(hit), w = toWorld(e.clientX, e.clientY);
+      let k = cvEl ? +cvEl.dataset.i : -1;
+      if (!cvEl && dbl) { // double-click on the cable adds a bend there
+        let best = Infinity;
+        for (let j = 1; j < abs.length; j++) {
+          const [ax, ay] = abs[j - 1], [bx, by] = abs[j], L = Math.hypot(bx - ax, by - ay) || 1, t = clamp(((w.x - ax) * (bx - ax) + (w.y - ay) * (by - ay)) / (L * L), 0, 1);
+          const dd = Math.hypot(ax + (bx - ax) * t - w.x, ay + (by - ay) * t - w.y); if (dd < best) { best = dd; k = j; }
+        }
+        const before = snapIds([id]); abs.splice(k, 0, snapCable(w, null)); setCableAbs(hit, abs); commit(before); setSel([id]); render(hit); action = null; return;
+      }
+      if (cvEl && selected.has(id) && !viewOnly()) {
+        const before = snapIds([id]);
+        if (cvEl.classList.contains('cmid')) abs.splice(k, 0, [(abs[k - 1][0] + abs[k][0]) / 2, (abs[k - 1][1] + abs[k][1]) / 2]);
+        else if (dbl && abs.length > 2) {
+          const last = abs.length - 1; abs.splice(k, 1); setCableAbs(hit, abs);
+          if (k === 0) delete hit.a; if (k === last) delete hit.b;
+          commit(before); render(hit); updateCtx(); action = null; return;
+        }
+        action = { type: 'cvert', id, k, abs, before, moved: false, sx: e.clientX, sy: e.clientY, tgt: null };
+        active.add(id); itemEl.classList.add('editpt'); return;
+      }
+    }
     if ((e.target.closest('.port') || tool === 'link') && LINKABLE(hit)) { startLink(id, e); return; }
     if (tool === 'text' && (!hit || isBack(hit))) { pendingEdit = createTextAt(toWorld(e.clientX, e.clientY)).id; setTool('select'); action = null; return; }
 
@@ -4050,8 +4429,10 @@ const Plan = (() => {
       if (carriers.length) items.forEach((i) => { if (isMark(i) && !ids.has(i.id) && carriers.some((c) => centerIn(i, c))) ids.add(i.id); });
       const starts = [...ids].map((k) => items.get(k)).map((i) => ({ it: i, x: i.x, y: i.y }));
       ids.forEach((k) => active.add(k));
+      const follow = []; // cables plugged into a moved card keep their plug on it
+      items.forEach((c) => { if (isCable(c) && !ids.has(c.id) && (ids.has(c.a) || ids.has(c.b))) { follow.push({ c, abs: cableAbs(c), a: ids.has(c.a), b: ids.has(c.b) }); active.add(c.id); } });
       const tilt = !reduceMotion && !selList.some(isBack);
-      action = { type: 'move', id, sx: e.clientX, sy: e.clientY, starts, ids, before: snapIds([...ids]), moved: false, shift: e.shiftKey, tilt, vx: 0, r: 0, lastX: e.clientX, hasBack: selList.some(isBack) };
+      action = { type: 'move', id, sx: e.clientX, sy: e.clientY, starts, ids, follow, before: snapIds([...ids, ...follow.map((f) => f.c.id)]), moved: false, shift: e.shiftKey, tilt, vx: 0, r: 0, lastX: e.clientX, hasBack: selList.some(isBack) };
       return;
     }
     if (tool === 'sticky') { pendingEdit = createStickyAt(toWorld(e.clientX, e.clientY)).id; setTool('select'); action = null; return; }
@@ -4067,6 +4448,7 @@ const Plan = (() => {
     const w = toWorld(e.clientX, e.clientY);
     sendPresence({ cursor: { x: Math.round(w.x), y: Math.round(w.y) } });
     if (tool === 'stamp') moveStampGhost(w);
+    if (cableDraft) moveDraft(e);
     if (!pointers.has(e.pointerId)) return;
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (!action) return;
@@ -4095,6 +4477,10 @@ const Plan = (() => {
       action.vx = action.vx * 0.6 + (e.clientX - action.lastX) * 0.4; action.lastX = e.clientX;
       const [wdx, wdy] = snapMove(action, Math.round(dx / view.z), Math.round(dy / view.z), e.altKey || e.ctrlKey || e.metaKey || (!action.hasBack && !!gridAt(w, action.ids)));
       action.starts.forEach((s) => { s.it.x = s.x + wdx; s.it.y = s.y + wdy; render(s.it); });
+      action.follow.forEach((f) => {
+        const abs = f.abs.map((p, k) => (f.a && f.b) || (f.a && !k) || (f.b && k === f.abs.length - 1) ? [p[0] + wdx, p[1] + wdy] : p);
+        setCableAbs(f.c, abs); render(f.c);
+      });
       if (action.tilt) { setDropTarget(sectionAt(w, action.ids)); setGridDrop(gridAt(w, action.ids), w); }
       if (!action.hasBack) previewFlow(action);
       sendPresence({ drag: { ids: action.starts.slice(0, 60).map((s) => s.it.id), dx: wdx, dy: wdy } });
@@ -4117,6 +4503,9 @@ const Plan = (() => {
         resnap(it, action.offs); action.offs.forEach((o) => render(o.m));
       }
       else if (it.type === 'image') { const ar = action.w / action.h; const w2 = Math.max(40, action.w + dx / view.z); it.w = Math.round(w2); it.h = Math.round(w2 / ar); }
+      else if (isDesk(it)) { // a desk keeps whole centimetres
+        it.w = Math.max(20, Math.round((action.w + dx / view.z) / PXCM)) * PXCM; it.h = Math.max(20, Math.round((action.h + dy / view.z) / PXCM)) * PXCM;
+      }
       else {
         const minW = isSec(it) ? 200 : 90, minH = isSec(it) ? 140 : 90;
         it.w = Math.round(Math.max(minW, action.w + dx / view.z)); it.h = Math.round(Math.max(minH, action.h + dy / view.z));
@@ -4130,9 +4519,21 @@ const Plan = (() => {
       const tgt = tid && tid !== action.from && LINKABLE(items.get(tid)) ? tid : null;
       if (tgt !== action.to) { setLinkTarget(tgt); action.to = tgt; tempRope.to = tgt; }
       schedule('links');
+    } else if (action.type === 'cvert') {
+      const it = items.get(action.id); if (!it) return;
+      if (!action.moved && Math.hypot(dx, dy) < 2) return;
+      action.moved = true;
+      const abs = action.abs, k = action.k;
+      let [x, y] = snapCable(w, null);
+      if (!e.shiftKey) { const tol = 10 / view.z; [abs[k - 1], abs[k + 1]].forEach((q) => { if (!q) return; if (Math.abs(x - q[0]) < tol) x = q[0]; if (Math.abs(y - q[1]) < tol) y = q[1]; }); }
+      abs[k] = [x, y]; setCableAbs(it, abs); render(it);
+      if (k === 0 || k === abs.length - 1) { const t = cableTarget(e); action.tgt = t; setLinkTarget(t ? t.id : null); }
+      updateCtx();
     } else if (action.type === 'draw') {
       if (!ghostEl) { ghostEl = document.createElement('div'); ghostEl.id = 'ghostSection'; world.appendChild(ghostEl); }
-      Object.assign(ghostEl.style, { left: Math.min(action.x, w.x) + 'px', top: Math.min(action.y, w.y) + 'px', width: Math.abs(w.x - action.x) + 'px', height: Math.abs(w.y - action.y) + 'px' });
+      let gw = Math.abs(w.x - action.x), gh = Math.abs(w.y - action.y);
+      if (action.desk) { gw = Math.round(gw / PXCM) * PXCM; gh = Math.round(gh / PXCM) * PXCM; ghostEl.dataset.size = `${cmOf(gw)} × ${cmOf(gh)} см`; ghostEl.classList.add('desk'); }
+      Object.assign(ghostEl.style, { left: (w.x < action.x ? action.x - gw : action.x) + 'px', top: (w.y < action.y ? action.y - gh : action.y) + 'px', width: gw + 'px', height: gh + 'px' });
     } else if (action.type === 'marquee') {
       const x1 = Math.min(action.sx, e.clientX), y1 = Math.min(action.sy, e.clientY);
       const x2 = Math.max(action.sx, e.clientX), y2 = Math.max(action.sy, e.clientY);
@@ -4479,9 +4880,10 @@ const Plan = (() => {
             setTimeout(() => d.classList.remove('settle'), 520);
           });
           setDropTarget(null); setGridDrop(null);
+          action.follow.forEach((f) => active.delete(f.c.id));
           commit(action.before); sendPresence({ drag: null }); renderAll();
         } else {
-          action.ids.forEach((k) => active.delete(k));
+          action.ids.forEach((k) => active.delete(k)); action.follow.forEach((f) => active.delete(f.c.id));
           if (!action.shift && selected.size > 1) setSel([action.id]);
           const it = items.get(action.id);
           if (it && it.type === 'comment' && !action.shift) openThread(action.id);
@@ -4503,7 +4905,28 @@ const Plan = (() => {
           commit(action.before); sendPresence({ resize: null });
         }
       }
-      if (action.type === 'draw') {
+      if (action.type === 'cvert') {
+        active.delete(action.id); setLinkTarget(null);
+        const it = items.get(action.id), ce = els.get(action.id); if (ce) ce.classList.remove('editpt');
+        if (it && action.moved) {
+          const k = action.k, last = action.abs.length - 1;
+          if (k === 0 || k === last) { // an end dropped on a card plugs into it; dropped anywhere else it is loose
+            const key = k === 0 ? 'a' : 'b', other = it[k === 0 ? 'b' : 'a'], t = action.tgt;
+            if (t && t.id !== other) it[key] = t.id; else delete it[key];
+          }
+          commit(action.before);
+        }
+        if (it) render(it);
+      }
+      if (action.type === 'draw' && action.desk) {
+        const p = lastPointer ? toWorld(lastPointer.x, lastPointer.y) : { x: action.x, y: action.y };
+        let w = Math.round(Math.abs(p.x - action.x) / PXCM) * PXCM, h = Math.round(Math.abs(p.y - action.y) / PXCM) * PXCM;
+        let x = p.x < action.x ? action.x - w : action.x, y = p.y < action.y ? action.y - h : action.y;
+        if (w < 20 * PXCM || h < 20 * PXCM) { w = 140 * PXCM; h = 70 * PXCM; x = action.x - w / 2; y = action.y - h / 2; } // a click: a 140 × 70 cm desk
+        if (ghostEl) { ghostEl.remove(); ghostEl = null; }
+        const sec = addSection(x, y, w, h, 'warn', 'Стільниця'); sec.desk = true; sec.autofit = false;
+        commit(regroup(sec), [sec.id]); setTool('select'); setSel([sec.id]); renderAll();
+      } else if (action.type === 'draw') {
         const p = lastPointer ? toWorld(lastPointer.x, lastPointer.y) : { x: action.x, y: action.y };
         let x = Math.min(action.x, p.x), y = Math.min(action.y, p.y), w = Math.abs(p.x - action.x), h = Math.abs(p.y - action.y);
         if (w < 80 || h < 60) { w = 640; h = 420; x = action.x - w / 2; y = action.y - h / 2; }
@@ -4997,6 +5420,7 @@ const Plan = (() => {
     const clones = list.map((i, k) => ({ ...clean(i), id: uid(), x: Math.round(i.x + dx), y: Math.round(i.y + dy), z: z + k, by: i.type === 'sticky' ? me.name : i.by }));
     const idMap = new Map(list.map((i, k) => [i.id, clones[k].id]));
     clones.forEach((c) => { if ('sec' in c) { if (c.sec && idMap.has(c.sec)) c.sec = idMap.get(c.sec); else delete c.sec; } }); // a copy joins wherever it lands
+    clones.forEach((c) => { if (isCable(c)) ['a', 'b'].forEach((k) => { if (c[k] && idMap.has(c[k])) c[k] = idMap.get(c[k]); else delete c[k]; }); });
     clones.forEach((c) => { delete c.hid; delete c.own; if ('grid' in c) { if (idMap.has(c.grid)) c.grid = idMap.get(c.grid); else { delete c.grid; delete c.cell; } } });
     clones.forEach((c) => items.set(c.id, c));
     clones.forEach((c) => { if (isCard(c) && !c.grid) placeInGrid(c, true); });
@@ -6441,6 +6865,10 @@ const Plan = (() => {
     if (editingId && mod && e.code === 'KeyB') { e.preventDefault(); toggleBold(); return; }
     if (editingId) { if (e.key === 'Escape' || (mod && e.key === 'Enter') || (e.key === 'Enter' && items.get(editingId) && (titled(items.get(editingId)) || items.get(editingId).type === 'task' || isBar(items.get(editingId))))) { e.preventDefault(); els.get(editingId).firstChild.blur(); } return; }
     if (isTyping(e.target)) { if (e.key === 'Enter' || e.key === 'Escape') { if (e.target.classList && e.target.classList.contains('rope-label')) e.preventDefault(); if (e.key === 'Escape' && ropeEditId && e.target.classList.contains('rope-label')) { const l = items.get(ropeEditId); e.target.textContent = (l && l.label) || ''; } e.target.blur(); if (e.target.id === 'nameInput') $('#mePop').hidden = true; } return; }
+    if (cableDraft && !mod) { // laying a cable: Enter or Esc ends it, Backspace takes the last point back
+      if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); finishCable(); return; }
+      if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); popDraftPoint(); return; }
+    }
     if (!mod && presKey(e)) return;
     const k = e.key.toLowerCase();
     if (viewOnly() && (mod ? !['=', '+', '-', '0'].includes(k) : !(e.code === 'Space' || e.key === 'Escape' || e.code === 'KeyV' || e.code === 'KeyH' || e.code === 'KeyP' || (e.shiftKey && e.code === 'Digit1')))) {
@@ -6490,6 +6918,7 @@ const Plan = (() => {
     else if (e.code === 'KeyT') setTool('text');
     else if (e.code === 'KeyL') setTool('link');
     else if (e.code === 'KeyD') setTool('node');
+    else if (e.code === 'KeyW') setTool('light');
     else if (e.code === 'KeyM') openMermaid(true);
     else if (e.code === 'KeyP') openPlan(true);
   });
